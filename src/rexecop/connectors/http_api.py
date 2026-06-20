@@ -208,10 +208,10 @@ class HttpApiConnectorRuntime:
             headers = {"Accept": "application/json"}
             headers.update(self._auth_headers())
             body = action_spec.get("body")
-            data = None
+            request_body: bytes | None = None
             if body is not None and override_url is None:
                 headers["Content-Type"] = "application/json"
-                data = json.dumps(body).encode("utf-8")
+                request_body = json.dumps(body).encode("utf-8")
             timeout = float(
                 action_spec.get("timeout_seconds")
                 or self.config.get("timeout_seconds")
@@ -221,7 +221,7 @@ class HttpApiConnectorRuntime:
                 url=request_url,
                 method=method,
                 headers=headers,
-                data=data,
+                data=request_body,
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read().decode("utf-8")
@@ -240,19 +240,19 @@ class HttpApiConnectorRuntime:
             )
         except urllib.error.HTTPError as exc:
             body_snippet = read_http_error_body(exc)
-            data: dict[str, Any] = {
+            error_data: dict[str, Any] = {
                 "error_class": http_error_class(exc.code),
                 "status_code": exc.code,
             }
             if body_snippet:
-                data["body_snippet"] = body_snippet
+                error_data["body_snippet"] = body_snippet
             return (
                 ConnectorResponse(
                     connector=request.connector,
                     action=request.action,
                     success=False,
                     error=f"http error {exc.code}",
-                    data=data,
+                    data=error_data,
                 ),
                 {},
                 override_url or "",

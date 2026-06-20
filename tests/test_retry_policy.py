@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ ENVIRONMENT = REPO_ROOT / "examples/environments/small-public-unit-proxmox.examp
 
 
 @pytest.fixture(autouse=True)
-def _clear_mock_failures() -> None:
+def _clear_mock_failures() -> Generator[None, None, None]:
     MockConnectorRuntime.clear_failures()
     yield
     MockConnectorRuntime.clear_failures()

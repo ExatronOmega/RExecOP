@@ -118,7 +118,7 @@ def test_build_scoped_execution_receipt_uses_derived_metrics() -> None:
     def steps(_plan: OperationPlan) -> list[dict[str, object]]:
         return [{"step": 1, "tool": "health", "args": ["ping"]}]
 
-    def link(_role: str, _artifact: dict[str, object]) -> dict[str, str]:
+    def link(_role: str, _artifact: dict[str, object]) -> dict[str, object]:
         return {"role": "execution_contract", "descriptor": {}}
 
     def validate(_role: str, artifact: dict[str, object]) -> dict[str, object]:

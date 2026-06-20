@@ -17,7 +17,10 @@ class HealthStagingHttpServer:
     def base_url(self) -> str:
         if self._server is None:
             raise RuntimeError("server not started")
-        host, port = self._server.server_address
+        host = self._server.server_address[0]
+        port = self._server.server_address[1]
+        if isinstance(host, bytes):
+            host = host.decode()
         return f"http://{host}:{port}"
 
     def start(self) -> None:
