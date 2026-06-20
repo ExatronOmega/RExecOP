@@ -21,6 +21,7 @@ from rexecop.adapters.govengine_port.contracts import (
 from rexecop.adapters.sclite_port.contracts import SCLITE_ARTIFACT_AUTHORITY
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import sanitize_connectors_for_storage, validate_no_inline_secrets
+from rexecop.environment.targets import validate_operation_target
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.evidence.manager import EvidenceManager
@@ -32,6 +33,7 @@ from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.storage.factory import create_store
 from rexecop.storage.port import RuntimeStore
+from rexecop.workflow.contract import validate_workflow_contract
 from rexecop.workflow.loader import load_workflow
 
 DEFAULT_MODE = "dry_run"
@@ -94,6 +96,8 @@ class OperationController:
         intent_meta = profile.intent_metadata(intent)
         workflow_path = profile.resolve_workflow_path(intent)
         workflow = load_workflow(workflow_path)
+        validate_operation_target(environment, target)
+        validate_workflow_contract(workflow, environment)
 
         operation_id = generate_operation_id()
         correlation_id = str(uuid.uuid4())

@@ -1,7 +1,7 @@
 # Distribution and installation
 
-RExecOp `0.2.2a0` is **alpha** software. The package is published on
-[PyPI](https://pypi.org/project/rexecop/) for evaluation installs; maturity limits in
+RExecOp `0.2.3a0` is **alpha** software. The latest published wheel on
+[PyPI](https://pypi.org/project/rexecop/0.2.2a0/) is **`0.2.2a0`**; maturity limits in
 [known-limitations.md](known-limitations.md) still apply.
 
 ## Supported install paths

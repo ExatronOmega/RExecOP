@@ -80,6 +80,7 @@ OperationStoragePort (protocol)
 ```
 
 `.rexecop/` is RExecOp runtime operator storage, not parallel SCLite truth authority.
+See [storage-backends.md](../docs/storage-backends.md) for File vs SQLite boundaries.
 
 ## Package map (current)
 

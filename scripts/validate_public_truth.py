@@ -35,6 +35,7 @@ STALE_OPERATOR_VERSIONS = (
     "0.1.5a0",
     "0.2.0a0",
     "0.2.1a0",
+    "0.2.2a0",
 )
 
 CLAIM_DOCS = (

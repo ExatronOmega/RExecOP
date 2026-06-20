@@ -4,7 +4,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PYTHON="${PYTHON:-python}"
+PYTHON="${PYTHON:-}"
+if [[ -z "$PYTHON" && -x "$ROOT/.venv/bin/python" ]]; then
+  PYTHON="$ROOT/.venv/bin/python"
+elif [[ -z "$PYTHON" ]]; then
+  PYTHON=python
+fi
 if ! command -v "$PYTHON" >/dev/null 2>&1; then
   PYTHON=python3
 fi

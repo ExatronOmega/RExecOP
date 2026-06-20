@@ -1,7 +1,7 @@
 # RExecOp
 
 [![CI: pytest](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml/badge.svg)](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml)
-[![Package: rexecop 0.2.2a0](https://img.shields.io/badge/package-rexecop%200.2.2a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.2a0/)
+[![Package: rexecop 0.2.3a0](https://img.shields.io/badge/package-rexecop%200.2.3a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.2a0/)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Dependency: GovEngine](https://img.shields.io/badge/dependency-GovEngine-informational.svg)](https://github.com/rozmiarD/GovEngine)
 [![Dependency: SCLite](https://img.shields.io/badge/dependency-SCLite-informational.svg)](https://github.com/rozmiarD/SCLite)
@@ -21,11 +21,11 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Version | `0.2.2a0` |
+| Version | `0.2.3a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
 | Delivery | Alpha scope complete on `main` (see [CHANGELOG](CHANGELOG.md)) |
 | Tests | 187 passed, 1 skipped (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
-| PyPI | [`rexecop==0.2.2a0`](https://pypi.org/project/rexecop/0.2.2a0/) — alpha; see [docs/distribution.md](docs/distribution.md) |
+| PyPI | latest published [`rexecop==0.2.2a0`](https://pypi.org/project/rexecop/0.2.2a0/); dev line `0.2.3a0` |
 | Dependencies | `govengine>=0.12.2a0,<0.15`, `sclite-core>=1.0.1,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
@@ -187,6 +187,8 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 | [docs/evidence-model.md](docs/evidence-model.md) | Internal events vs SCLite truth |
 | [docs/profile-contract.md](docs/profile-contract.md) | Profile layout and entry points |
 | [docs/connector-contract.md](docs/connector-contract.md) | `http_api`, secrets, error taxonomy |
+| [docs/environment-contract.md](docs/environment-contract.md) | Target, group, and connector semantics |
+| [docs/storage-backends.md](docs/storage-backends.md) | File vs SQLite boundaries |
 | [docs/safety-model.md](docs/safety-model.md) | Hard safety rules and operator posture |
 | [docs/known-limitations.md](docs/known-limitations.md) | Alpha scope and explicit non-claims |
 | [docs/distribution.md](docs/distribution.md) | Wheels, Git install, private index |

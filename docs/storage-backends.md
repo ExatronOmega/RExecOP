@@ -1,0 +1,51 @@
+# Storage backends
+
+RExecOp persists operator runtime data under `.rexecop/` in the current working directory.
+
+## Backend selection
+
+| Backend | Env / CLI | Use |
+| --- | --- | --- |
+| `file` (default) | `REXECOP_STORAGE=file` or omit | Single-operator JSON files |
+| `sqlite` | `REXECOP_STORAGE=sqlite` or `--storage sqlite` | Same layout with operations/plans/evidence in SQLite |
+
+Factory: `rexecop.storage.factory.create_store()`.
+
+## FileStore (`file` backend)
+
+| Path | Content | Write semantics |
+| --- | --- | --- |
+| `operations/*.json` | Operation envelopes | atomic replace via temp file |
+| `plans/*.json` | OperationPlan snapshots | atomic replace |
+| `evidence/<op>/*.json` | Internal evidence events | atomic replace |
+| `receipts/*.json` | Non-authoritative export summaries | atomic replace |
+| `approvals/*.json` | Manual approval stubs | atomic replace |
+| `sclite/<op>/` | Authoritative SCLite artifact bundles | directory per operation |
+| `queue/`, `locks/`, `inbox/` | Runtime coordination (not in StoragePort JSON API) | file drops |
+
+`FileStore` uses `storage.atomic.atomic_write_text` (write temp + `os.replace`) for JSON
+files to avoid torn reads on crash.
+
+## SqliteStore (`sqlite` backend)
+
+| Location | Content |
+| --- | --- |
+| `rexecop.db` tables `operations`, `plans`, `evidence_events` | JSON payloads identical to FileStore |
+| `sclite/`, `receipts/`, `approvals/`, `queue/`, `locks/`, `inbox/` | **Still on disk** via delegated `FileStore` helpers |
+
+SQLite stores **operation state**, **plans**, and **evidence event payloads** only.
+SCLite bundles, receipt exports, queue entries, target locks, and inbox triggers remain
+filesystem paths so review tooling and host-owned workers keep stable paths across backends.
+
+`PRAGMA journal_mode=WAL` is enabled on open.
+
+## InMemoryStore (tests)
+
+Operations, plans, and evidence live in RAM; SCLite output directory still uses on-disk
+`FileStore` paths under the configured root.
+
+## Related
+
+- [architecture.md](architecture.md)
+- [evidence-model.md](evidence-model.md)
+- [sclite-integration.md](sclite-integration.md)

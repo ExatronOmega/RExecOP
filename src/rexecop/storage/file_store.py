@@ -7,6 +7,7 @@ from typing import Any
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
+from rexecop.storage.atomic import atomic_write_text
 
 
 class FileStore:
@@ -33,10 +34,16 @@ class FileStore:
         path.mkdir(parents=True, exist_ok=True)
         return path
 
+    def _write_json(self, path: Path, payload: dict[str, Any]) -> None:
+        atomic_write_text(
+            path,
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        )
+
     def save_operation(self, operation: Operation) -> None:
         self.ensure_layout()
         path = self.operations_dir / f"{operation.id}.json"
-        path.write_text(json.dumps(operation.as_dict(), indent=2, sort_keys=True) + "\n")
+        self._write_json(path, operation.as_dict())
 
     def load_operation(self, operation_id: str) -> Operation:
         path = self.operations_dir / f"{operation_id}.json"
@@ -55,7 +62,7 @@ class FileStore:
     def save_plan(self, plan: OperationPlan) -> None:
         self.ensure_layout()
         path = self.plans_dir / f"{plan.operation_id}.json"
-        path.write_text(json.dumps(plan.as_dict(), indent=2, sort_keys=True) + "\n")
+        self._write_json(path, plan.as_dict())
 
     def load_plan(self, operation_id: str) -> OperationPlan:
         path = self.plans_dir / f"{operation_id}.json"
@@ -70,7 +77,7 @@ class FileStore:
         op_dir = self.evidence_dir / operation_id
         op_dir.mkdir(parents=True, exist_ok=True)
         path = op_dir / f"{event_id}.json"
-        path.write_text(json.dumps(event, indent=2, sort_keys=True) + "\n")
+        self._write_json(path, event)
 
     def list_evidence_events(self, operation_id: str) -> list[dict[str, Any]]:
         op_dir = self.evidence_dir / operation_id
@@ -84,7 +91,7 @@ class FileStore:
     def save_receipt_export(self, operation_id: str, export: dict[str, Any]) -> Path:
         self.ensure_layout()
         path = self.receipts_dir / f"{operation_id}.json"
-        path.write_text(json.dumps(export, indent=2, sort_keys=True) + "\n")
+        self._write_json(path, export)
         return path
 
     def load_receipt_export(self, operation_id: str) -> dict[str, Any]:
@@ -96,7 +103,7 @@ class FileStore:
     def save_approval(self, operation_id: str, approval: dict[str, Any]) -> Path:
         self.ensure_layout()
         path = self.approvals_dir / f"{operation_id}.json"
-        path.write_text(json.dumps(approval, indent=2, sort_keys=True) + "\n")
+        self._write_json(path, approval)
         return path
 
     def load_approval(self, operation_id: str) -> dict[str, Any]:

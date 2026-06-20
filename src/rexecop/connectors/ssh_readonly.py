@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shlex
 import subprocess
 from typing import Any
 
@@ -11,6 +12,8 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload
 from rexecop.secrets.port import SecretResolver
 from rexecop.secrets.resolver import default_secret_resolver
+
+ALLOWED_KNOWN_HOSTS_POLICIES = frozenset({"accept-new", "strict", "no"})
 
 
 class SshReadonlyRuntime:
@@ -125,20 +128,28 @@ class SshReadonlyRuntime:
         if not isinstance(args, list):
             raise RExecOpValidationError("ssh allowlist args must be a list")
         argv = normalize_allowlisted_argv(tool=tool, args=args, allowed_tools=allowed_tools)
-        return " ".join(argv)
+        return " ".join(shlex.quote(part) for part in argv)
 
     def _build_ssh_argv(self, remote_command: str) -> list[str]:
         host = str(self.config.get("host") or "").strip()
         user = str(self.config.get("user") or "").strip()
         if not host or not user:
             raise RExecOpValidationError("ssh_readonly requires host and user")
+        policy = str(self.config.get("known_hosts_policy") or "accept-new").strip()
+        if policy not in ALLOWED_KNOWN_HOSTS_POLICIES:
+            raise RExecOpValidationError(
+                f"unsupported known_hosts_policy: {policy}"
+            )
         argv = [
             "ssh",
             "-o",
             "BatchMode=yes",
             "-o",
-            "StrictHostKeyChecking=accept-new",
+            f"StrictHostKeyChecking={policy}",
         ]
+        known_hosts_file = str(self.config.get("known_hosts_file") or "").strip()
+        if known_hosts_file:
+            argv.extend(["-o", f"UserKnownHostsFile={known_hosts_file}"])
         port = self.config.get("port")
         if port is not None:
             argv.extend(["-p", str(port)])

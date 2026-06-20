@@ -6,7 +6,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: `0.1.0a0` declares the **alpha gate** (roadmap Phase 10). Prior `0.x.0a0` lines
 tracked incremental roadmap delivery.
 
-## [0.2.2a0] - 2026-06-16
+## [0.2.3a0] - 2026-06-20
+
+### Etap A — pre-policy contract hardening
+
+- Environment target validation at `plan` (`environment.targets`, group members, `all_critical_vms` semantics)
+- Workflow contract validation: missing/disabled connectors, unsupported step types
+- `ssh_readonly`: configurable `known_hosts_policy`, `UserKnownHostsFile`, `shlex.quote` for remote commands
+- `FileStore` atomic JSON writes via temp file + `os.replace`
+- Docs: [environment-contract.md](docs/environment-contract.md), [storage-backends.md](docs/storage-backends.md)
+- Tests: [tests/test_stage_a_contracts.py](tests/test_stage_a_contracts.py)
+- CHANGELOG date order corrected for `0.2.1a0` / `0.2.2a0`
+
+## [0.2.2a0] - 2026-06-20
 
 ### Public PyPI (`15.1c`) and documentation clarity
 
@@ -14,7 +26,7 @@ tracked incremental roadmap delivery.
 - Publish `rexecop` to PyPI; update [docs/distribution.md](docs/distribution.md) and public-truth validators
 - Canonical delivery test scope (`pytest -m delivery`) and composite runtime routing tests (from `0.2.1a0` batch)
 
-## [0.2.1a0] - 2026-06-20
+## [0.2.1a0] - 2026-06-19
 
 ### Domain connector backend plugin (`tecrax_proxmox`)
 

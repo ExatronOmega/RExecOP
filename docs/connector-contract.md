@@ -119,6 +119,8 @@ connectors:
     user: readonly
     port: 22
     identity_file_secret_ref: pve_ssh_key
+    known_hosts_policy: accept-new   # accept-new | strict | no
+    known_hosts_file: /path/to/known_hosts   # optional with strict
     allowlist:
       - action: uptime
         command: uptime
@@ -127,6 +129,16 @@ connectors:
 **Temporary operator tool:** until GovEngine policy engine owns remote command policy,
 this backend provides read-only allowlisted SSH only. It refuses `apply` / `recovery` modes.
 Do not treat it as a production authorization boundary on its own.
+
+### Risk notes
+
+| Topic | Behavior |
+| --- | --- |
+| `known_hosts_policy` | Default `accept-new` pins host keys on first connect. Use `strict` with a managed `known_hosts_file` in production-adjacent labs. `no` disables host key checking — **lab-only**. |
+| Remote command quoting | Allowlisted argv is joined with `shlex.quote` before passing as the remote SSH command. |
+| Remote shell | OpenSSH still invokes the remote user shell to run the command string — keep allowlists minimal. |
+| Secrets | `identity_file_secret_ref` resolves via `REXECOP_SECRETS_FILE`; never commit key material. |
+| Policy ownership | Full remote-command policy belongs in GovEngine + SCLite review, not in this connector alone. |
 
 ## Boundary
 
