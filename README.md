@@ -1,7 +1,7 @@
 # RExecOp
 
 [![CI: pytest](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml/badge.svg)](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml)
-[![Package: rexecop 0.1.5a0](https://img.shields.io/badge/package-rexecop%200.1.5a0-blueviolet.svg)](pyproject.toml)
+[![Package: rexecop 0.2.0a0](https://img.shields.io/badge/package-rexecop%200.2.0a0-blueviolet.svg)](pyproject.toml)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Dependency: GovEngine](https://img.shields.io/badge/dependency-GovEngine-informational.svg)](https://github.com/rozmiarD/GovEngine)
 [![Dependency: SCLite](https://img.shields.io/badge/dependency-SCLite-informational.svg)](https://github.com/rozmiarD/SCLite)
@@ -21,11 +21,11 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Version | `0.1.5a0` |
+| Version | `0.2.0a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Roadmap | Phases 0–12 delivered on `main` (see CHANGELOG) |
-| Tests | 143+ pytest tests (CI: ruff, mypy, public truth, boundary grep, secret scan, pytest) |
-| PyPI | not published — install from source |
+| Roadmap | Phases 0–15 delivered on `main` (see CHANGELOG) |
+| Tests | 150+ pytest tests (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
+| PyPI | not published — wheels validated in CI; see [docs/distribution.md](docs/distribution.md) |
 | Dependencies | `govengine>=0.12.2a0,<0.15`, `sclite-core>=1.0.1,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
@@ -71,11 +71,13 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - A policy engine (GovEngine is the governance authority)
 - SCLite schema authority or long-term truth storage
 - Domain profiles in core (no Tecrax/Ravenclaw operational logic in `src/rexecop`)
-- Production scheduler daemon, web UI, multi-tenant RBAC, or LLM execution loops
+- Production cron/recurrence scheduler (host-owned worker + systemd/cron pattern only)
 - Unattended apply on critical infrastructure without operator and governance gates
-- PyPI release (reserved for alpha gate / explicit operator approval)
+- PyPI release (reserved for explicit operator sign-off — see [docs/distribution.md](docs/distribution.md))
 
 ## Installation
+
+See [docs/distribution.md](docs/distribution.md) for wheels, Git URL, and private index notes.
 
 From source (recommended):
 
@@ -142,10 +144,13 @@ pip install -e /path/to/tecrax -e ".[dev]"
 python scripts/validate_public_truth.py
 ruff check .
 mypy src/rexecop
+python -m build && python -m twine check dist/*
 pytest
 ```
 
-GitHub Actions runs on every push and pull request: install `tecrax`, public truth validation, ruff, mypy, core boundary grep (`tecrax_profile` / `import tecrax` forbidden in core), pytest.
+GitHub Actions runs on every push and pull request: install `tecrax`, public truth validation,
+ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job (`build` +
+`twine check`).
 
 ## Documentation
 
@@ -160,6 +165,8 @@ GitHub Actions runs on every push and pull request: install `tecrax`, public tru
 | [docs/connector-contract.md](docs/connector-contract.md) | `http_api`, secrets, error taxonomy |
 | [docs/safety-model.md](docs/safety-model.md) | Hard safety rules and operator posture |
 | [docs/known-limitations.md](docs/known-limitations.md) | Alpha scope and explicit non-claims |
+| [docs/distribution.md](docs/distribution.md) | Wheels, Git install, private index |
+| [OPERATOR_LAB_RUNBOOK.md](OPERATOR_LAB_RUNBOOK.md) | Lab checklist and E2E walkthrough |
 | [OPERATOR_RUNBOOK.md](OPERATOR_RUNBOOK.md) | Installation, secrets, workflows, troubleshooting |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 

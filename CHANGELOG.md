@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: `0.1.0a0` declares the **alpha gate** (roadmap Phase 10). Prior `0.x.0a0` lines
 tracked incremental roadmap delivery.
 
+## [0.2.0a0] - 2026-06-18
+
+### Phase 15 — distribution & E2E runbook
+
+- CI `package-dry-run` job: `python -m build`, `twine check`, wheel install smoke
+- [docs/distribution.md](docs/distribution.md): source, wheel, Git URL, private index guidance
+- `OPERATOR_LAB_RUNBOOK.md`: full profile → GovEngine → SCLite E2E walkthrough
+- Lab sections for GovEngine adapter posture and evidence vs SCLite authority
+- Worker smoke checklist; package build smoke aligned with CI
+
 ## [0.1.5a0] - 2026-06-18
 
 ### Phase 14 — connectors

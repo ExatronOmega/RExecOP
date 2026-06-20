@@ -21,6 +21,7 @@ VERSION_DOCS = (
     "OPERATOR_RUNBOOK.md",
     "OPERATOR_LAB_RUNBOOK.md",
     "docs/known-limitations.md",
+    "docs/distribution.md",
 )
 
 STALE_OPERATOR_VERSIONS = (
@@ -30,6 +31,7 @@ STALE_OPERATOR_VERSIONS = (
     "0.1.4a0",
     "0.1.4a1",
     "0.1.4a2",
+    "0.1.5a0",
 )
 
 CLAIM_DOCS = (
@@ -134,6 +136,8 @@ def collect_errors() -> list[str]:
     _require(errors, "OPERATOR_LAB_RUNBOOK.md", "scripts/validate_public_truth.py")
     _require(errors, ".github/workflows/ci.yml", "python scripts/validate_public_truth.py")
     _require(errors, ".github/workflows/ci.yml", "rozmiarD/tecrax")
+    _require(errors, ".github/workflows/ci.yml", "python -m build")
+    _require(errors, ".github/workflows/ci.yml", "twine check")
 
     init_text = _read("src/rexecop/__init__.py")
     if f'__version__ = "{version}"' not in init_text:
