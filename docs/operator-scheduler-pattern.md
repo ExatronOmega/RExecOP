@@ -1,4 +1,4 @@
-# Operator scheduler pattern (Phase 12)
+# Operator scheduler pattern
 
 RExecOp does **not** ship a cron engine or recurring job DSL. Scheduling is **host-owned**:
 use systemd timers, cron, or an external orchestrator to invoke RExecOp CLI commands.

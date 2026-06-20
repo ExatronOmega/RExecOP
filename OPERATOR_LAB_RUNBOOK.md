@@ -1,7 +1,10 @@
-# Operator lab runbook (Phase 11–15)
+# Operator lab runbook
 
 RExecOp `0.2.0a0` — validate neutral core, plugin boundaries, read-only paths, and the full
 profile → GovEngine → SCLite emission path before apply.
+
+Runtime data is written to `.rexecop/` in the **current working directory**. Run lab commands
+from a dedicated directory (for example `~/lab/rexecop-runtime`) so artifacts stay isolated.
 
 ## Prerequisites
 
@@ -16,7 +19,7 @@ profile → GovEngine → SCLite emission path before apply.
 ```bash
 export REXECOP_SECRETS_FILE=~/.rexecop/secrets.yaml
 rexecop version    # 0.2.0a0
-export REXECOP_STORAGE=sqlite   # optional Phase 13.1 backend
+export REXECOP_STORAGE=sqlite   # optional SQLite backend for operations/plans/evidence
 python scripts/validate_public_truth.py
 ```
 
@@ -84,16 +87,17 @@ pytest tests/test_staging_connectors_e2e.py -q
 
 Uses local HTTP stub — same shape as production `http_api` config.
 
-### 7. Worker smoke (Phase 12)
+### 7. Worker and queue smoke
 
 ```bash
 pytest tests/test_worker_runtime.py -q
 # or manual:
 rexecop worker run --once
+rexecop queue --drain
 ```
 
 - [ ] Queue drain works without a long-running daemon
-- [ ] Scheduling remains **host-owned** (systemd/cron) — see `docs/operator-scheduler-pattern.md`
+- [ ] Scheduling remains **host-owned** (systemd/cron) — see [docs/operator-scheduler-pattern.md](docs/operator-scheduler-pattern.md)
 
 ### 8. Alpha sign-off
 
@@ -105,8 +109,7 @@ rexecop worker run --once
 ## Full E2E lab: profile YAML → GovEngine → SCLite bundle
 
 This walkthrough uses the neutral `http-health-fixture` profile so domain plugins are optional.
-It exercises planning, GovEngine admission on the plan path, workflow execution, validation, and
-SCLite bundle emission.
+It exercises planning, workflow execution, validation, and SCLite bundle emission.
 
 ### Step 1 — Prepare environment
 
@@ -114,20 +117,19 @@ Copy the staging template outside git and point connectors at a reachable `/heal
 or run the pytest E2E which starts an embedded HTTP stub:
 
 ```bash
-pytest tests/test_http_health_check_e2e.py -q -k test_
+pytest tests/test_http_health_check_e2e.py -q
 ```
 
 For a manual run, create `~/lab/http-health.env.yaml` with `backend: http_api` and a `health`
 connector action (see `examples/environments/` patterns).
 
-### Step 2 — Plan (GovEngine gate)
+### Step 2 — Plan
 
 ```bash
-export REXECOP_ROOT=~/lab/rexecop-runtime
-mkdir -p "$REXECOP_ROOT"
+mkdir -p ~/lab/rexecop-runtime && cd ~/lab/rexecop-runtime
 
-rexecop --root "$REXECOP_ROOT" plan \
-  --profile examples/profiles/http-health-fixture/profile.yaml \
+rexecop plan \
+  --profile /path/to/RExecOP/examples/profiles/http-health-fixture/profile.yaml \
   --env ~/lab/http-health.env.yaml \
   --intent http_health_check \
   --target local \
@@ -136,18 +138,18 @@ rexecop --root "$REXECOP_ROOT" plan \
 
 Record `<operation-id>` from output.
 
-Verify GovEngine was consulted on the mutating path when using `apply`; for `dry_run` the plan
-still records governance context where applicable:
+For mutating `apply` plans, verify GovEngine decision events in evidence:
 
 ```bash
-rg 'govengine_decision' "$REXECOP_ROOT/evidence/<operation-id>/" || true
+rg 'govengine_decision' .rexecop/evidence/<operation-id>/ || true
 ```
 
 ### Step 3 — Start workflow
 
 ```bash
-rexecop --root "$REXECOP_ROOT" start --operation <operation-id>
-rexecop --root "$REXECOP_ROOT" status --operation <operation-id>
+cd ~/lab/rexecop-runtime
+rexecop start --operation <operation-id>
+rexecop status --operation <operation-id>
 ```
 
 Expect terminal state `completed` for the golden path.
@@ -155,7 +157,7 @@ Expect terminal state `completed` for the golden path.
 ### Step 4 — Validate profile rules
 
 ```bash
-rexecop --root "$REXECOP_ROOT" validate --operation <operation-id>
+rexecop validate --operation <operation-id>
 ```
 
 Expect `passed: true` and rule `http_health_check.probe_ok`.
@@ -163,24 +165,24 @@ Expect `passed: true` and rule `http_health_check.probe_ok`.
 ### Step 5 — Inspect SCLite bundle (truth authority)
 
 ```bash
-ls -la "$REXECOP_ROOT/sclite/<operation-id>/"
+ls -la .rexecop/sclite/<operation-id>/
 ```
 
 Expect contract artifacts, scoped ticket, receipt, and evidence sidecars. Receipt
-`executed_command_count` should reflect connector steps on staging/http paths (Phase 13.2).
+`executed_command_count` should reflect connector steps on staging/http paths.
 
 Compare with non-authoritative export:
 
 ```bash
-test -f "$REXECOP_ROOT/receipts/<operation-id>.json" && \
+test -f .rexecop/receipts/<operation-id>.json && \
   echo "receipt export is summary only — sclite/ is authoritative"
 ```
 
 ### Step 6 — History and redaction
 
 ```bash
-rexecop --root "$REXECOP_ROOT" history --operation <operation-id>
-rg -i 'api_key|token|password' "$REXECOP_ROOT/evidence/<operation-id>/" || echo "no secret leaks"
+rexecop history --operation <operation-id>
+rg -i 'api_key|token|password' .rexecop/evidence/<operation-id>/ || echo "no secret leaks"
 ```
 
 ## GovEngine adapter posture (production vs tests)
@@ -213,7 +215,7 @@ Production CLI paths use `default_govengine_adapter()` unless tests inject a sub
 | `.rexecop/evidence/<op>/` | Append-only redacted runtime events (`EvidenceManager`) | Operator telemetry / debugging |
 | `.rexecop/sclite/<op>/` | Full GovEngine-integration bundle (`SCLiteArtifactEmitter`) | **Auditable truth** (SCLite) |
 | `.rexecop/receipts/<op>.json` | Export summary pointing at sclite descriptors | **Not** parallel truth |
-| `.rexecop/operations/`, `plans/` | Runtime operation state (file or sqlite backend) | RExecOp operator store |
+| `.rexecop/operations/`, `plans/` or `rexecop.db` | Runtime operation state (`file` or `sqlite` backend) | RExecOp operator store |
 | `.rexecop/queue/`, `locks/` | Concurrency and run-now backlog | Ephemeral operator mechanics |
 
 Evidence events include `govengine_decision_requested`, `step_completed`, `receipt_generated`.
@@ -221,7 +223,7 @@ SCLite owns review semantics (`verify_ticket_use`, review bundles). When both ex
 `sclite/` as authoritative for audit — see [docs/evidence-model.md](docs/evidence-model.md)
 and [docs/sclite-integration.md](docs/sclite-integration.md).
 
-## Package build smoke (Phase 15)
+## Package build smoke
 
 ```bash
 python -m pip install build twine

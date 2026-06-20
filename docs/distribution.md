@@ -1,7 +1,7 @@
 # Distribution and installation
 
 RExecOp `0.2.0a0` is **alpha** software. Wheels are validated in CI but **not** published to
-public PyPI until operator sign-off (roadmap Phase 15.1c).
+public PyPI until explicit operator sign-off.
 
 ## Supported install paths
 

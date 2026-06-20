@@ -23,8 +23,8 @@ policy engine or a parallel truth layer.
 | --- | --- |
 | Version | `0.2.0a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Roadmap | Phases 0–15 delivered on `main` (see CHANGELOG) |
-| Tests | 150+ pytest tests (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
+| Delivery | Alpha scope complete on `main` (see [CHANGELOG](CHANGELOG.md)) |
+| Tests | 151 collected / 150 passed, 1 skipped (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
 | PyPI | not published — wheels validated in CI; see [docs/distribution.md](docs/distribution.md) |
 | Dependencies | `govengine>=0.12.2a0,<0.15`, `sclite-core>=1.0.1,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
@@ -62,9 +62,11 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Declarative profile validation rules (YAML, not hardcoded domain logic in core)
 - Vertical slices: read-only `check_backup_status`, apply `restart_zabbix_agent` (mock + staging `http_api`)
 - Operational controls: approve, pause, resume, cancel, retry, rollback, queue, target lock, maintenance windows
-- Connectors: `mock`, config-driven `http_api`, `local_shell_readonly`
+- Runtime worker: `rexecop worker run`, `rexecop queue --drain`, `rexecop trigger` (host-owned scheduling)
+- Connectors: `mock`, config-driven `http_api` (retry, pagination, error mapping), `local_shell_readonly`, `ssh_readonly` (temporary)
+- Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
-- Operator CLI (`rexecop`) and file-based storage under `.rexecop/`
+- Operator CLI (`rexecop`); runtime data under `.rexecop/` in the current working directory
 
 ## What RExecOp does not include
 
@@ -72,6 +74,7 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - SCLite schema authority or long-term truth storage
 - Domain profiles in core (no Tecrax/Ravenclaw operational logic in `src/rexecop`)
 - Production cron/recurrence scheduler (host-owned worker + systemd/cron pattern only)
+- Web UI or multi-tenant RBAC
 - Unattended apply on critical infrastructure without operator and governance gates
 - PyPI release (reserved for explicit operator sign-off — see [docs/distribution.md](docs/distribution.md))
 
@@ -133,9 +136,13 @@ Runtime artifacts live under `.rexecop/` (gitignored): operations, evidence, SCL
 | `rollback` | Run explicit workflow rollback steps after failure |
 | `validate` | Re-run declarative profile validation |
 | `escalate` | Build operator escalation package |
-| `queue` | Inspect FIFO run-now backlog |
+| `queue` | Inspect FIFO run-now backlog; `queue --drain` processes pending starts |
+| `worker run` | Poll queue and start approved operations (`--once`, `--poll-interval`, `--watch-inbox`) |
+| `trigger` | Create operation from JSON stdin or CLI flags (webhook-friendly) |
 | `status` / `history` | Operation state and evidence history |
 | `version` | Package version |
+
+Global option: `--storage file|sqlite` selects the runtime storage backend.
 
 ## Development
 
@@ -158,6 +165,7 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 | --- | --- |
 | [docs/architecture.md](docs/architecture.md) | Layer boundaries and execution path |
 | [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, CLI orchestration, queue/lock |
+| [docs/operator-scheduler-pattern.md](docs/operator-scheduler-pattern.md) | Host-owned scheduling with worker/systemd |
 | [docs/govengine-integration.md](docs/govengine-integration.md) | Governance port and apply gating |
 | [docs/sclite-integration.md](docs/sclite-integration.md) | Artifact emission and authority model |
 | [docs/evidence-model.md](docs/evidence-model.md) | Internal events vs SCLite truth |

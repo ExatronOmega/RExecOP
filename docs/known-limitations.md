@@ -16,9 +16,10 @@ what the software does **not** provide so expectations stay aligned with impleme
 | Limitation | Detail |
 | --- | --- |
 | Host-owned worker only | `rexecop worker run` polls the file queue; no built-in cron/recurrence DSL |
+| Runtime root is cwd | `.rexecop/` is created in the current working directory — no global `--root` flag |
 | File storage default | `FileStore` is default; optional `SqliteStore` via `REXECOP_STORAGE=sqlite` |
 | No web UI | CLI (`rexecop`) only |
-| No multi-tenant RBAC | Single-operator file store model |
+| No multi-tenant RBAC | Single-operator storage model |
 | Target lock is advisory | File-based lock per `(environment, target)` — not a distributed lock service |
 
 ## Connectors and infrastructure
@@ -28,8 +29,8 @@ what the software does **not** provide so expectations stay aligned with impleme
 | `http_api` is generic REST | No built-in Proxmox/PBS/Zabbix SDKs — operators configure actions in environment YAML |
 | Staging proven, production is operator-owned | CI uses HTTP stub; live infra requires operator runbook and secrets hygiene |
 | `local_shell_readonly` only | No general shell apply backend in core |
-| `ssh_readonly` is temporary | Read-only SSH allowlist exists; full policy belongs in GovEngine policy engine |
-| Mock remains default | `examples/...proxmox.example.yaml` uses `mock` backend for offline use |
+| `ssh_readonly` is temporary | Read-only SSH allowlist exists; full remote-command policy belongs in GovEngine |
+| Mock remains default offline | `examples/...proxmox.example.yaml` uses `mock` backend for offline use |
 
 ## Profiles and domain
 
@@ -52,28 +53,33 @@ what the software does **not** provide so expectations stay aligned with impleme
 
 | Limitation | Detail |
 | --- | --- |
-| PyPI not published | Install from source; `pip install rexecop` metadata not validated on public index |
-| Alpha semver line | `0.1.0a0` resets marketing version; prior `0.11.0a0` was roadmap delivery numbering |
+| Public PyPI not published | Wheels are built and checked in CI; install from source, Git URL, or operator mirror |
+| Alpha semver line | `0.2.0a0` is the current alpha line; see [CHANGELOG.md](../CHANGELOG.md) for history |
 
-## Alpha claims (allowed)
+## What alpha **does** provide (allowed claims)
 
-- GovEngine-bound operations control-plane
-- Profile-defined workflow execution
-- SCLite artifact emission on completion path
-- Mock connectors and `http_api` read-only paths (staging-tested)
+- GovEngine-bound operations control-plane with default `GovEngineClient` adapter
+- Profile-defined workflow execution and declarative validation
+- SCLite artifact emission on the completion path with honest execution receipt metrics
+- Connectors: `mock`, `http_api`, `local_shell_readonly`, temporary `ssh_readonly`
+- Host-owned worker, queue drain, and JSON `trigger` ingress
+- Optional SQLite storage backend for operations, plans, and evidence
+- Wheel build + `twine check` validated in CI
 
-## Alpha claims (forbidden — do not document or market)
+## What alpha **does not** claim (forbidden marketing)
 
 - Production-ready governance (GovEngine remains authority)
-- Full Tecrax product
-- HA scheduler / multi-tenant / UI
+- Full Tecrax product or Ravenclaw merge
+- Built-in cron/recurrence scheduler, HA multi-tenant control plane, or web UI
 - Unmanned apply on critical targets
+- Public PyPI availability
 
 ## Operator sign-off checklist
 
 Before treating alpha as fit for your environment:
 
 - [ ] Read [OPERATOR_RUNBOOK.md](../OPERATOR_RUNBOOK.md) and [safety-model.md](safety-model.md)
+- [ ] Complete [OPERATOR_LAB_RUNBOOK.md](../OPERATOR_LAB_RUNBOOK.md) checklist
 - [ ] Confirm GovEngine and SCLite versions match `pyproject.toml` pins
 - [ ] Run read-only `check_backup_status` on fixture or staging `http_api`
 - [ ] Verify `.rexecop/` exports contain no plaintext secrets

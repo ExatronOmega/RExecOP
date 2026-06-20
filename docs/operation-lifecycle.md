@@ -42,7 +42,9 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `rollback` | Execute explicit `workflow.rollback.steps` on failed operation |
 | `validate` | Re-run declarative profile validation rules |
 | `escalate` | Package failure for operator handoff |
-| `queue` | Inspect FIFO run-now backlog |
+| `queue` | Inspect FIFO run-now backlog; `queue --drain` one-shot processing |
+| `worker run` | Poll queue and start approved operations |
+| `trigger` | Create operation from JSON stdin or CLI flags |
 | `status` / `history` | Operation state and evidence history |
 
 ## Runtime policy

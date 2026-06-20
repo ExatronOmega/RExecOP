@@ -59,9 +59,8 @@ mutating connector actions at the connector runtime layer.
 
 ## Runner contracts
 
-`build_runner_request_preview()` materializes GovEngine runner request shapes from the operation
-plan for Phase 4+ execution steps. Post-execution receipt binding uses GovEngine validation
-helpers where applicable.
+`build_runner_request_preview()` materializes GovEngine runner request shapes from the
+operation plan. Post-execution receipt binding uses GovEngine validation helpers where applicable.
 
 ## SCLite bridge
 

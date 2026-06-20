@@ -161,6 +161,28 @@ rexecop escalate --operation <id>
 Review the escalation package JSON (operation state, failed step, GovEngine summary, safe next options).
 Escalation options are **descriptive** — they are not auto-executed.
 
+## Queue, worker, and triggers
+
+When `start` cannot run immediately (target lock, `max_concurrent_operations`), approved
+operations wait with `metadata.queue.status = pending`.
+
+```bash
+rexecop queue                      # inspect backlog
+rexecop queue --drain              # one-shot drain without a worker loop
+rexecop worker run --once          # poll once and start queued operations
+rexecop worker run --poll-interval 30 --watch-inbox
+```
+
+External schedulers (systemd, cron) invoke the CLI — RExecOp does not ship a cron engine.
+See [operator-scheduler-pattern.md](operator-scheduler-pattern.md).
+
+Create operations from automation:
+
+```bash
+echo '{"profile":"tecrax","env":"/path/env.yaml","intent":"check_backup_status","target":"all_critical_vms","mode":"dry_run","auto_start":true}' \
+  | rexecop trigger
+```
+
 ## Queue and concurrency
 
 ```bash
@@ -201,7 +223,8 @@ Directory is gitignored — back up operator-side if retention is required.
 | `mutating execution blocked` | GovEngine decision, approval state, maintenance window |
 | `capability_undeclared` | Action missing from profile `connectors/*.yaml` |
 | `connector disabled` | `enabled: false` in environment YAML |
-| Queue stuck | `rexecop queue`; check target lock and `max_concurrent_operations` |
+| Queue stuck | `rexecop queue`; `rexecop queue --drain` or `rexecop worker run --once` |
+| Wrong runtime data path | `.rexecop/` is relative to cwd — `cd` to your operator directory first |
 
 ## Safety checklist (every environment)
 
