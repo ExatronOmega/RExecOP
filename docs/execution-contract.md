@@ -87,7 +87,7 @@ Without `policy_pack`, connector allowlists and mode checks behave as before.
 
 ## GovEngine note
 
-GovEngine `0.14.0+` ships the PolicyEngine MVP (`govengine.policy`). RExecOp uses it when `policy_pack` is configured; otherwise governance flows through `RuntimeAdmissionResult` compose with host-supplied summaries only.
+GovEngine `0.15.0` ships the PolicyEngine MVP (`govengine.policy`). RExecOp uses it when `policy_pack` is configured; otherwise governance flows through `RuntimeAdmissionResult` compose with host-supplied summaries only.
 
 ## Related
 

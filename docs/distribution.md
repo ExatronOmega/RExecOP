@@ -1,14 +1,14 @@
 # Distribution and installation
 
-RExecOp `0.2.3a0` is **alpha** software, published on
-[PyPI](https://pypi.org/project/rexecop/0.2.3a0/); maturity limits in
+RExecOp `0.2.4a0` is **alpha** software, published on
+[PyPI](https://pypi.org/project/rexecop/0.2.4a0/); maturity limits in
 [known-limitations.md](known-limitations.md) still apply.
 
 ## Supported install paths
 
 | Path | When to use |
 | --- | --- |
-| **PyPI** (`pip install rexecop==0.2.3a0`) | Quick evaluation when GovEngine/SCLite pins are acceptable |
+| **PyPI** (`pip install rexecop==0.2.4a0`) | Quick evaluation when GovEngine/SCLite pins are acceptable |
 | Editable source (`pip install -e`) | Development and operator lab (recommended for contributors) |
 | Wheel from `dist/` after `python -m build` | Offline install, internal mirrors |
 | Git URL install | Pin a commit or tag without PyPI |
@@ -17,7 +17,7 @@ RExecOp `0.2.3a0` is **alpha** software, published on
 
 - Python **3.11+**
 - Network access to install pinned dependencies:
-  - `govengine>=0.12.2a0,<0.15`
+  - `govengine>=0.15.0,<0.16`
   - `sclite-core>=1.0.1,<1.1`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 
@@ -26,20 +26,20 @@ RExecOp `0.2.3a0` is **alpha** software, published on
 ```bash
 python -m venv .venv && source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "rexecop==0.2.3a0"
+python -m pip install "rexecop==0.2.4a0"
 rexecop version
 ```
 
 With Tecrax profile (after `tecrax` is on PyPI at a compatible version):
 
 ```bash
-python -m pip install "rexecop[tecrax]==0.2.3a0"
+python -m pip install "rexecop[tecrax]==0.2.4a0"
 ```
 
 If the `tecrax` extra cannot resolve from PyPI yet, install Tecrax from Git:
 
 ```bash
-python -m pip install "rexecop==0.2.3a0"
+python -m pip install "rexecop==0.2.4a0"
 python -m pip install "tecrax @ git+https://github.com/rozmiarD/tecrax.git@main"
 ```
 
@@ -65,7 +65,7 @@ Matches the CI `package-dry-run` job:
 
 ```bash
 python -m pip install --upgrade pip build twine
-python -m pip install "govengine>=0.12.2a0,<0.15" "sclite-core>=1.0.1,<1.1"
+python -m pip install "govengine>=0.15.0,<0.16" "sclite-core>=1.0.1,<1.1"
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*

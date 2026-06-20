@@ -4,12 +4,12 @@
 
 | Field | Value |
 |-------|-------|
-| RExecOp version (dev line) | `0.2.3a0` |
-| RExecOp version (PyPI published) | `0.2.3a0` |
+| RExecOp version (dev line) | `0.2.4a0` |
+| RExecOp version (PyPI published) | `0.2.4a0` |
 | Tecrax version | `0.3.2a0` |
 | Operator | lab automation / operator host |
 | Host / environment | dev workstation (`/home/probo/projects/rexecop`) |
-| Date (UTC) | 2026-06-20 |
+| Date (UTC) | 2026-06-16 |
 
 ## Automated checks
 
@@ -18,7 +18,7 @@
 | `bash scripts/run_alpha_signoff_checks.sh` | [x] | delivery scope + public truth |
 | `pytest -m delivery` | [x] | includes `test_stage_a_contracts.py` |
 | GitHub Actions `main` green | [x] | commit: `a24d928` (ruff fix) |
-| PyPI `rexecop==0.2.3a0` install smoke | [x] | `rexecop version` → `0.2.3a0` |
+| PyPI `rexecop==0.2.4a0` install smoke | [x] | `rexecop version` → `0.2.4a0` |
 | PyPI `tecrax==0.3.2a0` install smoke | [x] | imports OK with rexecop pin |
 
 ## Human checklist (production-adjacent)
@@ -43,6 +43,6 @@ _______________________________________________
 
 ## Notes
 
-- Etap A contract hardening landed in `0.2.3a0` (target validation, workflow contract, atomic FileStore, ssh_readonly docs).
+- Etap A contract hardening landed in `0.2.4a0` (target validation, workflow contract, atomic FileStore, ssh_readonly docs).
 - GovEngine policy engine for SSH remains a separate GovEngine roadmap item.
 - This record contains **no** secret values by design.

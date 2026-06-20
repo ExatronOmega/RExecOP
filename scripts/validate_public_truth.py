@@ -12,10 +12,10 @@ if str(SRC) not in sys.path:
 
 import rexecop  # noqa: E402
 
-EXPECTED_GOVENGINE = "govengine>=0.12.2a0,<0.15"
+EXPECTED_GOVENGINE = "govengine>=0.15.0,<0.16"
 EXPECTED_SCLITE = "sclite-core>=1.0.1,<1.1"
 EXPECTED_TECRAX_EXTRA = "tecrax>=0.3.2a0,<0.4"
-PUBLISHED_PYPI_VERSION = "0.2.3a0"
+PUBLISHED_PYPI_VERSION = "0.2.4a0"
 
 VERSION_DOCS = (
     "README.md",
@@ -36,6 +36,7 @@ STALE_OPERATOR_VERSIONS = (
     "0.2.0a0",
     "0.2.1a0",
     "0.2.2a0",
+    "0.2.3a0",
 )
 
 CLAIM_DOCS = (

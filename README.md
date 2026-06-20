@@ -1,7 +1,7 @@
 # RExecOp
 
 [![CI: pytest](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml/badge.svg)](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml)
-[![Package: rexecop 0.2.3a0](https://img.shields.io/badge/package-rexecop%200.2.3a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.3a0/)
+[![Package: rexecop 0.2.4a0](https://img.shields.io/badge/package-rexecop%200.2.4a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.4a0/)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Dependency: GovEngine](https://img.shields.io/badge/dependency-GovEngine-informational.svg)](https://github.com/rozmiarD/GovEngine)
 [![Dependency: SCLite](https://img.shields.io/badge/dependency-SCLite-informational.svg)](https://github.com/rozmiarD/SCLite)
@@ -21,12 +21,12 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Version | `0.2.3a0` |
+| Version | `0.2.4a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
 | Delivery | Alpha scope complete on `main` (see [CHANGELOG](CHANGELOG.md)) |
 | Tests | 209 passed, 1 skipped (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
-| PyPI | [`rexecop==0.2.3a0`](https://pypi.org/project/rexecop/0.2.3a0/) |
-| Dependencies | `govengine>=0.12.2a0,<0.15`, `sclite-core>=1.0.1,<1.1` (see `pyproject.toml`) |
+| PyPI | [`rexecop==0.2.4a0`](https://pypi.org/project/rexecop/0.2.4a0/) |
+| Dependencies | `govengine>=0.15.0,<0.16`, `sclite-core>=1.0.1,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
 ## Project sentence
@@ -94,7 +94,7 @@ Ravenclaw is legacy and out of scope for RExecOp.
 Published alpha package:
 
 ```bash
-python -m pip install "rexecop==0.2.3a0"
+python -m pip install "rexecop==0.2.4a0"
 rexecop version
 ```
 

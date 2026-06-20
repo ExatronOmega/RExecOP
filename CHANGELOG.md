@@ -8,6 +8,8 @@ tracked incremental roadmap delivery.
 
 ## Unreleased
 
+## [0.2.4a0] - 2026-06-16
+
 ### Execution request / receipt boundary
 
 - `rexecop.execution.model`: `ExecutionRequest`, `ExecutionReceipt`, `ExecutionStepReceipt`, `ResourceLimits` (schema `v0.1`)
@@ -26,6 +28,8 @@ tracked incremental roadmap delivery.
 - Connector policy gate in `CompositeConnectorRuntime.invoke()` before all backends
 - `rexecop.policy` module; example [examples/policy/rexecop-connectors-default.yaml](examples/policy/rexecop-connectors-default.yaml)
 - Tests: [tests/test_connector_policy_engine.py](tests/test_connector_policy_engine.py)
+- Dependency pin: `govengine>=0.15.0,<0.16` (PolicyEngine MVP)
+- Published to PyPI as `rexecop==0.2.4a0`
 
 ## [0.2.3a0] - 2026-06-20
 
