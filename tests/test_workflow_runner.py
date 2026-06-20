@@ -46,6 +46,12 @@ def test_workflow_runner_executes_declared_steps_only() -> None:
     )
     assert result.success
     assert result.executed_steps == ["resolve_inventory", "query_pbs"]
+    assert result.shared_state["execution_request"]["source"] == "approved_workflow_plan"
+    assert result.shared_state["execution_receipt"]["success"] is True
+    assert result.shared_state["execution_receipt"]["executed_steps"] == [
+        "resolve_inventory",
+        "query_pbs",
+    ]
 
 
 def test_validator_is_deterministic() -> None:

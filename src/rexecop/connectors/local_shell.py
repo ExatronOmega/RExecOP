@@ -8,6 +8,7 @@ from rexecop.connectors.base import ConnectorRequest, ConnectorResponse
 from rexecop.connectors.command_shape import normalize_allowlisted_argv
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.evidence.redaction import redact_payload
+from rexecop.execution.output import bounded_text
 
 
 class LocalShellReadonlyRuntime:
@@ -99,15 +100,30 @@ class LocalShellReadonlyRuntime:
                 data={"error_class": connector_errors.TIMEOUT},
             )
         success = completed.returncode == 0
+        max_output_bytes = int(self.config.get("max_output_bytes") or 65536)
+        stdout = bounded_text(completed.stdout, max_bytes=max_output_bytes)
+        stderr = bounded_text(completed.stderr, max_bytes=max_output_bytes)
         return ConnectorResponse(
             connector=request.connector,
             action=request.action,
             success=success,
             data=redact_payload(
                 {
-                    "stdout": completed.stdout.strip(),
-                    "stderr": completed.stderr.strip(),
+                    "stdout": stdout.text,
+                    "stderr": stderr.text,
                     "returncode": completed.returncode,
+                    "output_digests": {
+                        "stdout": stdout.digest,
+                        "stderr": stderr.digest,
+                    },
+                    "output_truncated": {
+                        "stdout": stdout.truncated,
+                        "stderr": stderr.truncated,
+                    },
+                    "output_sizes": {
+                        "stdout_bytes": stdout.original_bytes,
+                        "stderr_bytes": stderr.original_bytes,
+                    },
                 }
             ),
             error="" if success else completed.stderr.strip() or "command failed",

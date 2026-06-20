@@ -5,6 +5,10 @@ from typing import Any, Protocol
 
 from rexecop.execution.backend import StepExecutionContext, StepExecutionResult
 from rexecop.execution.executor import StepExecutor
+from rexecop.execution.model import (
+    execution_receipt_from_results,
+    execution_request_from_workflow,
+)
 
 
 class WorkflowEvidenceSink(Protocol):
@@ -75,6 +79,14 @@ class WorkflowRunner:
         state = dict(shared_state or {})
         executed = list(state.get("executed_steps") or [])
         results = dict(state.get("step_results") or {})
+        execution_request = execution_request_from_workflow(
+            operation_id=operation_id,
+            target=target,
+            mode=mode,
+            planned_steps=planned_steps,
+            max_steps=max_steps,
+        )
+        state["execution_request"] = execution_request.as_dict()
         index = start_index
         steps_run = 0
 
@@ -117,6 +129,17 @@ class WorkflowRunner:
                     correlation_id=correlation_id,
                 )
             error_class = str(result.output.get("error_class") or "")
+            state["executed_steps"] = executed
+            state["step_results"] = results
+            receipt = execution_receipt_from_results(
+                request=execution_request,
+                success=False,
+                executed_steps=executed,
+                step_results=results,
+                error=result.error or f"step failed: {step_id}",
+                error_class=error_class,
+            )
+            state["execution_receipt"] = receipt.as_dict()
             return WorkflowRunResult(
                 operation_id=operation_id,
                 success=False,
@@ -131,6 +154,13 @@ class WorkflowRunner:
 
         state["executed_steps"] = executed
         state["step_results"] = results
+        receipt = execution_receipt_from_results(
+            request=execution_request,
+            success=True,
+            executed_steps=executed,
+            step_results=results,
+        )
+        state["execution_receipt"] = receipt.as_dict()
         return WorkflowRunResult(
             operation_id=operation_id,
             success=True,

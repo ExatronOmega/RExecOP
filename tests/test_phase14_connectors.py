@@ -197,3 +197,5 @@ def test_ssh_readonly_builds_batch_mode_command() -> None:
     assert "-o" in argv and "BatchMode=yes" in argv
     assert argv[-2] == "readonly@pve-01.example.com"
     assert argv[-1] == "uptime"
+    assert response.data["output_digests"]["stdout"].startswith("sha256:")
+    assert response.data["output_truncated"]["stdout"] is False

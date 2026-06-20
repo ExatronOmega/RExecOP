@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rexecop.operation.model import Operation
-from rexecop.storage.port import RuntimeStore
+if TYPE_CHECKING:
+    from rexecop.operation.model import Operation
+    from rexecop.storage.port import RuntimeStore
 
 
 def build_escalation_package(

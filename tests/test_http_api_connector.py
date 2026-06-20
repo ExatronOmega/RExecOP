@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from helpers.staging_http_server import StagingHttpServer
 from rexecop.connectors import errors as connector_errors
@@ -102,6 +103,41 @@ def test_local_shell_readonly_runs_allowlisted_command() -> None:
     )
     assert response.success
     assert "load average" in response.data["stdout"].lower()
+    assert response.data["output_digests"]["stdout"].startswith("sha256:")
+    assert response.data["output_truncated"]["stdout"] is False
+
+
+def test_local_shell_readonly_bounds_output_and_keeps_digest() -> None:
+    runtime = LocalShellReadonlyRuntime(
+        connector_name="host_probe",
+        config={
+            "max_output_bytes": 4,
+            "allowlist": [
+                {"action": "probe", "command": "printf", "args": ["abcdef"]},
+            ],
+        },
+    )
+
+    class Result:
+        returncode = 0
+        stdout = "abcdef"
+        stderr = ""
+
+    with patch("rexecop.connectors.local_shell.subprocess.run", return_value=Result()):
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_probe",
+                action="probe",
+                target="local",
+                mode="dry_run",
+            )
+        )
+
+    assert response.success
+    assert response.data["stdout"] == "abcd"
+    assert response.data["output_truncated"]["stdout"] is True
+    assert response.data["output_sizes"]["stdout_bytes"] == 6
+    assert response.data["output_digests"]["stdout"].startswith("sha256:")
 
 
 def test_api_response_redaction_masks_secret_fields() -> None:
