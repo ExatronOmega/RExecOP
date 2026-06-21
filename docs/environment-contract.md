@@ -76,6 +76,9 @@ environment:
 
 Example pack: [examples/policy/rexecop-connectors-default.yaml](../examples/policy/rexecop-connectors-default.yaml).
 
+Lab environment with pack wired: [examples/environments/small-public-unit-proxmox.policy.example.yaml](../examples/environments/small-public-unit-proxmox.policy.example.yaml).
+The base [small-public-unit-proxmox.example.yaml](../examples/environments/small-public-unit-proxmox.example.yaml) omits `policy_pack` so apply/mutation tests stay neutral.
+
 See [execution-contract.md](execution-contract.md) and [govengine-integration.md](govengine-integration.md).
 
 ## Related

@@ -69,7 +69,31 @@ rexecop validate --operation <id>
 
 - [ ] Final state `completed`
 - [ ] `.rexecop/sclite/<id>/` contains bundle artifacts
+- [ ] `metadata.policy_verdict.decision` is `allow` for dry_run readonly (default lab env ships `policy_pack`)
 - [ ] No secrets in evidence JSON
+
+### 4b. Policy pack on lab fixture
+
+Use `examples/environments/small-public-unit-proxmox.policy.example.yaml` (readonly
+mock path with `policy_pack`). The base `small-public-unit-proxmox.example.yaml`
+stays without a pack so apply/mutation tests keep a neutral fixture.
+
+```bash
+pytest tests/test_readonly_vertical_slice_e2e.py tests/test_connector_policy_engine.py -q
+```
+
+Manual lab:
+
+```bash
+rexecop plan \
+  --profile examples/profiles/tecrax-fixture/profile.yaml \
+  --env examples/environments/small-public-unit-proxmox.policy.example.yaml \
+  --intent check_backup_status --target all_critical_vms --mode dry_run
+rexecop start --operation <id>
+```
+
+- [ ] Readonly `check_backup_status` completes with `policy_verdict.decision: allow`
+- [ ] Connector policy denies `ssh_readonly` on critical targets (unit tests)
 
 ### 5. Tecrax product profile (optional)
 

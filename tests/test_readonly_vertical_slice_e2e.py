@@ -9,6 +9,9 @@ from rexecop.storage.file_store import FileStore
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE = REPO_ROOT / "examples/profiles/tecrax-fixture/profile.yaml"
 ENVIRONMENT = REPO_ROOT / "examples/environments/small-public-unit-proxmox.example.yaml"
+POLICY_ENVIRONMENT = (
+    REPO_ROOT / "examples/environments/small-public-unit-proxmox.policy.example.yaml"
+)
 
 
 def test_readonly_vertical_slice_e2e(tmp_path: Path) -> None:
@@ -16,12 +19,14 @@ def test_readonly_vertical_slice_e2e(tmp_path: Path) -> None:
     controller = OperationController(store=store)
     operation = controller.plan(
         profile_path=PROFILE,
-        environment_path=ENVIRONMENT,
+        environment_path=POLICY_ENVIRONMENT,
         intent="check_backup_status",
         target="all_critical_vms",
         mode="dry_run",
     )
     assert operation.state == OperationState.PLANNED.value
+    assert operation.metadata["policy_pack"]["policy_id"] == "rexecop-connectors"
+    assert operation.metadata["policy_verdict"]["decision"] == "allow"
 
     completed = controller.start(operation.id)
     assert completed.state == OperationState.COMPLETED.value

@@ -18,6 +18,9 @@ from rexecop.storage.file_store import FileStore
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE = REPO_ROOT / "examples/profiles/tecrax-fixture/profile.yaml"
 ENVIRONMENT = REPO_ROOT / "examples/environments/small-public-unit-proxmox.example.yaml"
+POLICY_ENVIRONMENT = (
+    REPO_ROOT / "examples/environments/small-public-unit-proxmox.policy.example.yaml"
+)
 POLICY_PACK_PATH = REPO_ROOT / "examples/policy/rexecop-connectors-default.yaml"
 
 
@@ -110,15 +113,10 @@ def test_connector_policy_allows_read_shell_on_critical() -> None:
 
 
 def test_plan_persists_policy_pack_and_verdict(tmp_path: Path) -> None:
-    env_path = tmp_path / "env.yaml"
-    env_data = yaml.safe_load(ENVIRONMENT.read_text())
-    env_data["environment"]["policy_pack"] = _policy_pack()
-    env_path.write_text(yaml.safe_dump(env_data))
-
     controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
     operation = controller.plan(
         profile_path=PROFILE,
-        environment_path=env_path,
+        environment_path=POLICY_ENVIRONMENT,
         intent="check_backup_status",
         target="all_critical_vms",
         mode="dry_run",
@@ -150,13 +148,6 @@ def test_plan_rejects_invalid_policy_pack(tmp_path: Path) -> None:
 def test_environment_loader_reads_policy_pack() -> None:
     env = load_environment(ENVIRONMENT)
     assert env.policy_pack is None
-    env_path = ENVIRONMENT.parent / "policy-pack-fixture.yaml"
-    data = yaml.safe_load(ENVIRONMENT.read_text())
-    data["environment"]["policy_pack"] = _policy_pack()
-    env_path.write_text(yaml.safe_dump(data))
-    try:
-        loaded = load_environment(env_path)
-        assert loaded.policy_pack is not None
-        assert loaded.policy_pack["policy_id"] == "rexecop-connectors"
-    finally:
-        env_path.unlink(missing_ok=True)
+    loaded = load_environment(POLICY_ENVIRONMENT)
+    assert loaded.policy_pack is not None
+    assert loaded.policy_pack["policy_id"] == "rexecop-connectors"
