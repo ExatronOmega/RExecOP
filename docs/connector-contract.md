@@ -55,6 +55,8 @@ Templates:
 
 - `examples/environments/small-public-unit-proxmox.example.yaml` — mock connectors
 - `examples/environments/small-public-unit-proxmox.staging.example.yaml` — `http_api` + `secret_ref`
+- `examples/environments/small-public-unit-proxmox.staging.lab.example.yaml` — local lab stub (`base_url`)
+- `examples/secrets/staging-http.lab.example.yaml` — secrets template for real staging
 
 ## Safety rules
 

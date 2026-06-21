@@ -1,8 +1,9 @@
 environment:
-  id: small-public-unit-proxmox-staging
+  id: small-public-unit-proxmox-staging-lab
   description: >
-    Staging environment template for http_api connectors. Copy outside git and
-    set REXECOP_SECRETS_FILE / REXECOP_SECRET_* values operator-side.
+    Local staging lab for http_api connectors. Used by scripts/run_staging_http_lab.py
+    with an embedded Proxmox/PBS API stub (127.0.0.1). For real staging endpoints copy
+    small-public-unit-proxmox.staging.example.yaml outside git and use --env with secrets.
   profile: tecrax
 
   targets:
@@ -11,44 +12,22 @@ environment:
       members:
         - vm-zabbix-01
         - vm-pbs-01
-    vm-zabbix-01:
-      type: vm
-      node: pve-01
-      vmid: "101"
 
   connectors:
     proxmox:
       enabled: true
       backend: http_api
-      base_url_secret_ref: proxmox_base_url
-      auth:
-        secret_ref: proxmox_api_token
-        header: Authorization
-        prefix: "PVEAPIToken="
+      base_url: http://127.0.0.1:0
       timeout_seconds: 10
-      retry:
-        max_attempts: 2
-        on:
-          - timeout
-          - transient_connector_error
       actions:
         list_vms:
           method: GET
           path: /proxmox/vms
           unwrap: vms
-        restart:
-          method: POST
-          path: /proxmox/restart
-          mutating: true
-          body:
-            target: "{target}"
     pbs:
       enabled: true
       backend: http_api
-      base_url_secret_ref: pbs_base_url
-      auth:
-        secret_ref: pbs_api_token
-        header: Authorization
+      base_url: http://127.0.0.1:0
       timeout_seconds: 20
       actions:
         list_snapshots:

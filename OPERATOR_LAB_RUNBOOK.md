@@ -103,13 +103,37 @@ rexecop plan --profile tecrax --env <env> \
 rexecop start --operation <id>
 ```
 
-### 6. Staging HTTP (CI pattern)
+### 6. Staging HTTP lab (`http_api`)
+
+**Local stub (no secrets, operator host):**
+
+```bash
+python scripts/run_staging_http_lab.py
+# optional: --workdir /tmp/rexecop-staging-http-lab
+```
+
+Starts embedded Proxmox/PBS API stub on `127.0.0.1`, runs `plan` → `start` → `validate`
+for `check_backup_status` / `all_critical_vms` / `dry_run` using
+`examples/environments/small-public-unit-proxmox.staging.lab.example.yaml`.
+
+**Real staging endpoints:**
+
+```bash
+cp examples/environments/small-public-unit-proxmox.staging.example.yaml ~/lab/
+cp examples/secrets/staging-http.lab.example.yaml ~/.rexecop/secrets.yaml  # edit values; chmod 0600
+export REXECOP_SECRETS_FILE=~/.rexecop/secrets.yaml
+python scripts/run_staging_http_lab.py --env ~/lab/small-public-unit-proxmox.staging.yaml
+```
+
+**CI-equivalent pytest:**
 
 ```bash
 pytest tests/test_staging_connectors_e2e.py -q
 ```
 
-Uses local HTTP stub — same shape as production `http_api` config.
+- [ ] `staging_http_lab_ok` printed with operation id
+- [ ] `validate` → `passed: true`, rule `check_backup_status.all_critical_covered`
+- [ ] No secret material in `.rexecop/evidence/` (script checks; `rg` for manual audit)
 
 ### 7. Worker and queue smoke
 

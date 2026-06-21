@@ -30,10 +30,21 @@
 | 1 | Runbooks and safety model read | [x] | `OPERATOR_RUNBOOK.md`, `OPERATOR_LAB_RUNBOOK.md`, `docs/safety-model.md` |
 | 2 | Lab runbook completed on operator host | [x] | cwd: `/tmp/rexecop-lab-runtime` |
 | 3 | Dependency pins verified (`pip check`) | [x] | clean after editable + PyPI smoke |
-| 4 | Read-only workflow succeeded on fixture/staging | [x] | op: `op-20260621-075639-63aaee`; validate `passed: true` |
+| 4 | Read-only workflow succeeded on fixture/staging | [x] | fixture/policy op: `op-20260621-075639-63aaee`; staging `http_api` op: `op-20260621-085305-f0633c` |
 | 5 | No secrets in `.rexecop/` exports (`rg` clean) | [x] | `rg` on evidence tree — no hits |
 | 6 | Production config uses `GovEngineClient` | [x] | default via `default_govengine_adapter()`; static adapter tests-only |
 | 7 | Alpha limitations accepted | [x] | `docs/known-limitations.md`, `docs/alpha-sign-off.md` |
+
+## Staging HTTP lab evidence
+
+| Field | Value |
+|-------|-------|
+| Script | `scripts/run_staging_http_lab.py` (local stub mode) |
+| Environment | `examples/environments/small-public-unit-proxmox.staging.lab.example.yaml` |
+| Intent | `check_backup_status` / `all_critical_vms` / `dry_run` |
+| Operation id | `op-20260621-085305-f0633c` |
+| Validate rule | `check_backup_status.all_critical_covered` |
+| Connectors | `http_api` → local Proxmox/PBS stub (`StagingHttpServer`) |
 
 ## Policy lab evidence
 
@@ -57,5 +68,6 @@ lab automation — 2026-06-21 UTC
 
 - Etap A contract hardening + execution receipt boundary + PolicyEngine E2E in `0.2.4a0`.
 - Default fixture env **without** `policy_pack` remains for apply/mutation tests; policy lab uses `*.policy.example.yaml`.
-- Staging template includes optional `policy_pack` for operator copies outside git.
+- Staging template: `small-public-unit-proxmox.staging.example.yaml` (+ secrets outside git).
+- Local staging lab: `python scripts/run_staging_http_lab.py` (no external Proxmox required).
 - This record contains **no** secret values by design.
