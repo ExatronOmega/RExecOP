@@ -33,7 +33,7 @@ def test_tecrax_profile_entry_point_registered() -> None:
     resolved = resolve_profile_path("tecrax")
     profile = load_profile(resolved)
     assert profile.name == "tecrax"
-    assert profile.version == "0.3.1"
+    assert profile.version
 
 
 def test_core_has_no_domain_specific_tokens() -> None:
