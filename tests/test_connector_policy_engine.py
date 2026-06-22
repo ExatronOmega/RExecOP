@@ -112,6 +112,64 @@ def test_connector_policy_allows_read_shell_on_critical() -> None:
     assert response.success is True
 
 
+def test_connector_policy_blocks_unenforced_obligations_before_backend() -> None:
+    pack = compile_environment_policy_pack(
+        {
+            "policy_id": "obligated-read",
+            "version": "1",
+            "rules": [
+                {
+                    "rule_id": "allow-read-with-controls",
+                    "effect": "allow_with_obligations",
+                    "conditions": {"action.mode": "read"},
+                    "obligations": [
+                        {"obligation_id": "receipt", "kind": "receipt"}
+                    ],
+                    "constraints": [
+                        {
+                            "constraint_id": "bounded-output",
+                            "kind": "output_limit",
+                            "value": 4096,
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+    runtime = build_connector_runtime(
+        connectors={
+            "host_probe": {
+                "enabled": True,
+                "backend": "local_shell_readonly",
+                "allowlist": [{"action": "uptime", "command": "uptime"}],
+            }
+        },
+        profile_root=None,
+        mutating_allowed=False,
+        policy_pack=pack,
+        operation_id="op-policy-controls",
+        target_criticality="low",
+    )
+
+    with patch("rexecop.connectors.local_shell.subprocess.run") as run_mock:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_probe",
+                action="uptime",
+                target="host",
+                mode="dry_run",
+            )
+        )
+
+    run_mock.assert_not_called()
+    assert response.success is False
+    assert response.data["policy_reason_code"] == "unsupported_policy_controls"
+    assert response.data["policy_blockers"] == [
+        "unsupported_obligation:receipt:receipt",
+        "unsupported_constraint:bounded-output:output_limit",
+    ]
+
+
 def test_plan_persists_policy_pack_and_verdict(tmp_path: Path) -> None:
     controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
     operation = controller.plan(

@@ -11,6 +11,15 @@ PyPI alpha line is **`0.2.4a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+### B2-lite enforcement hardening
+
+- Structured argv restrictions block shell `-c`, `sudo`, service mutations, Docker
+  mutations and Docker Compose lifecycle commands before subprocess execution
+- Connector policy admission now accepts only plain `allow` without obligations or
+  constraints; unsupported controls fail closed with explicit blockers
+- Negative matrices cover restricted argv, subprocess-not-called and PolicyEngine
+  `allow_with_obligations` regression behavior
+
 ### R0-lite and read-only profile enforcement
 
 - Core boundary checks reject infrastructure-domain tokens under `src/rexecop`

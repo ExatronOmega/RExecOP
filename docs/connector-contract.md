@@ -111,6 +111,10 @@ connectors:
 
 Refuses mutating operation modes. Only allowlisted `action` / `command` pairs may run.
 Allowlist entries are validated with `govengine.execution.command_shape.normalize_argv`.
+RExecOp additionally rejects structured mutation patterns before subprocess execution:
+shell `-c`, `sudo`, service/systemd lifecycle mutations, Docker mutations, and Docker
+Compose `up`/`down`/`restart`. Matching uses argv tokens and command families, not
+substring scanning.
 
 Optional `max_output_bytes` (default `65536`) bounds stored stdout/stderr. Responses include
 `output_digests` (SHA-256 of full capture), `output_truncated`, and `output_sizes`.
@@ -134,6 +138,12 @@ connectors:
 ```
 
 **Policy layers:** when `environment.policy_pack` is set, GovEngine `PolicyEngine` runs at plan (operation) and at each connector invoke before backends execute. Allowlists and read-only mode checks remain as a second layer for shell/SSH backends.
+
+Connector execution currently accepts only a plain `allow` verdict with no obligations
+or constraints. `allow_with_obligations`, or any verdict carrying controls RExecOp cannot
+enforce, is blocked before the backend with `unsupported_policy_controls`. RExecOp does
+not claim that receipt, output-limit, timeout, or other obligations are fulfilled merely
+because GovEngine returned them.
 
 ### Risk notes
 

@@ -40,15 +40,35 @@ def evaluate_connector_policy(
 
 
 def policy_verdict_allows_execution(verdict: PolicyVerdict) -> bool:
-    return verdict.decision in {"allow", "allow_with_obligations"}
+    return (
+        verdict.decision == "allow"
+        and not verdict.obligations
+        and not verdict.constraints
+    )
+
+
+def unsupported_policy_controls(verdict: PolicyVerdict) -> tuple[str, list[str]]:
+    blockers = [
+        f"unsupported_obligation:{item.obligation_id}:{item.kind}"
+        for item in verdict.obligations
+    ]
+    blockers.extend(
+        f"unsupported_constraint:{item.constraint_id}:{item.kind}"
+        for item in verdict.constraints
+    )
+    if blockers:
+        return "unsupported_policy_controls", blockers
+    if verdict.decision == "allow_with_obligations":
+        return "unsupported_policy_obligations", ["unfulfilled_policy_obligations"]
+    reason = verdict.reason_code or verdict.decision
+    return reason, list(verdict.blockers) if verdict.blockers else [reason]
 
 
 def connector_policy_blocked_response(
     request: ConnectorRequest,
     verdict: PolicyVerdict,
 ) -> ConnectorResponse:
-    reason = verdict.reason_code or verdict.decision
-    blockers = list(verdict.blockers) if verdict.blockers else [reason]
+    reason, blockers = unsupported_policy_controls(verdict)
     return ConnectorResponse(
         connector=request.connector,
         action=request.action,
