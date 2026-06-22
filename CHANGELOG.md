@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.4a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.5a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
 
@@ -42,6 +42,21 @@ PyPI alpha line is **`0.2.4a0`**. Entries under [Releases](#releases) are newest
 - Source distributions exclude local editor workflow metadata
 
 ## Releases
+
+### [0.2.5a0] - 2026-06-22
+
+#### Deterministic reaction interpreter
+
+- compiles a bounded, profile-owned reaction DSL with deterministic priority,
+  exact operators, duplicate-condition rejection, and read-only intent resolution;
+- enforces reaction depth, count, idempotency, and cycle boundaries fail-closed;
+- requires plain GovEngine `allow` without obligations or constraints before a
+  child operation can be planned;
+- executes admitted reactions only through the normal operation lifecycle and
+  binds the resulting receipt into a replayable SCLite reaction chain;
+- validates LLM escalation proposals as untrusted, non-executable input only;
+- adds `reaction-plan`, `reaction-start`, `reaction-replay`, and
+  `reaction-proposal-validate` CLI commands.
 
 ### [0.2.4a0] - 2026-06-20
 
@@ -254,6 +269,7 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
+[0.2.5a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.4a0...v0.2.5a0
 [0.2.4a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.3a0...v0.2.4a0
 [0.2.3a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.2a0...v0.2.3a0
 [0.2.2a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.1a0...v0.2.2a0

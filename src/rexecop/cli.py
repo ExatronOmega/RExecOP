@@ -10,6 +10,8 @@ import typer
 from rexecop import __version__
 from rexecop.errors import RExecOpError
 from rexecop.operation.controller import OperationController
+from rexecop.reaction.model import ReactionContext
+from rexecop.reaction.service import ReactionService
 from rexecop.runtime_ops.worker import (
     drain_queue,
     parse_trigger_payload,
@@ -42,10 +44,84 @@ def _controller() -> OperationController:
     return OperationController()
 
 
+def _reaction_service() -> ReactionService:
+    return ReactionService(_controller())
+
+
 @app.command("version")
 def version_cmd() -> None:
     """Print the package version."""
     typer.echo(__version__)
+
+
+@app.command("reaction-plan")
+def reaction_plan_cmd(
+    profile: str = typer.Option(..., "--profile"),
+    env: Path = typer.Option(..., "--env"),
+    observation: Path = typer.Option(..., "--observation"),
+    target: str = typer.Option(..., "--target"),
+    mode: str = typer.Option("dry_run", "--mode"),
+    depth: int = typer.Option(0, "--depth", min=0),
+    reaction_count: int = typer.Option(0, "--reaction-count", min=0),
+    visited_rule_digest: list[str] | None = typer.Option(None, "--visited-rule-digest"),
+) -> None:
+    """Compile and evaluate one bounded profile-defined reaction."""
+    try:
+        result = _reaction_service().plan(
+            profile_path=profile,
+            environment_path=env,
+            observation_path=observation,
+            target=target,
+            mode=mode,
+            context=ReactionContext(
+                depth=depth,
+                reaction_count=reaction_count,
+                visited_rule_digests=tuple(visited_rule_digest or ()),
+            ),
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("reaction-start")
+def reaction_start_cmd(reaction: str = typer.Option(..., "--reaction")) -> None:
+    """Start the already admitted child operation for a reaction."""
+    try:
+        result = _reaction_service().start(reaction)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("reaction-replay")
+def reaction_replay_cmd(reaction: str = typer.Option(..., "--reaction")) -> None:
+    """Verify a persisted reaction chain without executing anything."""
+    try:
+        result = _reaction_service().replay(reaction)
+    except (RExecOpError, ValueError) as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("reaction-proposal-validate")
+def reaction_proposal_validate_cmd(
+    profile: str = typer.Option(..., "--profile"),
+    proposal: Path = typer.Option(..., "--proposal"),
+) -> None:
+    """Validate an untrusted advisory proposal; this never executes it."""
+    try:
+        result = _reaction_service().validate_proposal(
+            profile_path=profile,
+            proposal_path=proposal,
+        )
+    except (RExecOpError, ValueError) as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @app.command("plan")
