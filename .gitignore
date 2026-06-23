@@ -35,3 +35,9 @@ id_dsa
 id_ecdsa
 id_ed25519
 known_hosts
+*.local.yaml
+*.local.yml
+*.private.yaml
+*.private.yml
+*.runtime.yaml
+*.runtime.yml
