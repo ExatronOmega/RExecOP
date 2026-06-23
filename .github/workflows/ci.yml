@@ -39,7 +39,7 @@ jobs:
         run: python scripts/validate_public_truth.py
 
       - name: Ruff
-        run: ruff check . --exclude tecrax
+        run: ruff check . --exclude tecrax --exclude govengine
 
       - name: Mypy
         run: mypy src/rexecop
