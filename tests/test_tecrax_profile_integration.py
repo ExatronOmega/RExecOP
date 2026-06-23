@@ -26,6 +26,14 @@ TECRAX_ROOT = Path(tecrax.profile_root()).parents[2]
 HOST_INVENTORY_ENVIRONMENT = (
     TECRAX_ROOT / "examples/environments/ubuntu-host.readonly.example.yaml"
 )
+DOCKER_SERVICE_SHOW = (
+    "systemctl show docker --property=LoadState --property=ActiveState "
+    "--property=SubState --property=UnitFileState --no-pager"
+)
+DOCKER_SOCKET_SHOW = (
+    "systemctl show docker.socket --property=LoadState --property=ActiveState "
+    "--property=SubState --property=UnitFileState --no-pager"
+)
 
 
 def test_tecrax_profile_entry_point_registered() -> None:
@@ -154,6 +162,12 @@ def test_tecrax_ntp_health_ssh_readonly_e2e(
             "NTP=no\nNTPSynchronized=yes\n"
         ),
         "systemctl is-active ntp": "active\n",
+        DOCKER_SERVICE_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\n"
+        ),
+        DOCKER_SOCKET_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=listening\nUnitFileState=enabled\n"
+        ),
     }
 
     def run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
@@ -173,6 +187,47 @@ def test_tecrax_ntp_health_ssh_readonly_e2e(
 
     assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
     assert controller.validate(operation.id)["passed"] is True
+
+
+def test_tecrax_docker_services_health_ssh_readonly_e2e(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secrets_path = tmp_path / "secrets.yaml"
+    secrets_path.write_text(
+        "secrets:\n  monitoring_host_ssh_identity: /tmp/test-identity\n"
+    )
+    secrets_path.chmod(0o600)
+    monkeypatch.setenv("REXECOP_SECRETS_FILE", str(secrets_path))
+    outputs = {
+        DOCKER_SERVICE_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\n"
+        ),
+        DOCKER_SOCKET_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=listening\nUnitFileState=enabled\n"
+        ),
+    }
+
+    def run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        command = argv[-1]
+        return subprocess.CompletedProcess(argv, 0, outputs[command], "")
+
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run", side_effect=run):
+        operation = controller.plan(
+            profile_path="tecrax",
+            environment_path=HOST_INVENTORY_ENVIRONMENT,
+            intent="check_docker_services_health",
+            target="monitoring-host-01",
+            mode="dry_run",
+        )
+        completed = controller.start(operation.id)
+
+    assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
+    validation = controller.validate(operation.id)
+    assert validation["passed"] is True
+    assert validation["details"]["scope"] == "systemd_service_only"
+    assert validation["details"]["container_runtime_state"] == "not_observed"
 
 
 def test_tecrax_zabbix_application_health_http_e2e(tmp_path: Path) -> None:
@@ -233,6 +288,12 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
             "NTP=no\nNTPSynchronized=yes\n"
         ),
         "systemctl is-active ntp": "active\n",
+        DOCKER_SERVICE_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\n"
+        ),
+        DOCKER_SOCKET_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=listening\nUnitFileState=enabled\n"
+        ),
     }
 
     def run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
@@ -262,6 +323,7 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     details = validation["details"]
     assert details["diagnostic_complete"] is True
     assert details["observed_health"] == "degraded"
+    assert details["components"]["docker"]["status"] == "healthy"
     assert details["components"]["zabbix"]["status"] == "unhealthy"
     assert details["continued_failures"] == [
         {
