@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -230,7 +231,11 @@ class HttpApiConnectorRuntime:
             )
             if max_response_bytes < 1:
                 raise RExecOpValidationError("max_response_bytes must be positive")
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            urlopen_kwargs: dict[str, Any] = {"timeout": timeout}
+            tls_context = self._tls_context(request_url)
+            if tls_context is not None:
+                urlopen_kwargs["context"] = tls_context
+            with urllib.request.urlopen(req, **urlopen_kwargs) as resp:
                 raw_bytes = resp.read(max_response_bytes + 1)
             if len(raw_bytes) > max_response_bytes:
                 return (
@@ -367,6 +372,30 @@ class HttpApiConnectorRuntime:
         raise RExecOpValidationError(
             f"http_api connector {self.connector_name} requires base_url or base_url_secret_ref"
         )
+
+    def _tls_context(self, request_url: str) -> ssl.SSLContext | None:
+        tls = self.config.get("tls")
+        if tls is None:
+            return None
+        if not isinstance(tls, dict):
+            raise RExecOpValidationError("http_api tls config must be a mapping")
+        unknown = set(tls) - {"ca_file_secret_ref"}
+        if unknown:
+            raise RExecOpValidationError(
+                "http_api tls config contains unsupported fields"
+            )
+        if not request_url.lower().startswith("https://"):
+            raise RExecOpValidationError("http_api tls config requires an https base URL")
+        ca_file_ref = str(tls.get("ca_file_secret_ref") or "").strip()
+        if not ca_file_ref:
+            raise RExecOpValidationError("http_api tls.ca_file_secret_ref is required")
+        ca_file = self.secret_resolver.resolve(ca_file_ref)
+        try:
+            return ssl.create_default_context(cafile=ca_file)
+        except (OSError, ssl.SSLError) as exc:
+            raise RExecOpValidationError(
+                "http_api TLS CA file could not be loaded"
+            ) from exc
 
     def _auth_headers(self) -> dict[str, str]:
         auth = self.config.get("auth")

@@ -74,6 +74,7 @@ def test_core_has_no_domain_specific_tokens() -> None:
         "hillstone",
         "ntp",
         "pbs",
+        "portainer",
         "proxmox",
         "tecrax",
         "ubuntu",
@@ -315,13 +316,74 @@ def test_tecrax_adguard_health_local_shell_e2e(tmp_path: Path) -> None:
     assert validation["details"]["management_api_state"] == "not_observed"
 
 
+def test_tecrax_portainer_health_https_e2e(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secrets_path = tmp_path / "secrets.yaml"
+    secrets_path.write_text(
+        "secrets:\n"
+        "  portainer_base_url: https://localhost:19443\n"
+        "  portainer_ca_file: /tmp/fixture-portainer-ca.pem\n"
+    )
+    secrets_path.chmod(0o600)
+    monkeypatch.setenv("REXECOP_SECRETS_FILE", str(secrets_path))
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, _size: int = -1) -> bytes:
+            return json.dumps(
+                {
+                    "Version": "2.33.5",
+                    "InstanceID": "fixture-instance-id-must-not-persist",
+                }
+            ).encode()
+
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+    with (
+        patch(
+            "rexecop.connectors.http_api.ssl.create_default_context",
+            return_value=object(),
+        ),
+        patch(
+            "rexecop.connectors.http_api.urllib.request.urlopen",
+            return_value=Response(),
+        ),
+    ):
+        operation = controller.plan(
+            profile_path="tecrax",
+            environment_path=HOST_INVENTORY_ENVIRONMENT,
+            intent="check_portainer_health",
+            target="monitoring-host-01",
+            mode="dry_run",
+        )
+        completed = controller.start(operation.id)
+
+    assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
+    validation = controller.validate(operation.id)
+    assert validation["passed"] is True
+    assert validation["details"]["scope"] == "unauthenticated_status_only"
+    assert validation["details"]["api_version"] == "2.33.5"
+    assert validation["details"]["management_objects_state"] == "not_observed"
+    assert "fixture-instance-id-must-not-persist" not in str(completed.as_dict())
+    assert "fixture-instance-id-must-not-persist" not in str(validation)
+
+
 def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     secrets_path = tmp_path / "secrets.yaml"
     secrets_path.write_text(
-        "secrets:\n  monitoring_host_ssh_identity: /tmp/test-identity\n"
+        "secrets:\n"
+        "  monitoring_host_ssh_identity: /tmp/test-identity\n"
+        "  portainer_base_url: https://localhost:19443\n"
+        "  portainer_ca_file: /tmp/fixture-portainer-ca.pem\n"
     )
     secrets_path.chmod(0o600)
     monkeypatch.setenv("REXECOP_SECRETS_FILE", str(secrets_path))
@@ -369,6 +431,10 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
             "rexecop.connectors.http_api.urllib.request.urlopen",
             side_effect=urllib.error.URLError("unavailable"),
         ),
+        patch(
+            "rexecop.connectors.http_api.ssl.create_default_context",
+            return_value=object(),
+        ),
     ):
         operation = controller.plan(
             profile_path="tecrax",
@@ -388,7 +454,12 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     assert details["components"]["docker"]["status"] == "healthy"
     assert details["components"]["zabbix"]["status"] == "unhealthy"
     assert details["components"]["adguard"]["status"] == "healthy"
+    assert details["components"]["portainer"]["status"] == "unhealthy"
     assert details["continued_failures"] == [
+        {
+            "step_id": "read_portainer_status",
+            "error_class": "transient_connector_error",
+        },
         {
             "step_id": "read_zabbix_api_version",
             "error_class": "transient_connector_error",

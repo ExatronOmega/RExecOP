@@ -26,6 +26,8 @@ connectors:
     enabled: true
     backend: http_api
     base_url_secret_ref: proxmox_base_url   # or base_url for staging/lab
+    tls:
+      ca_file_secret_ref: proxmox_ca_file   # optional operator-managed CA path
     auth:
       secret_ref: proxmox_api_token
       header: Authorization
@@ -74,6 +76,9 @@ Templates:
 7. **HTTP response bounds** — successful bodies are read only up to
    `max_response_bytes + 1` (default `65536`); oversized responses fail before JSON parsing
    and are not persisted.
+8. **TLS** — HTTPS verifies certificates and hostnames. A private/self-signed CA may be
+   selected only through `tls.ca_file_secret_ref`; insecure verification flags are rejected.
+   The referenced CA file and any host-specific trust material stay outside git.
 
 ## Error taxonomy
 

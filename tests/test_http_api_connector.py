@@ -256,3 +256,81 @@ def test_http_api_rejects_oversized_success_payload_before_parsing() -> None:
     assert response.success is False
     assert response.data["error_class"] == connector_errors.VALIDATION_FAILED
     assert response.data["output_truncated"] is True
+
+
+def test_http_api_uses_operator_managed_ca_file_for_verified_tls() -> None:
+    class Resolver:
+        def resolve(self, secret_ref: str) -> str:
+            assert secret_ref == "fixture_ca_file"
+            return "/operator/ca/fixture.pem"
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, _size: int = -1) -> bytes:
+            return b'{"status":"ok"}'
+
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://localhost:9443",
+            "tls": {"ca_file_secret_ref": "fixture_ca_file"},
+            "actions": {"probe": {"method": "GET", "path": "/status"}},
+        },
+        profile_root=None,
+        mutating_allowed=False,
+        secret_resolver=Resolver(),
+    )
+    context = object()
+    with (
+        patch(
+            "rexecop.connectors.http_api.ssl.create_default_context",
+            return_value=context,
+        ) as create_context,
+        patch(
+            "rexecop.connectors.http_api.urllib.request.urlopen",
+            return_value=Response(),
+        ) as urlopen,
+    ):
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="api",
+                action="probe",
+                target="target",
+                mode="dry_run",
+            )
+        )
+
+    assert response.success is True
+    create_context.assert_called_once_with(cafile="/operator/ca/fixture.pem")
+    assert urlopen.call_args.kwargs["context"] is context
+
+
+def test_http_api_rejects_insecure_or_unknown_tls_options() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://api.example",
+            "tls": {"verify": False},
+            "actions": {"probe": {"method": "GET", "path": "/probe"}},
+        },
+        profile_root=None,
+        mutating_allowed=False,
+    )
+
+    response = runtime.invoke(
+        ConnectorRequest(
+            connector="api",
+            action="probe",
+            target="target",
+            mode="dry_run",
+        )
+    )
+
+    assert response.success is False
+    assert response.data["error_class"] == connector_errors.VALIDATION_FAILED
+    assert "unsupported fields" in str(response.error)
