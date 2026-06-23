@@ -264,6 +264,8 @@ def build_execution_contract(
             "execution_contract_requires_ticket_before_use",
         ],
     }
+    if plan.catalog_binding:
+        artifact["catalog_binding"] = dict(plan.catalog_binding)
     return _validate("execution_contract", artifact)
 
 

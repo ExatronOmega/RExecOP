@@ -20,6 +20,7 @@ from rexecop.adapters.govengine_port.contracts import (
     is_mutating_mode,
 )
 from rexecop.adapters.sclite_port.contracts import SCLITE_ARTIFACT_AUTHORITY
+from rexecop.catalog.service import CatalogService
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import sanitize_connectors_for_storage, validate_no_inline_secrets
 from rexecop.environment.targets import validate_operation_target
@@ -79,15 +80,52 @@ class OperationController:
     def plan(
         self,
         *,
-        profile_path: str | Path,
-        environment_path: Path,
+        profile_path: str | Path | None = None,
+        environment_path: Path | None = None,
         intent: str,
         target: str,
         mode: str = DEFAULT_MODE,
         requested_by: str = "operator",
+        catalog_path: Path | None = None,
     ) -> Operation:
         if mode not in SUPPORTED_MODES:
             raise RExecOpValidationError(f"unsupported mode: {mode}")
+
+        catalog_resolution = None
+        resolved_catalog_path: Path | None = None
+        if catalog_path is not None:
+            resolved_catalog_path = catalog_path.expanduser().resolve()
+            catalog_resolution = CatalogService(resolved_catalog_path).resolve_operation(
+                target, intent
+            )
+            if not catalog_resolution.applicability.applicable:
+                raise RExecOpValidationError(
+                    "catalog operation is not applicable: "
+                    f"{catalog_resolution.applicability.status}"
+                )
+            if profile_path is not None:
+                supplied_profile = resolve_profile_path(profile_path).resolve()
+                if supplied_profile.is_file():
+                    supplied_profile = supplied_profile.parent
+                if supplied_profile != catalog_resolution.target.profile_path.resolve():
+                    raise RExecOpValidationError(
+                        "catalog profile does not match supplied profile"
+                    )
+            if environment_path is not None and (
+                environment_path.expanduser().resolve()
+                != catalog_resolution.target.environment_path.resolve()
+            ):
+                raise RExecOpValidationError(
+                    "catalog environment does not match supplied environment"
+                )
+            profile_path = catalog_resolution.target.profile_path
+            environment_path = catalog_resolution.target.environment_path
+            target = catalog_resolution.target.environment_target
+
+        if profile_path is None:
+            raise RExecOpValidationError("profile is required without a target catalog")
+        if environment_path is None:
+            raise RExecOpValidationError("environment is required without a target catalog")
 
         resolved_profile_path = resolve_profile_path(profile_path)
         profile = load_profile(resolved_profile_path)
@@ -149,6 +187,13 @@ class OperationController:
         if environment.policy_pack:
             operation.metadata["policy_pack"] = dict(environment.policy_pack)
         operation.metadata["target_criticality"] = target_crit
+        if catalog_resolution is not None:
+            assert resolved_catalog_path is not None
+            operation.metadata["catalog_binding"] = catalog_resolution.binding.as_dict()
+            operation.metadata["catalog_runtime"] = {
+                "catalog_path": str(resolved_catalog_path),
+                "target_id": catalog_resolution.target.id,
+            }
 
         govengine_preview: dict[str, Any] = {
             "profile": profile.name,
@@ -208,6 +253,11 @@ class OperationController:
             pause_safe_points=workflow.pause_safe_points(),
             retry_policy_summary=dict(workflow.retry or {"max_attempts": 0}),
             rollback_available=bool(workflow.rollback),
+            catalog_binding=(
+                catalog_resolution.binding.as_dict()
+                if catalog_resolution is not None
+                else {}
+            ),
         )
 
         self._transition(
@@ -223,7 +273,11 @@ class OperationController:
             correlation_id=correlation_id,
             state_before=OperationState.CREATED.value,
             state_after=operation.state,
-            payload={"planned_steps": plan.planned_steps, "workflow_id": workflow.id},
+            payload={
+                "planned_steps": plan.planned_steps,
+                "workflow_id": workflow.id,
+                "catalog_binding": dict(plan.catalog_binding),
+            },
         )
         operation.evidence_event_ids.append(plan_event)
 
@@ -344,6 +398,8 @@ class OperationController:
 
     def _start_operation(self, operation_id: str, *, drain_queue: bool) -> Operation:
         operation = self.get_operation(operation_id)
+        plan = self.store.load_plan(operation_id)
+        self._verify_catalog_binding(operation, plan)
         if operation.state == OperationState.APPROVED.value and is_mutating_mode(operation.mode):
             self.runtime.check_maintenance_window(operation)
             if self.runtime.admit_for_execution(operation) == "queued":
@@ -353,6 +409,31 @@ class OperationController:
         if drain_queue:
             self._drain_queue()
         return self.get_operation(operation_id)
+
+    def _verify_catalog_binding(
+        self,
+        operation: Operation,
+        plan: OperationPlan,
+    ) -> None:
+        runtime = operation.metadata.get("catalog_runtime")
+        if not isinstance(runtime, dict):
+            return
+        catalog_path = str(runtime.get("catalog_path") or "").strip()
+        target_id = str(runtime.get("target_id") or "").strip()
+        if not catalog_path or not target_id or not plan.catalog_binding:
+            raise RExecOpValidationError("catalog runtime binding is incomplete")
+        current = CatalogService(Path(catalog_path)).resolve_operation(
+            target_id,
+            operation.intent,
+        )
+        if not current.applicability.applicable:
+            raise RExecOpValidationError(
+                f"catalog operation is no longer applicable: {current.applicability.status}"
+            )
+        if current.binding.as_dict() != plan.catalog_binding:
+            raise RExecOpValidationError(
+                "catalog binding drift detected; create a new operation plan"
+            )
 
     def _release_runtime_if_terminal(self, operation: Operation) -> None:
         if operation.state in {

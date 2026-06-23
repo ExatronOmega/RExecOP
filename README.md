@@ -24,7 +24,7 @@ policy engine or a parallel truth layer.
 | Version | `0.2.5a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
 | Delivery | Alpha scope complete on `main` (see [CHANGELOG](CHANGELOG.md)) |
-| Tests | 209 passed, 1 skipped (CI: ruff, mypy, public truth, boundary grep, secret scan, build, pytest) |
+| Tests | 280 passed, 1 skipped (2026-06-23 snapshot; CI reruns the current suite) |
 | PyPI | [`rexecop==0.2.5a0`](https://pypi.org/project/rexecop/0.2.5a0/) |
 | Dependencies | `govengine>=0.15.0,<0.16`, `sclite-core>=1.0.4,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
@@ -76,6 +76,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Connectors: `mock`, config-driven `http_api` (retry, pagination, error mapping), `local_shell_readonly`, `ssh_readonly` (temporary; bounded output + digests)
 - Execution contracts: `ExecutionRequest` / `ExecutionReceipt` in workflow `shared_state` (schema `v0.1`)
 - GovEngine `PolicyEngine` when `environment.policy_pack` is set (plan + per-connector invoke gate)
+- Operator target catalog and profile-derived operation catalog with deterministic applicability
+  and start-time drift rejection; catalog compatibility never replaces GovEngine admission
 - Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
 - Operator CLI (`rexecop`); runtime data under `.rexecop/` in the current working directory
@@ -157,6 +159,8 @@ Runtime artifacts live under `.rexecop/` (gitignored): operations, evidence, SCL
 | `queue` | Inspect FIFO run-now backlog; `queue --drain` processes pending starts |
 | `worker run` | Poll queue and start approved operations (`--once`, `--poll-interval`, `--watch-inbox`) |
 | `trigger` | Create operation from JSON stdin or CLI flags (webhook-friendly) |
+| `targets list` / `targets show` | Query bounded descriptors from a private target catalog |
+| `operations list` / `operations explain` | Query profile-owned operations and target applicability |
 | `status` / `history` | Operation state and evidence history |
 | `version` | Package version |
 
@@ -193,6 +197,7 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 | [docs/connector-contract.md](docs/connector-contract.md) | `http_api`, secrets, error taxonomy |
 | [docs/execution-contract.md](docs/execution-contract.md) | ExecutionRequest/Receipt, bounded output |
 | [docs/environment-contract.md](docs/environment-contract.md) | Target, group, and connector semantics |
+| [docs/operator-catalog.md](docs/operator-catalog.md) | Target catalog, operation projection, applicability and drift binding |
 | [docs/storage-backends.md](docs/storage-backends.md) | File vs SQLite boundaries |
 | [docs/safety-model.md](docs/safety-model.md) | Hard safety rules and operator posture |
 | [docs/known-limitations.md](docs/known-limitations.md) | Alpha scope and explicit non-claims |

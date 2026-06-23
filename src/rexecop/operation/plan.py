@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -21,6 +21,7 @@ class OperationPlan:
     pause_safe_points: list[str]
     retry_policy_summary: dict[str, Any]
     rollback_available: bool
+    catalog_binding: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -39,6 +40,7 @@ class OperationPlan:
             "pause_safe_points": list(self.pause_safe_points),
             "retry_policy_summary": dict(self.retry_policy_summary),
             "rollback_available": self.rollback_available,
+            "catalog_binding": dict(self.catalog_binding),
         }
 
     @classmethod
@@ -59,4 +61,8 @@ class OperationPlan:
             pause_safe_points=[str(item) for item in data.get("pause_safe_points") or []],
             retry_policy_summary=dict(data.get("retry_policy_summary") or {}),
             rollback_available=bool(data.get("rollback_available", False)),
+            catalog_binding={
+                str(key): str(value)
+                for key, value in dict(data.get("catalog_binding") or {}).items()
+            },
         )

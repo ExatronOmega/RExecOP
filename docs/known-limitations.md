@@ -21,6 +21,7 @@ what the software does **not** provide so expectations stay aligned with impleme
 | No web UI | CLI (`rexecop`) only |
 | No multi-tenant RBAC | Single-operator storage model |
 | Target lock is advisory | File-based lock per `(environment, target)` — not a distributed lock service |
+| Catalog is operator-owned | Static local YAML projection only; no discovery, CMDB synchronization, UI or authorization cache |
 
 ## Connectors and infrastructure
 
@@ -39,6 +40,7 @@ what the software does **not** provide so expectations stay aligned with impleme
 | Tecrax via external package | Domain semantics in [`tecrax`](https://github.com/rozmiarD/tecrax), not in core |
 | Ravenclaw out of scope | Legacy; no RExecOp profile path planned |
 | Validation is declarative YAML | Complex domain logic beyond `require_*` steps belongs in profile tooling, not core |
+| Operation catalog is opt-in | A profile intent must declare catalog metadata; RExecOp never invents missing domain applicability |
 
 ## Security and compliance
 

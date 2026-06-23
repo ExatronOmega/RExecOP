@@ -8,8 +8,15 @@ from pathlib import Path
 import typer
 
 from rexecop import __version__
+from rexecop.catalog.service import (
+    CatalogService,
+    compile_operation_descriptor,
+    compile_profile_operations,
+)
 from rexecop.errors import RExecOpError
 from rexecop.operation.controller import OperationController
+from rexecop.profile.loader import load_profile
+from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.model import ReactionContext
 from rexecop.reaction.service import ReactionService
 from rexecop.runtime_ops.worker import (
@@ -25,6 +32,13 @@ app = typer.Typer(
     help="Regulated Execution Operations control-plane for profile-defined workflows.",
     no_args_is_help=True,
 )
+targets_app = typer.Typer(help="Query an operator-owned target catalog.", no_args_is_help=True)
+operations_app = typer.Typer(
+    help="Query profile-defined operations and target applicability.",
+    no_args_is_help=True,
+)
+app.add_typer(targets_app, name="targets")
+app.add_typer(operations_app, name="operations")
 
 
 @app.callback()
@@ -52,6 +66,94 @@ def _reaction_service() -> ReactionService:
 def version_cmd() -> None:
     """Print the package version."""
     typer.echo(__version__)
+
+
+@targets_app.command("list")
+def targets_list_cmd(
+    catalog: Path = typer.Option(..., "--catalog", help="Private target catalog YAML."),
+) -> None:
+    """List bounded target descriptors without connector paths or credentials."""
+    try:
+        service = CatalogService(catalog)
+        result = {
+            "catalog_version": service.version,
+            "catalog_digest": service.digest,
+            "targets": service.list_targets(),
+        }
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@targets_app.command("show")
+def targets_show_cmd(
+    target: str = typer.Argument(..., help="Target id from the private catalog."),
+    catalog: Path = typer.Option(..., "--catalog", help="Private target catalog YAML."),
+) -> None:
+    """Show one bounded target descriptor."""
+    try:
+        item = CatalogService(catalog).get_target(target)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(item.public_dict(), indent=2, sort_keys=True))
+
+
+@operations_app.command("list")
+def operations_list_cmd(
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Registered profile name or profile path when listing all operations.",
+    ),
+    catalog: Path | None = typer.Option(
+        None,
+        "--catalog",
+        help="Private target catalog YAML when filtering by target.",
+    ),
+    target: str | None = typer.Option(
+        None,
+        "--target",
+        help="Target id; requires --catalog.",
+    ),
+) -> None:
+    """List profile operations or their technical applicability to one target."""
+    try:
+        if target is not None:
+            if catalog is None:
+                raise RExecOpError("--target requires --catalog")
+            result: dict[str, object] = {
+                "target": target,
+                "operations": CatalogService(catalog).list_operations_for_target(target),
+            }
+        else:
+            if profile is None:
+                raise RExecOpError("--profile is required when --target is omitted")
+            loaded = load_profile(resolve_profile_path(profile))
+            result = {
+                "profile": {"id": loaded.name, "version": loaded.version},
+                "operations": [item.as_dict() for item in compile_profile_operations(loaded)],
+            }
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@operations_app.command("explain")
+def operations_explain_cmd(
+    intent: str = typer.Argument(..., help="Profile intent id."),
+    profile: str = typer.Option(..., "--profile", help="Registered profile or path."),
+) -> None:
+    """Show the profile-owned operation descriptor; this is not admission."""
+    try:
+        loaded = load_profile(resolve_profile_path(profile))
+        operation = compile_operation_descriptor(loaded, intent)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(operation.as_dict(), indent=2, sort_keys=True))
 
 
 @app.command("reaction-plan")
@@ -126,10 +228,15 @@ def reaction_proposal_validate_cmd(
 
 @app.command("plan")
 def plan_cmd(
-    profile: str = typer.Option(
-        ..., "--profile", help="Registered profile name or path to profile.yaml."
+    profile: str | None = typer.Option(
+        None, "--profile", help="Registered profile name or path to profile.yaml."
     ),
-    env: Path = typer.Option(..., "--env", help="Path to environment YAML file."),
+    env: Path | None = typer.Option(None, "--env", help="Path to environment YAML file."),
+    catalog: Path | None = typer.Option(
+        None,
+        "--catalog",
+        help="Private target catalog; supplies profile/environment binding.",
+    ),
     intent: str = typer.Option(..., "--intent", help="Profile intent id."),
     target: str = typer.Option(..., "--target", help="Target id from environment."),
     mode: str = typer.Option("dry_run", "--mode", help="Operation mode."),
@@ -143,6 +250,7 @@ def plan_cmd(
             intent=intent,
             target=target,
             mode=mode,
+            catalog_path=catalog,
         )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
