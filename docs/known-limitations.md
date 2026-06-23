@@ -1,6 +1,6 @@
 # Known limitations (alpha)
 
-RExecOp `0.2.5a0` is an **alpha** release for operator evaluation. This document states
+RExecOp `0.2.6a0` is an **unpublished alpha source line** for operator evaluation. This document states
 what the software does **not** provide so expectations stay aligned with implementation.
 
 ## Governance and truth
@@ -9,7 +9,7 @@ what the software does **not** provide so expectations stay aligned with impleme
 | --- | --- |
 | GovEngine is authority | RExecOp does not interpret organizational policy; `StaticGovEngineAdapter` is test-only |
 | SCLite is truth | Receipt exports under `.rexecop/receipts/` are summaries; bundles under `.rexecop/sclite/` are authoritative |
-| No second policy engine | All mutating gates go through `govengine_port` — no bypass API |
+| No second policy engine | Configured policy packs and all mutating admission go through GovEngine — no bypass API |
 
 ## Operations and runtime
 
@@ -56,8 +56,8 @@ what the software does **not** provide so expectations stay aligned with impleme
 | Limitation | Detail |
 | --- | --- |
 | Public PyPI | `rexecop==0.2.5a0` published for alpha evaluation — not a production-ready claim |
-| Alpha semver line | `0.2.5a0` is the current alpha line; see [CHANGELOG.md](../CHANGELOG.md) for history |
-| Unreleased B2 dependency | Current main consumes GovEngine enforcement-plan APIs from GovEngine main; the next coordinated package release must raise the published dependency floor before publishing an RExecOp wheel |
+| Source alpha line | `0.2.6a0` is current on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
+| Coordinated release pending | Source metadata requires `govengine>=0.16.0,<0.17`; GovEngine must be published first, then RExecOp, then Tecrax |
 
 ## What alpha **does** provide (allowed claims)
 
@@ -86,6 +86,6 @@ Before treating alpha as fit for your environment:
 - [ ] Read [OPERATOR_RUNBOOK.md](../OPERATOR_RUNBOOK.md) and [safety-model.md](safety-model.md)
 - [ ] Complete [OPERATOR_LAB_RUNBOOK.md](../OPERATOR_LAB_RUNBOOK.md) checklist
 - [ ] Confirm GovEngine and SCLite versions match `pyproject.toml` pins
-- [ ] Run read-only `check_backup_status` on fixture or staging `http_api`
+- [ ] Run a bounded read-only profile intent appropriate for the selected target
 - [ ] Verify `.rexecop/` exports contain no plaintext secrets
 - [ ] Accept alpha limits above for production-adjacent use

@@ -11,6 +11,16 @@ PyPI alpha line is **`0.2.5a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+No changes after the `0.2.6a0` source candidate.
+
+## [0.2.6a0] - Unreleased
+
+- Advanced the source package beyond the published `0.2.5a0` wheel so B2,
+  R4c, and their GovEngine `0.16.0` floor have an unambiguous release line.
+- Publication and tagging remain separate operator-approved actions.
+- Removed an import-order cycle between `rexecop.policy` and
+  `rexecop.connectors` by lazily exposing the composite connector runtime.
+
 ### Full B2 policy binding and runtime enforcement
 
 - `ExecutionRequest` / `ExecutionReceipt` schema `v0.2` binds GovEngine policy
@@ -289,6 +299,7 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
+[0.2.6a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.5a0...HEAD
 [0.2.5a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.4a0...v0.2.5a0
 [0.2.4a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.3a0...v0.2.4a0
 [0.2.3a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.2a0...v0.2.3a0

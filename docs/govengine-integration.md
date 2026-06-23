@@ -17,7 +17,7 @@ Profile workflow
 
 | Adapter | Use |
 | --- | --- |
-| `GovEngineClient` | **Default** production path via `compose_runtime_admission_result()` |
+| `GovEngineClient` | **Default** runtime path via `compose_runtime_admission_result()` |
 | `StaticGovEngineAdapter` | Bootstrap and tests only — **not** production governance |
 
 Factory: `default_govengine_adapter()` in `adapters/govengine_port/adapter.py`.
@@ -28,7 +28,7 @@ The static adapter is explicitly marked `bootstrap_only` and documented as non-p
 ## Dependency
 
 ```text
-govengine>=0.15.0,<0.16
+govengine>=0.16.0,<0.17
 ```
 
 Pinned compatible with the SCLite alpha line used by RExecOp (`sclite-core>=1.0.4,<1.1`).
@@ -72,6 +72,10 @@ are not projected and remain blocked.
 | `approval_required` | `waiting_for_approval` — no mutating connector calls |
 | `blocked`, `read_only_only`, `human_required`, … | `blocked` or wait — no mutation |
 | `error` / invalid admission | Fail closed |
+
+For read-only workflows with `policy_pack`, the operation verdict and projected
+controls are also validated before IO. Auto-approval of the read-only lifecycle
+does not bypass PolicyEngine or enforcement-plan validation.
 
 Evidence events: `govengine_decision_requested`, `govengine_decision_received`.
 

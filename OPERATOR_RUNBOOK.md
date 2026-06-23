@@ -1,6 +1,6 @@
 # Operator runbook
 
-RExecOp **alpha** (`0.2.5a0`) — Regulated Execution Operations control-plane for
+RExecOp **alpha** (`0.2.6a0` source line) — Regulated Execution Operations control-plane for
 profile-defined workflows under GovEngine and SCLite.
 
 This runbook covers installation, daily operations, staging setup, and safety checks.
@@ -13,7 +13,7 @@ For architecture and boundaries see [docs/](docs/) and [known-limitations.md](do
 | Python | 3.11+ |
 | RExecOp | Install from source or internal wheel (see [docs/distribution.md](docs/distribution.md)) |
 | Tecrax profile | [`tecrax`](https://github.com/rozmiarD/tecrax) for `--profile tecrax` |
-| GovEngine / SCLite | Pulled in via `pip install -e .` per `pyproject.toml` pins |
+| GovEngine / SCLite | Install coordinated GovEngine source first; SCLite resolves from the package range |
 | Operator host | Shell access; network to targets when using `http_api` |
 
 ## Installation
@@ -22,13 +22,15 @@ For architecture and boundaries see [docs/](docs/) and [known-limitations.md](do
 git clone https://github.com/rozmiarD/RExecOP.git
 cd RExecOP
 python -m venv .venv && source .venv/bin/activate
+git clone https://github.com/rozmiarD/GovEngine.git ../govengine
+pip install -e ../govengine
 pip install -e ".[dev]"
 
 # Tecrax profile (recommended for operators)
 git clone https://github.com/rozmiarD/tecrax.git ../tecrax
 pip install -e ../tecrax
 
-rexecop version   # expect 0.2.5a0
+rexecop version   # expect 0.2.6a0 from the coordinated source checkout
 python scripts/validate_public_truth.py   # docs + version alignment
 
 # Optional: SQLite backend for operations/plans/evidence (SCLite bundles still on disk)
@@ -175,7 +177,7 @@ rexecop worker run --poll-interval 30 --watch-inbox
 ```
 
 External schedulers (systemd, cron) invoke the CLI — RExecOp does not ship a cron engine.
-See [operator-scheduler-pattern.md](operator-scheduler-pattern.md).
+See [operator-scheduler-pattern.md](docs/operator-scheduler-pattern.md).
 
 Create operations from automation:
 

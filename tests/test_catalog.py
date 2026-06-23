@@ -119,7 +119,7 @@ def _write_fixture(
                         "fixture_api": {
                             "enabled": True,
                             "backend": "http_api",
-                            "base_url": "http://10.23.45.67",
+                            "base_url": "http://192.0.2.67",
                             "actions": {
                                 "read_status": {"method": "GET", "path": "/status"}
                             },
@@ -171,7 +171,7 @@ def test_catalog_is_profile_neutral_and_hides_private_paths(
 
     assert targets[0]["profile_ref"] == profile_name
     rendered = json.dumps(targets)
-    assert "10.23.45.67" not in rendered
+    assert "192.0.2.67" not in rendered
     assert str(tmp_path) not in rendered
     assert "environment_ref" not in rendered
 
@@ -306,7 +306,7 @@ def test_catalog_cli_lists_targets_and_applicable_operations(tmp_path: Path) -> 
 
     assert targets.exit_code == 0, targets.output
     assert operations.exit_code == 0, operations.output
-    assert "10.23.45.67" not in targets.output
+    assert "192.0.2.67" not in targets.output
     assert str(tmp_path) not in targets.output
     assert '"status": "admission_required"' in operations.output
 

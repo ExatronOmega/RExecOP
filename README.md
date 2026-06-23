@@ -21,12 +21,12 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Version | `0.2.5a0` |
+| Current source line | `0.2.6a0` (not published) |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Delivery | Alpha scope complete on `main` (see [CHANGELOG](CHANGELOG.md)) |
-| Tests | 280 passed, 1 skipped (2026-06-23 snapshot; CI reruns the current suite) |
-| PyPI | [`rexecop==0.2.5a0`](https://pypi.org/project/rexecop/0.2.5a0/) |
-| Dependencies | `govengine>=0.15.0,<0.16`, `sclite-core>=1.0.4,<1.1` (see `pyproject.toml`) |
+| Delivery | B2/R4c source candidate on `main` (see [CHANGELOG](CHANGELOG.md)) |
+| Tests | 290 passed, 1 skipped (2026-06-23 R5d snapshot; CI reruns the current suite) |
+| Latest PyPI | [`rexecop==0.2.5a0`](https://pypi.org/project/rexecop/0.2.5a0/) |
+| Source dependencies | `govengine>=0.16.0,<0.17`, `sclite-core>=1.0.4,<1.1` (see `pyproject.toml`) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
 ## Project sentence
@@ -35,17 +35,19 @@ policy engine or a parallel truth layer.
 
 ## Stack position
 
-One operation crosses all layers. GovEngine gates **mutating** work; SCLite validates the **proof bundle** RExecOp emits after execution.
+One operation crosses all layers. GovEngine owns policy and admission decisions;
+RExecOp enforces admitted neutral controls and executes the workflow; SCLite
+validates the **proof bundle** emitted after execution.
 
 ```text
 Profiles (tecrax, fixtures)
   intents, workflows, connector contracts, validation rules
         |
         v
-RExecOp  plan -> lifecycle FSM -> step execution -> profile validation
-        |                    \
-        |                     `--> GovEngine admission (mutating modes only)
-        |                               allowed | blocked | approval_required
+RExecOp  plan -> GovEngine policy/admission -> lifecycle FSM
+        |                  allowed | blocked | approval_required
+        v
+RExecOp  admitted controls -> step execution -> profile validation
         v
 RExecOp  project runtime facts + GovEngine admission into SCLite artifact shapes
         |
@@ -70,7 +72,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - SCLite port: full GovEngine-integration bundle emission (scoped ticket v0.3, kernel guard, review pass)
 - Profile resolution by path or `rexecop.profiles` entry point (`tecrax`)
 - Declarative profile validation rules (YAML, not hardcoded domain logic in core)
-- Vertical slices: read-only `check_backup_status`, apply `restart_zabbix_agent` (mock + staging `http_api`)
+- Fixture-only vertical slices: `check_backup_status` and `restart_zabbix_agent`;
+  current operator targets remain read-only and do not expose apply
 - Operational controls: approve, pause, resume, cancel, retry, rollback, queue, target lock, maintenance windows
 - Runtime worker: `rexecop worker run`, `rexecop queue --drain`, `rexecop trigger` (host-owned scheduling)
 - Connectors: `mock`, config-driven `http_api` (retry, pagination, error mapping), `local_shell_readonly`, `ssh_readonly` (temporary; bounded output + digests)
@@ -101,6 +104,10 @@ python -m pip install "rexecop==0.2.5a0"
 rexecop version
 ```
 
+The published `0.2.5a0` wheel predates the full B2 enforcement and R4c catalog
+source changes. It does not contain the B2 enforcement path. Use the coordinated
+source checkouts below until an operator-approved `0.2.6a0` publication exists.
+
 See [docs/distribution.md](docs/distribution.md) for Tecrax extra, wheels, Git URL, and private index notes.
 
 From source (development):
@@ -109,13 +116,15 @@ From source (development):
 git clone https://github.com/rozmiarD/RExecOP.git
 cd RExecOP
 python -m venv .venv && source .venv/bin/activate
+git clone https://github.com/rozmiarD/GovEngine.git ../govengine
+pip install -e ../govengine
 pip install -e ".[dev]"
 ```
 
 With the Tecrax profile package:
 
 ```bash
-pip install -e ".[dev]" -e /path/to/tecrax
+pip install -e /path/to/tecrax
 # or: pip install -e ".[dev,tecrax]"  # when tecrax is installable from index
 ```
 
@@ -148,7 +157,7 @@ Runtime artifacts live under `.rexecop/` (gitignored): operations, evidence, SCL
 
 | Command | Purpose |
 | --- | --- |
-| `plan` | Create operation + plan; GovEngine gate for mutating modes |
+| `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (queues when lock/capacity busy) |
 | `pause` / `resume` | Pause only at `pause_safe` workflow steps |

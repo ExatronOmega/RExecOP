@@ -47,8 +47,8 @@ def test_public_truth_rejects_stale_readme_operator_version(
     version = validator.current_version()
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     stale_readme = readme.replace(version, version).replace(
-        f"| Version | `{version}` |",
-        "| Version | `0.1.2a0` |",
+        f"| Current source line | `{version}`",
+        "| Current source line | `0.1.2a0`",
     )
 
     def fake_read(path: str) -> str:
@@ -59,6 +59,28 @@ def test_public_truth_rejects_stale_readme_operator_version(
     monkeypatch.setattr(validator, "_read", fake_read)
     errors = validator.collect_errors()
     assert any("README.md:stale_operator_version:0.1.2a0" in item for item in errors)
+
+
+def test_policy_import_is_independent_of_connector_import_order() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from rexecop.policy.enforcement import "
+                "validate_policy_enforcement_record; "
+                "from rexecop.connectors import CompositeConnectorRuntime; "
+                "assert callable(validate_policy_enforcement_record); "
+                "assert CompositeConnectorRuntime.__name__ == "
+                "'CompositeConnectorRuntime'"
+            ),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_public_truth_rejects_missing_changelog_section(monkeypatch: pytest.MonkeyPatch) -> None:

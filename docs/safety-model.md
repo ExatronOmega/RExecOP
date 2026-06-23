@@ -50,8 +50,8 @@ secrets before sharing artifacts outside the host.
 
 ## Pre-alpha limits
 
-RExecOp is **alpha** software. See [docs/known-limitations.md](docs/known-limitations.md) and
-[OPERATOR_RUNBOOK.md](OPERATOR_RUNBOOK.md) for operator procedures and explicit non-claims.
+RExecOp is **alpha** software. See [known-limitations.md](known-limitations.md) and
+[OPERATOR_RUNBOOK.md](../OPERATOR_RUNBOOK.md) for operator procedures and explicit non-claims.
 
 ## Related documents
 

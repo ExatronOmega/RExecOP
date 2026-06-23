@@ -12,9 +12,9 @@ if str(SRC) not in sys.path:
 
 import rexecop  # noqa: E402
 
-EXPECTED_GOVENGINE = "govengine>=0.15.0,<0.16"
+EXPECTED_GOVENGINE = "govengine>=0.16.0,<0.17"
 EXPECTED_SCLITE = "sclite-core>=1.0.4,<1.1"
-EXPECTED_TECRAX_EXTRA = "tecrax>=0.3.3a0,<0.4"
+EXPECTED_TECRAX_EXTRA = "tecrax>=0.3.5a0,<0.4"
 PUBLISHED_PYPI_VERSION = "0.2.5a0"
 
 VERSION_DOCS = (
@@ -96,6 +96,7 @@ def _reject_stale_operator_versions(errors: list[str], path: str, text: str, cur
             f"RExecOp `{stale}`",
             f"RExecOp **alpha** (`{stale}`)",
             f"| Version | `{stale}` |",
+            f"| Current source line | `{stale}`",
             f"package-rexecop%20{stale}",
         )
         for marker in markers:
@@ -104,16 +105,25 @@ def _reject_stale_operator_versions(errors: list[str], path: str, text: str, cur
 
 
 def _assert_pypi_docs(errors: list[str], version: str) -> None:
-    if version != PUBLISHED_PYPI_VERSION:
-        return
     readme = _read("README.md")
     for marker in PYPI_DOC_MARKERS:
         if marker not in readme:
             errors.append(f"README.md:missing_pypi_marker:{marker}")
-    _require(errors, "README.md", f"https://pypi.org/project/rexecop/{version}/")
-    _require(errors, "README.md", f'python -m pip install "rexecop=={version}"')
+    _require(
+        errors,
+        "README.md",
+        f"https://pypi.org/project/rexecop/{PUBLISHED_PYPI_VERSION}/",
+    )
+    _require(
+        errors,
+        "README.md",
+        f'python -m pip install "rexecop=={PUBLISHED_PYPI_VERSION}"',
+    )
+    if version != PUBLISHED_PYPI_VERSION:
+        _require(errors, "README.md", f"Current source line | `{version}`")
+        _require(errors, "README.md", "does not contain the B2 enforcement path")
     _require(errors, "docs/distribution.md", "https://pypi.org/project/rexecop/")
-    _require(errors, "docs/distribution.md", f"rexecop=={version}")
+    _require(errors, "docs/distribution.md", f"rexecop=={PUBLISHED_PYPI_VERSION}")
 
 
 def current_version() -> str:
@@ -148,7 +158,7 @@ def collect_errors() -> list[str]:
         _require(errors, path, version)
         _reject_stale_operator_versions(errors, path, text, version)
 
-    badge = f"package-rexecop%20{version}"
+    badge = f"package-rexecop%20{PUBLISHED_PYPI_VERSION}"
     if badge not in _read("README.md"):
         errors.append(f"README.md:missing_badge:{badge}")
 
