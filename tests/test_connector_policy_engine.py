@@ -183,8 +183,78 @@ def test_plan_persists_policy_pack_and_verdict(tmp_path: Path) -> None:
     assert operation.metadata["policy_pack"]["policy_id"] == "rexecop-connectors"
     assert operation.metadata["target_criticality"] == "critical"
     assert operation.metadata["policy_verdict"]["decision"] == "allow"
+    assert operation.metadata["policy_verdict"]["reason_code"] == "check_backup_status_allowed"
     plan = controller.store.load_plan(operation.id)
     assert plan.govengine_request_preview["policy_decision"]["decision"] == "allow"
+
+
+def test_plan_blocks_operation_policy_obligations(tmp_path: Path) -> None:
+    env_path = tmp_path / "env.yaml"
+    env_data = yaml.safe_load(ENVIRONMENT.read_text())
+    env_data["environment"]["policy_pack"] = {
+        "policy_id": "obligated-operation",
+        "version": "1",
+        "rules": [
+            {
+                "rule_id": "allow-read-operation-with-controls",
+                "effect": "allow_with_obligations",
+                "conditions": {
+                    "action.category": "operation",
+                    "action.mode": "read",
+                    "action.intent": "check_backup_status",
+                },
+                "obligations": [{"obligation_id": "receipt", "kind": "receipt"}],
+                "constraints": [
+                    {
+                        "constraint_id": "bounded-output",
+                        "kind": "output_limit",
+                        "value": 4096,
+                    }
+                ],
+            }
+        ],
+    }
+    env_path.write_text(yaml.safe_dump(env_data))
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+
+    with pytest.raises(RExecOpValidationError, match="unsupported_policy_controls"):
+        controller.plan(
+            profile_path=PROFILE,
+            environment_path=env_path,
+            intent="check_backup_status",
+            target="all_critical_vms",
+            mode="dry_run",
+        )
+
+
+def test_plan_fails_closed_without_operation_allow_rule(tmp_path: Path) -> None:
+    env_path = tmp_path / "env.yaml"
+    env_data = yaml.safe_load(ENVIRONMENT.read_text())
+    env_data["environment"]["policy_pack"] = {
+        "policy_id": "connector-only",
+        "version": "1",
+        "rules": [
+            {
+                "rule_id": "allow-read-connectors-only",
+                "effect": "allow",
+                "conditions": {
+                    "action.category": "connector",
+                    "action.mode": "read",
+                },
+            }
+        ],
+    }
+    env_path.write_text(yaml.safe_dump(env_data))
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+
+    with pytest.raises(RExecOpValidationError, match="operation policy denied"):
+        controller.plan(
+            profile_path=PROFILE,
+            environment_path=env_path,
+            intent="check_backup_status",
+            target="all_critical_vms",
+            mode="dry_run",
+        )
 
 
 def test_plan_rejects_invalid_policy_pack(tmp_path: Path) -> None:

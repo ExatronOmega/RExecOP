@@ -38,10 +38,18 @@ Pinned compatible with the SCLite alpha line used by RExecOp (`sclite-core>=1.0.
 When the environment declares `policy_pack`, RExecOp:
 
 1. Compiles the pack at `plan` and stores it on the operation.
-2. Evaluates operation policy → `govengine_request_preview.policy_decision` (via `policy_verdict_to_gov_policy_decision()`).
-3. Re-evaluates per connector at invoke time in `CompositeConnectorRuntime` before backends run.
+2. Evaluates operation policy and fails plan unless the verdict is a plain `allow`
+   with no obligations or constraints.
+3. Projects the operation verdict to `govengine_request_preview.policy_decision`
+   (via `policy_verdict_to_gov_policy_decision()`).
+4. Re-evaluates per connector at invoke time in `CompositeConnectorRuntime` before backends run.
 
 Without `policy_pack`, `GovEngineClient` behavior is unchanged (compose inputs from preview overrides or fail-closed defaults).
+
+RExecOp does not satisfy GovEngine PolicyEngine obligations by implication. If
+GovEngine returns `allow_with_obligations`, `approval_required`, `deny`, blockers,
+obligations, or constraints on the policy-pack path, RExecOp treats that as
+not executable until a future enforcement adapter explicitly implements those controls.
 
 ## Decision mapping
 

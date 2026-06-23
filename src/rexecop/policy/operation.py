@@ -7,6 +7,7 @@ from govengine.policy.model import PolicyVerdict
 from rexecop.adapters.govengine_port.contracts import is_mutating_mode
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.environment.model import Environment
+from rexecop.errors import RExecOpValidationError
 from rexecop.policy.criticality import target_criticality
 
 
@@ -43,3 +44,39 @@ def evaluate_operation_policy(
         },
     }
     return PolicyEngine().evaluate(request, policy_pack)
+
+
+def operation_policy_allows_plan(verdict: PolicyVerdict) -> bool:
+    return (
+        verdict.decision == "allow"
+        and not verdict.obligations
+        and not verdict.constraints
+    )
+
+
+def operation_policy_blockers(verdict: PolicyVerdict) -> tuple[str, list[str]]:
+    blockers = [
+        f"unsupported_obligation:{item.obligation_id}:{item.kind}"
+        for item in verdict.obligations
+    ]
+    blockers.extend(
+        f"unsupported_constraint:{item.constraint_id}:{item.kind}"
+        for item in verdict.constraints
+    )
+    if blockers:
+        return "unsupported_policy_controls", blockers
+    if verdict.decision == "allow_with_obligations":
+        return "unsupported_policy_obligations", ["unfulfilled_policy_obligations"]
+    reason = verdict.reason_code or verdict.decision
+    return reason, list(verdict.blockers) if verdict.blockers else [reason]
+
+
+def require_operation_policy_allows_plan(verdict: PolicyVerdict) -> None:
+    if operation_policy_allows_plan(verdict):
+        return
+    reason, blockers = operation_policy_blockers(verdict)
+    blocker_text = ",".join(blockers)
+    raise RExecOpValidationError(
+        f"operation policy denied: {reason}"
+        + (f" blockers={blocker_text}" if blocker_text else "")
+    )

@@ -111,7 +111,9 @@ src/rexecop/
 GovEngine composes and validates `RuntimeAdmissionResult` and runner request/receipt shapes.
 RExecOp calls the GovEngine adapter before mutating execution and maps admission metadata into
 GovEngine `0.15.0` PolicyEngine evaluates `environment.policy_pack` at plan and on every
-connector invoke. GovEngine does **not** execute operations or invoke connectors directly.
+connector invoke. RExecOp executes only plain `allow` verdicts with no obligations or
+constraints on that path. GovEngine does **not** execute operations or invoke connectors
+directly.
 
 Workflow execution additionally records `ExecutionRequest` / `ExecutionReceipt` in operation
 `shared_state` — see [execution-contract.md](execution-contract.md).

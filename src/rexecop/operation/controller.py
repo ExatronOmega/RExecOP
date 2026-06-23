@@ -31,7 +31,7 @@ from rexecop.operation.plan import OperationPlan
 from rexecop.operation.state import OperationState, validate_transition
 from rexecop.orchestration.orchestrator import OperationOrchestrator
 from rexecop.policy.criticality import target_criticality
-from rexecop.policy.operation import evaluate_operation_policy
+from rexecop.policy.operation import evaluate_operation_policy, require_operation_policy_allows_plan
 from rexecop.policy.pack import compile_environment_policy_pack, policy_decision_from_verdict
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
@@ -172,6 +172,7 @@ class OperationController:
             )
             govengine_preview["policy_decision"] = policy_decision_from_verdict(verdict)
             operation.metadata["policy_verdict"] = verdict.as_dict()
+            require_operation_policy_allows_plan(verdict)
 
         created_event = self.evidence.emit(
             operation_id=operation.id,

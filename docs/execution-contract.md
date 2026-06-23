@@ -95,8 +95,12 @@ Workflow plan (profile)
 
 When `environment.policy_pack` is set:
 
-1. **Plan** — `PolicyEngine.evaluate()` builds an operation-level `PolicyVerdict`, projected to `GovPolicyDecision` in `govengine_request_preview.policy_decision` for `GovEngineClient` / `compose_runtime_admission_result()`.
-2. **Connector invoke** — `CompositeConnectorRuntime` evaluates each `ConnectorRequest` against the same compiled pack **before** the backend runs. Deny / approval-required verdicts return `error_class: policy_denied` without subprocess/HTTP/SSH I/O.
+1. **Plan** — `PolicyEngine.evaluate()` builds an operation-level `PolicyVerdict`.
+   RExecOp accepts only a plain `allow` with no obligations or constraints; every
+   other verdict fails plan. The accepted verdict is projected to `GovPolicyDecision`
+   in `govengine_request_preview.policy_decision` for `GovEngineClient` /
+   `compose_runtime_admission_result()`.
+2. **Connector invoke** — `CompositeConnectorRuntime` evaluates each `ConnectorRequest` against the same compiled pack **before** the backend runs. Any verdict other than plain `allow` with no obligations or constraints returns `error_class: policy_denied` without subprocess/HTTP/SSH I/O.
 
 Module: `rexecop.policy` (`pack.py`, `operation.py`, `connector.py`, `criticality.py`).
 
