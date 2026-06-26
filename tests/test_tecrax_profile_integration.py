@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.controller import OperationController
@@ -41,6 +42,65 @@ ADGUARD_LOGIN_STATUS = (
     "curl -q -sS -m 3 --connect-timeout 2 --max-redirs 0 -o /dev/null "
     "-w %{http_code} http://adguard.example.invalid/login.html"
 )
+
+
+def _http_binding(operation: object, connector_action: str) -> str:
+    metadata = getattr(operation, "metadata")
+    bindings = metadata.get("http_action_bindings")
+    assert isinstance(bindings, dict)
+    digest = bindings.get(connector_action)
+    assert isinstance(digest, str)
+    assert digest.startswith("sha256:")
+    return digest
+
+
+def _assert_runtime_http_digest(
+    operation: object,
+    *,
+    step_id: str,
+    connector_action: str,
+) -> None:
+    digest = _http_binding(operation, connector_action)
+    metadata = getattr(operation, "metadata")
+    shared_state = metadata.get("shared_state")
+    assert isinstance(shared_state, dict)
+    connector_results = shared_state.get("connector_results")
+    assert isinstance(connector_results, dict)
+    step_result = connector_results.get(step_id)
+    assert isinstance(step_result, dict)
+    assert step_result["action_contract_digest"] == digest
+
+    step_results = metadata.get("step_results")
+    assert isinstance(step_results, dict)
+    raw_step_result = step_results.get(step_id)
+    assert isinstance(raw_step_result, dict)
+    output = raw_step_result.get("output")
+    assert isinstance(output, dict)
+    data = output.get("data")
+    assert isinstance(data, dict)
+    assert data["action_contract_digest"] == digest
+
+    execution_receipt = shared_state.get("execution_receipt")
+    assert isinstance(execution_receipt, dict)
+    step_receipts = execution_receipt.get("step_receipts")
+    assert isinstance(step_receipts, list)
+    receipt = next(item for item in step_receipts if item["step_id"] == step_id)
+    assert receipt["output_digest_refs"]["record"].startswith("sha256:")
+
+
+def _environment_with_http_action_drift(
+    tmp_path: Path,
+    *,
+    connector: str,
+    action: str,
+    field: str,
+    value: object,
+) -> Path:
+    data = yaml.safe_load(HOST_INVENTORY_ENVIRONMENT.read_text(encoding="utf-8"))
+    data["environment"]["connectors"][connector]["actions"][action][field] = value
+    path = tmp_path / "http-action-drift.environment.yaml"
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    return path
 
 
 def _ssh_remote_command(argv: object) -> str:
@@ -274,12 +334,41 @@ def test_tecrax_zabbix_application_health_http_e2e(tmp_path: Path) -> None:
             target="monitoring-host-01",
             mode="dry_run",
         )
+        _http_binding(operation, "zabbix_api.read_zabbix_api_version")
         completed = controller.start(operation.id)
 
     assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
+    _assert_runtime_http_digest(
+        completed,
+        step_id="read_zabbix_api_version",
+        connector_action="zabbix_api.read_zabbix_api_version",
+    )
     validation = controller.validate(operation.id)
     assert validation["passed"] is True
     assert validation["details"]["container_runtime_state"] == "not_observed"
+
+
+def test_tecrax_zabbix_http_action_drift_fails_before_backend_io(
+    tmp_path: Path,
+) -> None:
+    environment = _environment_with_http_action_drift(
+        tmp_path,
+        connector="zabbix_api",
+        action="read_zabbix_api_version",
+        field="path",
+        value="/api/mutate",
+    )
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        with pytest.raises(RExecOpValidationError, match="http action shape mismatch"):
+            controller.plan(
+                profile_path="tecrax",
+                environment_path=environment,
+                intent="check_zabbix_container_health",
+                target="monitoring-host-01",
+                mode="dry_run",
+            )
+    backend.assert_not_called()
 
 
 def test_tecrax_adguard_health_local_shell_e2e(tmp_path: Path) -> None:
@@ -359,9 +448,15 @@ def test_tecrax_portainer_health_https_e2e(
             target="monitoring-host-01",
             mode="dry_run",
         )
+        _http_binding(operation, "portainer_api.read_portainer_status")
         completed = controller.start(operation.id)
 
     assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
+    _assert_runtime_http_digest(
+        completed,
+        step_id="read_portainer_status",
+        connector_action="portainer_api.read_portainer_status",
+    )
     validation = controller.validate(operation.id)
     assert validation["passed"] is True
     assert validation["details"]["observation_scope"] == "unauthenticated_status_only"
@@ -369,6 +464,38 @@ def test_tecrax_portainer_health_https_e2e(
     assert validation["details"]["management_objects_state"] == "not_observed"
     assert "fixture-instance-id-must-not-persist" not in str(completed.as_dict())
     assert "fixture-instance-id-must-not-persist" not in str(validation)
+
+
+def test_tecrax_portainer_http_action_drift_fails_before_backend_io(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secrets_path = tmp_path / "secrets.yaml"
+    secrets_path.write_text(
+        "secrets:\n"
+        "  portainer_base_url: https://localhost:19443\n"
+        "  portainer_ca_file: /tmp/fixture-portainer-ca.pem\n"
+    )
+    secrets_path.chmod(0o600)
+    monkeypatch.setenv("REXECOP_SECRETS_FILE", str(secrets_path))
+    environment = _environment_with_http_action_drift(
+        tmp_path,
+        connector="portainer_api",
+        action="read_portainer_status",
+        field="method",
+        value="POST",
+    )
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        with pytest.raises(RExecOpValidationError, match="http action shape mismatch"):
+            controller.plan(
+                profile_path="tecrax",
+                environment_path=environment,
+                intent="check_portainer_health",
+                target="monitoring-host-01",
+                mode="dry_run",
+            )
+    backend.assert_not_called()
 
 
 def test_tecrax_monitoring_diagnosis_preserves_partial_failure(

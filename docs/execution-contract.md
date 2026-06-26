@@ -46,6 +46,9 @@ outside the profile workflow.
 
 Receipts reference bounded runtime output-record digests and connector stream
 digests where available; they do **not** embed raw stdout/stderr or HTTP bodies.
+For `http_api`, the step output may include an `action_contract_digest` produced by
+profile action-shape validation. The execution receipt binds the resulting bounded step
+record digest rather than adding an HTTP-specific receipt field.
 
 ## Bounded connector output
 
