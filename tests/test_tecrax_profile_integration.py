@@ -585,6 +585,7 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     assert validation["passed"] is True
     details = validation["details"]
     assert details["aggregation_completed"] is True
+    assert details["schema_ref"] == "schemas/monitoring_host_diagnosis.v1.schema.json"
     assert details["observed_health"] == "degraded"
     assert details["components"]["docker"]["status"] == "healthy"
     assert details["components"]["zabbix"]["status"] == "unhealthy"
@@ -600,6 +601,11 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
             "error_class": "transient_connector_error",
         }
     ]
+    assert any(
+        item["component"] == "zabbix"
+        and item["reason_code"] == "zabbix_unhealthy"
+        for item in details["findings"]
+    )
 
 
 def test_validator_requires_profile_root_for_unknown_intent() -> None:
