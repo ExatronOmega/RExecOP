@@ -7,9 +7,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.6a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.7a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
+
+## [0.2.7a0] - 2026-06-27
 
 - Added the PEP 561 `py.typed` marker so downstream stack profiles can type-check
   against RExecOp's exported modules instead of treating the package as untyped.
@@ -20,6 +22,9 @@ PyPI alpha line is **`0.2.6a0`**. Entries under [Releases](#releases) are newest
   backend-not-called drift failures without adding domain semantics to RExecOp core.
 - Updated Tecrax integration fixtures for the profile-owned bounded available-update
   summary action without adding host-update semantics to RExecOp core.
+- Published the alpha line over `govengine>=0.16.1,<0.17`,
+  `sclite-core>=1.0.5,<1.1`, and `tecrax>=0.3.6a0,<0.4` while preserving the
+  existing B2/R4c execution and catalog boundary.
 
 ## [0.2.6a0] - 2026-06-24
 
@@ -307,6 +312,7 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
+[0.2.7a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.6a0...v0.2.7a0
 [0.2.6a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.5a0...v0.2.6a0
 [0.2.5a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.4a0...v0.2.5a0
 [0.2.4a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.3a0...v0.2.4a0
