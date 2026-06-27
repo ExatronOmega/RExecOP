@@ -591,6 +591,16 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     assert details["components"]["zabbix"]["status"] == "unhealthy"
     assert details["components"]["adguard"]["status"] == "healthy"
     assert details["components"]["portainer"]["status"] == "unhealthy"
+    shared_state = completed.metadata["shared_state"]
+    observation = shared_state["reaction_observation"]
+    assert observation["artifact_type"] == "observation_envelope"
+    assert observation["schema_ref"] == "schemas/observation_envelope.v0.1.schema.json"
+    assert observation["source"] == {
+        "operation_id": operation.id,
+        "intent_id": "diagnose_monitoring_host",
+        "target_id": "monitoring-host-01",
+    }
+    assert observation["facts"] == details
     assert details["continued_failures"] == [
         {
             "step_id": "read_portainer_status",
