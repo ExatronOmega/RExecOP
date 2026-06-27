@@ -11,6 +11,8 @@ PyPI alpha line is **`0.2.6a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+- Added `types-PyYAML` to the development extra so a clean `rexecop[dev]`
+  environment can run `mypy src/rexecop` without manual stub installation.
 - Added Tecrax Zabbix and Portainer HTTP action identity regression vectors that verify
   plan bindings, connector `action_contract_digest`, bounded receipt output digests and
   backend-not-called drift failures without adding domain semantics to RExecOp core.
