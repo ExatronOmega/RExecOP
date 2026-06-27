@@ -10,6 +10,7 @@ from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.controller import OperationController
 from rexecop.operation.model import Operation
 from rexecop.storage.atomic import secure_directory, secure_file
+from rexecop.triggers.service import TriggerService
 
 
 def drain_queue(controller: OperationController) -> list[str]:
@@ -92,6 +93,8 @@ def trigger_operation(
 
 
 def parse_trigger_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if "trigger_event" in payload:
+        return parse_trigger_event_payload(payload)
     profile = str(payload.get("profile") or "").strip()
     env = str(payload.get("env") or payload.get("environment") or "").strip()
     intent = str(payload.get("intent") or "").strip()
@@ -117,6 +120,43 @@ def parse_trigger_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def parse_trigger_event_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    profile = str(payload.get("profile") or "").strip()
+    env = str(payload.get("env") or payload.get("environment") or "").strip()
+    catalog = str(payload.get("catalog") or "").strip()
+    event = payload.get("trigger_event")
+    if not profile or not isinstance(event, dict):
+        raise RExecOpValidationError("trigger event requires profile and trigger_event")
+    if not env and not catalog:
+        raise RExecOpValidationError("trigger event requires env/environment or catalog")
+    return {
+        "kind": "trigger_event",
+        "profile": profile,
+        "environment_path": Path(env) if env else None,
+        "catalog_path": Path(catalog) if catalog else None,
+        "trigger_event": event,
+        "source": str(payload.get("source") or "stdin"),
+    }
+
+
+def trigger_event(
+    controller: OperationController,
+    *,
+    profile: str,
+    environment_path: Path | None,
+    event_payload: dict[str, Any],
+    catalog_path: Path | None = None,
+    source: str = "stdin",
+) -> dict[str, Any]:
+    return TriggerService(controller).process_event(
+        profile_path=profile,
+        environment_path=environment_path,
+        catalog_path=catalog_path,
+        event_payload=event_payload,
+        source=source,
+    )
+
+
 def _process_inbox(controller: OperationController) -> list[str]:
     root = controller.store.root
     if root is None:
@@ -134,19 +174,29 @@ def _process_inbox(controller: OperationController) -> list[str]:
             if not isinstance(payload, dict):
                 raise RExecOpValidationError(f"invalid inbox trigger: {path.name}")
             parsed = parse_trigger_payload(payload)
-            operation = trigger_operation(
-                controller,
-                profile=parsed["profile"],
-                environment_path=parsed["environment_path"],
-                intent=parsed["intent"],
-                target=parsed["target"],
-                mode=parsed["mode"],
-                source=f"inbox:{path.name}",
-                auto_start=parsed["auto_start"],
-                auto_react=parsed["auto_react"],
-            )
-            if parsed["auto_start"]:
-                started.append(operation.id)
+            if parsed.get("kind") == "trigger_event":
+                trigger_event(
+                    controller,
+                    profile=parsed["profile"],
+                    environment_path=parsed["environment_path"],
+                    catalog_path=parsed["catalog_path"],
+                    event_payload=parsed["trigger_event"],
+                    source=f"inbox:{path.name}",
+                )
+            else:
+                operation = trigger_operation(
+                    controller,
+                    profile=parsed["profile"],
+                    environment_path=parsed["environment_path"],
+                    intent=parsed["intent"],
+                    target=parsed["target"],
+                    mode=parsed["mode"],
+                    source=f"inbox:{path.name}",
+                    auto_start=parsed["auto_start"],
+                    auto_react=parsed["auto_react"],
+                )
+                if parsed["auto_start"]:
+                    started.append(operation.id)
             path.unlink(missing_ok=True)
         except Exception:
             path.rename(inbox / f"failed-{path.name}")

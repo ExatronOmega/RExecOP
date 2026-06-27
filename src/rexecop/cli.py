@@ -23,6 +23,7 @@ from rexecop.runtime_ops.worker import (
     drain_queue,
     parse_trigger_payload,
     run_worker,
+    trigger_event,
     trigger_operation,
 )
 from rexecop.storage.factory import resolve_storage_backend
@@ -485,21 +486,33 @@ def trigger_cmd(
 
     controller = _controller()
     try:
-        operation = trigger_operation(
-            controller,
-            profile=str(parsed["profile"]),
-            environment_path=Path(parsed["environment_path"]),
-            intent=str(parsed["intent"]),
-            target=str(parsed["target"]),
-            mode=str(parsed.get("mode") or "dry_run"),
-            source=str(parsed.get("source") or "cli"),
-            auto_start=bool(parsed.get("auto_start", auto_start)),
-            auto_react=(
-                str(parsed["auto_react"])
-                if parsed.get("auto_react") is not None
-                else None
-            ),
-        )
+        if parsed.get("kind") == "trigger_event":
+            result = trigger_event(
+                controller,
+                profile=str(parsed["profile"]),
+                environment_path=parsed["environment_path"],
+                catalog_path=parsed["catalog_path"],
+                event_payload=parsed["trigger_event"],
+                source=str(parsed.get("source") or "cli"),
+            )
+            typer.echo(json.dumps(result, indent=2, sort_keys=True))
+            return
+        else:
+            operation = trigger_operation(
+                controller,
+                profile=str(parsed["profile"]),
+                environment_path=Path(parsed["environment_path"]),
+                intent=str(parsed["intent"]),
+                target=str(parsed["target"]),
+                mode=str(parsed.get("mode") or "dry_run"),
+                source=str(parsed.get("source") or "cli"),
+                auto_start=bool(parsed.get("auto_start", auto_start)),
+                auto_react=(
+                    str(parsed["auto_react"])
+                    if parsed.get("auto_react") is not None
+                    else None
+                ),
+            )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc

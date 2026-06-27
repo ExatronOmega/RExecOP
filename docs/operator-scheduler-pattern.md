@@ -46,6 +46,30 @@ rexecop worker run --watch-inbox --poll-interval 60
 ```
 
 Drop JSON files into `.rexecop/inbox/*.json` using the same shape as `trigger` stdin.
+Inbox files may also carry a neutral trigger event. RExecOp evaluates only the
+mechanics; event meaning and operation mapping come from the selected profile's
+`triggers/trigger_rules.yaml`.
+
+```json
+{
+  "profile": "examples/profiles/runtime-fixture/profile.yaml",
+  "env": "examples/environments/runtime-fixture.policy.example.yaml",
+  "trigger_event": {
+    "id": "evt-001",
+    "source": "lab-wrapper",
+    "type": "fixture.state_observed",
+    "subject": "fixture-target",
+    "occurred_at": "2026-06-28T12:00:00+00:00",
+    "payload": {"status": "degraded"},
+    "rule_set": "fixture.triggers"
+  }
+}
+```
+
+Trigger event decisions are limited to `plan_operation`, `ignore`, `escalate`,
+`drop_duplicate`, and `cooldown_blocked`. A `plan_operation` decision creates a
+normal operation plan through `OperationController.plan()` and records trigger
+decision metadata/evidence on that operation. It does not start the operation.
 
 ## systemd unit example
 
@@ -95,6 +119,8 @@ ExecStart=/bin/bash -c 'OPERATION=$(/home/rexecop/.venv/bin/rexecop plan ...); /
 - Trigger payloads may opt into `auto_react: "plan_only"`. After the source
   operation completes, RExecOp may create a reaction chain and child operation
   plan, but the worker does not start that child automatically.
+- Trigger events use deterministic event digest, dedupe key, cooldown key and
+  bounded timestamp-skew checks. Unsafe or inconsistent event time fails closed.
 
 ## Related
 

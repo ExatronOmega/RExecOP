@@ -26,6 +26,10 @@ PyPI alpha line is **`0.2.7a0`**. Entries under [Releases](#releases) are newest
 - Preserved target catalog binding for reaction-planned child operations when
   the source operation was planned through a target catalog, including fail-closed
   catalog applicability/drift checks before child creation.
+- Added a domain-neutral trigger event intake slice with profile-owned
+  `triggers/trigger_rules.yaml`, deterministic trigger decisions, event digest
+  binding, dedupe, cooldown, timestamp-skew fail-closed checks and file-inbox
+  processing that creates operation plans without auto-starting them.
 
 ## [0.2.7a0] - 2026-06-27
 
