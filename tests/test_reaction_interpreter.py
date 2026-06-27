@@ -242,6 +242,62 @@ def test_reaction_plan_can_use_profile_observation_from_completed_operation(
     assert stored.metadata["shared_state"]["reaction_observation"] == observation
 
 
+def test_auto_react_plan_only_creates_idempotent_child_plan(tmp_path: Path) -> None:
+    profile_root = _profile(tmp_path)
+    environment_path = tmp_path / "environment.yaml"
+    environment_path.write_text(POLICY_ENV.read_text(encoding="utf-8"), encoding="utf-8")
+    store = FileStore(tmp_path / "runtime")
+    observation = _observation_value(profile_root, operation_id="source-op", status="degraded")
+    source = _completed_source_operation(profile_root, observation=observation)
+    source.metadata["profile_root"] = str(profile_root)
+    source.metadata["environment_path"] = str(environment_path)
+    source.metadata["auto_react"] = {
+        "mode": "plan_only",
+        "depth": 0,
+        "reaction_count": 0,
+        "visited_rule_digests": [],
+    }
+    store.save_operation(source)
+    controller = OperationController(store=store)
+
+    first = controller._maybe_plan_auto_reaction(source)
+    second = controller._maybe_plan_auto_reaction(source)
+
+    assert first is not None
+    assert first["status"] == "planned"
+    assert first["outcome"] == "run_intent"
+    child_id = first["child_operation_id"]
+    assert isinstance(child_id, str)
+    assert child_id
+    assert store.load_operation(child_id).state == OperationState.PLANNED.value
+    assert second is not None
+    assert second["idempotent_replay"] is True
+    assert second["child_operation_id"] == child_id
+    assert len(store.list_operations()) == 2
+
+
+def test_auto_react_plan_only_no_op_never_creates_child_operation(tmp_path: Path) -> None:
+    profile_root = _profile(tmp_path)
+    environment_path = tmp_path / "environment.yaml"
+    environment_path.write_text(POLICY_ENV.read_text(encoding="utf-8"), encoding="utf-8")
+    store = FileStore(tmp_path / "runtime")
+    observation = _observation_value(profile_root, operation_id="source-op", status="healthy")
+    source = _completed_source_operation(profile_root, observation=observation)
+    source.metadata["profile_root"] = str(profile_root)
+    source.metadata["environment_path"] = str(environment_path)
+    source.metadata["auto_react"] = {"mode": "plan_only"}
+    store.save_operation(source)
+    controller = OperationController(store=store)
+
+    result = controller._maybe_plan_auto_reaction(source)
+
+    assert result is not None
+    assert result["status"] == "planned"
+    assert result["outcome"] == "no_op"
+    assert result["child_operation_id"] is None
+    assert len(store.list_operations()) == 1
+
+
 def test_reaction_plan_rejects_missing_or_ambiguous_observation_source(
     tmp_path: Path,
 ) -> None:

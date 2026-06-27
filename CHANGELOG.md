@@ -19,6 +19,10 @@ PyPI alpha line is **`0.2.7a0`**. Entries under [Releases](#releases) are newest
   requiring a manually supplied observation file.
 - Added neutral profile conformance checks and a CI/sign-off gate for
   profile-declared reaction-observation handoff contracts.
+- Added opt-in `auto_react=plan_only` for completed read-only operations. When
+  a profile-produced `reaction_observation` is present, RExecOp can create a
+  replayable reaction plan and admitted child operation plan without starting
+  the child operation.
 
 ## [0.2.7a0] - 2026-06-27
 

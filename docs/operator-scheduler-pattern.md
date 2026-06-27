@@ -92,6 +92,9 @@ ExecStart=/bin/bash -c 'OPERATION=$(/home/rexecop/.venv/bin/rexecop plan ...); /
 - Target lock files live under `.rexecop/locks/` (advisory, single-host).
 - Queue file: `.rexecop/queue/run_now.json`.
 - Worker only starts operations in `approved` state on the queue; read-only plans still need `start` unless `trigger --auto-start`.
+- Trigger payloads may opt into `auto_react: "plan_only"`. After the source
+  operation completes, RExecOp may create a reaction chain and child operation
+  plan, but the worker does not start that child automatically.
 
 ## Related
 

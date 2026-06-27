@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -96,11 +97,13 @@ class OperationOrchestrator:
         evidence: EvidenceManager,
         transition: Any,
         export_receipt: Any,
+        auto_reaction_handler: Callable[[Operation], dict[str, Any] | None] | None = None,
     ) -> None:
         self.store = store
         self.evidence = evidence
         self._transition = transition
         self._export_receipt = export_receipt
+        self._auto_reaction_handler = auto_reaction_handler
 
     def _runner_for_operation(self, operation: Operation) -> WorkflowRunner:
         connectors = operation.metadata.get("environment_connectors")
@@ -488,6 +491,8 @@ class OperationOrchestrator:
                 EvidenceEventType.OPERATION_COMPLETED,
                 correlation_id=operation.correlation_id,
             )
+            self.store.save_operation(operation)
+            self._maybe_plan_auto_reaction(operation)
         else:
             self._transition(
                 operation,
@@ -504,6 +509,23 @@ class OperationOrchestrator:
 
         self.store.save_operation(operation)
         return operation
+
+    def _maybe_plan_auto_reaction(self, operation: Operation) -> None:
+        if self._auto_reaction_handler is None:
+            return
+        result = self._auto_reaction_handler(operation)
+        if not result:
+            return
+        operation.metadata["auto_reaction"] = result
+        event_id = self.evidence.emit(
+            operation_id=operation.id,
+            event_type=EvidenceEventType.REACTION_PLANNED,
+            correlation_id=operation.correlation_id,
+            state_before=operation.state,
+            state_after=operation.state,
+            payload=result,
+        )
+        operation.evidence_event_ids.append(event_id)
 
     def _handle_step_failure(
         self,

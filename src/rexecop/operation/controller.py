@@ -38,6 +38,7 @@ from rexecop.policy.operation import evaluate_operation_policy, require_operatio
 from rexecop.policy.pack import compile_environment_policy_pack, policy_decision_from_verdict
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
+from rexecop.reaction.model import ReactionContext
 from rexecop.storage.atomic import atomic_write_text
 from rexecop.storage.factory import create_store
 from rexecop.storage.port import RuntimeStore
@@ -77,6 +78,7 @@ class OperationController:
             evidence=self.evidence,
             transition=self._transition,
             export_receipt=self.export_receipt,
+            auto_reaction_handler=self._maybe_plan_auto_reaction,
         )
 
     def plan(
@@ -89,9 +91,15 @@ class OperationController:
         mode: str = DEFAULT_MODE,
         requested_by: str = "operator",
         catalog_path: Path | None = None,
+        auto_react: str | None = None,
     ) -> Operation:
         if mode not in SUPPORTED_MODES:
             raise RExecOpValidationError(f"unsupported mode: {mode}")
+        auto_react_mode = (auto_react or "").strip()
+        if auto_react_mode and auto_react_mode != "plan_only":
+            raise RExecOpValidationError(
+                f"unsupported auto_react mode: {auto_react_mode}"
+            )
 
         catalog_resolution = None
         resolved_catalog_path: Path | None = None
@@ -172,9 +180,17 @@ class OperationController:
         )
 
         operation.metadata["profile_root"] = str(profile.root)
+        operation.metadata["environment_path"] = str(environment_path.expanduser().resolve())
         operation.metadata["environment_connectors"] = sanitize_connectors_for_storage(
             environment.connectors
         )
+        if auto_react_mode:
+            operation.metadata["auto_react"] = {
+                "mode": auto_react_mode,
+                "depth": 0,
+                "reaction_count": 0,
+                "visited_rule_digests": [],
+            }
         http_action_bindings: dict[str, str] = {}
         for step in workflow.steps:
             if step.type != "connector" or not step.connector:
@@ -317,6 +333,64 @@ class OperationController:
 
         self.store.save_operation(operation)
         return operation
+
+    def _maybe_plan_auto_reaction(self, operation: Operation) -> dict[str, Any] | None:
+        config = operation.metadata.get("auto_react")
+        if not isinstance(config, dict):
+            return None
+        mode = str(config.get("mode") or "")
+        if mode != "plan_only":
+            raise RExecOpValidationError(f"unsupported auto_react mode: {mode}")
+        if operation.mode not in {"observe", "dry_run", "emergency_readonly"}:
+            raise RExecOpValidationError("auto_react supports read-only modes only")
+        shared_state = operation.metadata.get("shared_state")
+        if not isinstance(shared_state, dict) or not isinstance(
+            shared_state.get("reaction_observation"),
+            dict,
+        ):
+            return {
+                "mode": mode,
+                "status": "skipped",
+                "reason": "reaction_observation_not_present",
+            }
+        profile_root = str(operation.metadata.get("profile_root") or "").strip()
+        environment_path = str(operation.metadata.get("environment_path") or "").strip()
+        if not profile_root or not environment_path:
+            raise RExecOpValidationError("auto_react runtime binding is incomplete")
+
+        from rexecop.reaction.service import ReactionService
+
+        result = ReactionService(self).plan(
+            profile_path=profile_root,
+            environment_path=Path(environment_path),
+            source_operation_id=operation.id,
+            target=operation.target,
+            mode=operation.mode,
+            context=ReactionContext(
+                depth=int(config.get("depth") or 0),
+                reaction_count=int(config.get("reaction_count") or 0),
+                visited_rule_digests=tuple(
+                    str(item) for item in config.get("visited_rule_digests") or []
+                ),
+            ),
+        )
+        plan = result["reaction_plan"]
+        rule_ref = plan.get("rule_ref")
+        if not isinstance(rule_ref, dict):
+            rule_ref = {}
+        return {
+            "mode": mode,
+            "status": "planned",
+            "reaction_id": result["reaction_id"],
+            "chain_root": result["chain_root"],
+            "idempotent_replay": bool(result.get("idempotent_replay")),
+            "outcome": plan.get("outcome"),
+            "reason": plan.get("reason"),
+            "rule_id": rule_ref.get("id"),
+            "rule_digest": rule_ref.get("digest"),
+            "child_operation_id": plan.get("child_operation_id"),
+            "admission": dict(plan.get("admission") or {}),
+        }
 
     def evaluate_governance(self, operation_id: str) -> GovEngineDecision:
         operation = self.get_operation(operation_id)

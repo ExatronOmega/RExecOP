@@ -50,6 +50,27 @@ rexecop reaction-proposal-validate --profile tecrax --proposal proposal.json
 only the already admitted child and uses the ordinary connector, validation,
 evidence, and receipt path. `reaction-replay` performs no execution.
 
+Operation creation also supports an explicit plan-only automation mode:
+
+```bash
+rexecop plan \
+  --profile tecrax \
+  --env /path/outside/repo/environment.yaml \
+  --intent diagnose_monitoring_host \
+  --target monitoring-host-01 \
+  --mode dry_run \
+  --auto-react plan_only
+```
+
+`auto-react plan_only` is evaluated only after the source operation reaches
+`completed` and validation passes. It loads the profile-produced
+`metadata.shared_state.reaction_observation`, runs the same deterministic
+reaction planner, writes the replayable reaction chain, and may create an
+admitted child operation in `planned` state. It never starts that child
+operation and it is ignored unless explicitly requested on the source
+operation. `trigger` accepts the same `auto_react` value from JSON/inbox
+payloads.
+
 `reaction-plan` accepts exactly one observation source:
 
 - `--observation` points at an already generated SCLite

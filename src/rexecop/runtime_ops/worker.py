@@ -57,6 +57,7 @@ def trigger_operation(
     mode: str = "dry_run",
     source: str = "stdin",
     auto_start: bool = False,
+    auto_react: str | None = None,
 ) -> Operation:
     operation = controller.plan(
         profile_path=profile,
@@ -65,6 +66,7 @@ def trigger_operation(
         target=target,
         mode=mode,
         requested_by=f"trigger:{source}",
+        auto_react=auto_react,
     )
     event = controller.evidence.emit(
         operation_id=operation.id,
@@ -78,6 +80,7 @@ def trigger_operation(
             "intent": intent,
             "target": target,
             "mode": mode,
+            "auto_react": auto_react,
         },
     )
     operation.evidence_event_ids.append(event)
@@ -105,6 +108,11 @@ def parse_trigger_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "target": target,
         "mode": mode,
         "auto_start": bool(payload.get("auto_start", False)),
+        "auto_react": (
+            str(payload["auto_react"]).strip()
+            if payload.get("auto_react") is not None
+            else None
+        ),
         "source": str(payload.get("source") or "stdin"),
     }
 
@@ -135,6 +143,7 @@ def _process_inbox(controller: OperationController) -> list[str]:
                 mode=parsed["mode"],
                 source=f"inbox:{path.name}",
                 auto_start=parsed["auto_start"],
+                auto_react=parsed["auto_react"],
             )
             if parsed["auto_start"]:
                 started.append(operation.id)

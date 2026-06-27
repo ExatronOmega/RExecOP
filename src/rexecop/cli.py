@@ -242,6 +242,11 @@ def plan_cmd(
     intent: str = typer.Option(..., "--intent", help="Profile intent id."),
     target: str = typer.Option(..., "--target", help="Target id from environment."),
     mode: str = typer.Option("dry_run", "--mode", help="Operation mode."),
+    auto_react: str | None = typer.Option(
+        None,
+        "--auto-react",
+        help="Optional deterministic reaction mode after completion; currently: plan_only.",
+    ),
 ) -> None:
     """Create an operation plan without executing connectors."""
     try:
@@ -253,6 +258,7 @@ def plan_cmd(
             target=target,
             mode=mode,
             catalog_path=catalog,
+            auto_react=auto_react,
         )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
@@ -444,6 +450,11 @@ def trigger_cmd(
     target: str | None = typer.Option(None, "--target"),
     mode: str = typer.Option("dry_run", "--mode"),
     auto_start: bool = typer.Option(False, "--auto-start"),
+    auto_react: str | None = typer.Option(
+        None,
+        "--auto-react",
+        help="Optional deterministic reaction mode after completion; currently: plan_only.",
+    ),
 ) -> None:
     """Create an operation from JSON stdin or CLI flags (webhook-friendly)."""
     if sys.stdin.isatty() and not all([profile, env, intent, target]):
@@ -468,6 +479,7 @@ def trigger_cmd(
             "target": target or "",
             "mode": mode,
             "auto_start": auto_start,
+            "auto_react": auto_react,
             "source": "cli",
         }
 
@@ -482,6 +494,11 @@ def trigger_cmd(
             mode=str(parsed.get("mode") or "dry_run"),
             source=str(parsed.get("source") or "cli"),
             auto_start=bool(parsed.get("auto_start", auto_start)),
+            auto_react=(
+                str(parsed["auto_react"])
+                if parsed.get("auto_react") is not None
+                else None
+            ),
         )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)

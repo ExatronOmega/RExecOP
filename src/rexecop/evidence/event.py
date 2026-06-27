@@ -17,6 +17,7 @@ class EvidenceEventType(StrEnum):
     VALIDATION_STARTED = "validation_started"
     VALIDATION_COMPLETED = "validation_completed"
     RECEIPT_GENERATED = "receipt_generated"
+    REACTION_PLANNED = "reaction_planned"
     OPERATION_COMPLETED = "operation_completed"
     OPERATION_FAILED = "operation_failed"
     OPERATION_ESCALATED = "operation_escalated"

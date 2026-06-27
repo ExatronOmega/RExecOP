@@ -618,6 +618,99 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     )
 
 
+def test_tecrax_monitoring_diagnosis_auto_react_plan_only_never_starts_child(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secrets_path = tmp_path / "secrets.yaml"
+    secrets_path.write_text(
+        "secrets:\n"
+        "  monitoring_host_ssh_identity: /tmp/test-identity\n"
+        "  portainer_base_url: https://localhost:19443\n"
+        "  portainer_ca_file: /tmp/fixture-portainer-ca.pem\n"
+    )
+    secrets_path.chmod(0o600)
+    monkeypatch.setenv("REXECOP_SECRETS_FILE", str(secrets_path))
+    outputs = {
+        "cat /etc/os-release": 'PRETTY_NAME="Ubuntu 24.04 LTS"\nID=ubuntu\nVERSION_ID="24.04"\n',
+        "uname -srm": "Linux 6.8.0 x86_64\n",
+        "hostname": "monitoring-host\n",
+        "uptime": "up 5 days\n",
+        "cat /proc/loadavg": "0.10 0.20 0.30 1/200 12345\n",
+        "df -P /": (
+            "Filesystem 1024-blocks Used Available Capacity Mounted on\n"
+            "/dev/root 100000 9000 91000 9% /\n"
+        ),
+        "free -m": "Mem: 32000 8000 4000 100 2000 24000\n",
+        "timedatectl show --property=NTPSynchronized --property=NTP": (
+            "NTP=no\nNTPSynchronized=yes\n"
+        ),
+        "systemctl is-active ntp": "active\n",
+        DOCKER_SERVICE_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled\n"
+        ),
+        DOCKER_SOCKET_SHOW: (
+            "LoadState=loaded\nActiveState=active\nSubState=listening\nUnitFileState=enabled\n"
+        ),
+        "systemctl is-enabled unattended-upgrades": "enabled\n",
+        AVAILABLE_UPDATES_SUMMARY: "0;0\n",
+        "sysctl -n kernel.randomize_va_space": "2\n",
+        "sysctl -n kernel.dmesg_restrict": "1\n",
+        "find /var/run -maxdepth 1 -name reboot-required -printf '%f\\n'": "",
+        "ntpq -c 'rv 0 stratum,offset,rootdelay,rootdisp,leap'": (
+            "stratum=3, offset=0.123, rootdelay=1.23, rootdisp=2.34, leap=0\n"
+        ),
+    }
+    local_outputs = {
+        ADGUARD_DNS_QUERY: (
+            "example.com. 300 IN A 104.20.23.154\n"
+            "example.com. 300 IN A 172.66.147.243\n"
+        ),
+        ADGUARD_LOGIN_STATUS: "200",
+    }
+
+    def run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        local_command = _local_command(argv)
+        if local_command in local_outputs:
+            return subprocess.CompletedProcess(argv, 0, local_outputs[local_command], "")
+        command = _ssh_remote_command(argv)
+        return subprocess.CompletedProcess(argv, 0, outputs[command], "")
+
+    controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
+    with (
+        patch("rexecop.connectors.ssh_readonly.subprocess.run", side_effect=run),
+        patch(
+            "rexecop.connectors.http_api.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("unavailable"),
+        ),
+        patch(
+            "rexecop.connectors.http_api.ssl.create_default_context",
+            return_value=object(),
+        ),
+    ):
+        operation = controller.plan(
+            profile_path="tecrax",
+            environment_path=HOST_INVENTORY_ENVIRONMENT,
+            intent="diagnose_monitoring_host",
+            target="monitoring-host-01",
+            mode="dry_run",
+            auto_react="plan_only",
+        )
+        completed = controller.start(operation.id)
+
+    assert completed.state == OperationState.COMPLETED.value, completed.as_dict()
+    auto_reaction = completed.metadata["auto_reaction"]
+    assert auto_reaction["status"] == "planned"
+    assert auto_reaction["outcome"] == "run_intent"
+    assert auto_reaction["rule_id"] == "monitoring.zabbix-unhealthy"
+    child_id = auto_reaction["child_operation_id"]
+    assert isinstance(child_id, str)
+    child = controller.get_operation(child_id)
+    assert child.intent == "check_zabbix_container_health"
+    assert child.state == OperationState.PLANNED.value
+    assert child.requested_by.startswith("reaction:reaction-")
+
+
 def test_validator_requires_profile_root_for_unknown_intent() -> None:
     profile = load_profile(FIXTURE_PROFILE)
     try:

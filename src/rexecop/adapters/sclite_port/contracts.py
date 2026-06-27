@@ -84,6 +84,10 @@ EVENT_SCLITE_MAPPING: dict[str, dict[str, str]] = {
         "future_artifact": "execution_receipt",
         "sclite_schema_ref": SCLITE_SCHEMA_REFS["execution_receipt"],
     },
+    "reaction_planned": {
+        "future_artifact": "evidence_contract",
+        "sclite_schema_ref": SCLITE_SCHEMA_REFS["evidence_contract"],
+    },
     "operation_completed": {
         "future_artifact": "execution_receipt",
         "sclite_schema_ref": SCLITE_SCHEMA_REFS["execution_receipt"],
