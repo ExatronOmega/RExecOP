@@ -70,6 +70,11 @@ Trigger event decisions are limited to `plan_operation`, `ignore`, `escalate`,
 `drop_duplicate`, and `cooldown_blocked`. A `plan_operation` decision creates a
 normal operation plan through `OperationController.plan()` and records trigger
 decision metadata/evidence on that operation. It does not start the operation.
+Trigger rules may bind an operation target literally (`target` or
+`catalog_target`) or by a neutral event-field path (`target_from` or
+`catalog_target_from`, for example `subject`). Profiles own the meaning of those
+fields; RExecOp only resolves the path and fails closed when it is missing or
+ambiguous.
 
 ## systemd unit example
 

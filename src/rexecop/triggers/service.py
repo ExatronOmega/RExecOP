@@ -27,7 +27,17 @@ ALLOWED_OPERATORS = frozenset({"exists", "equals", "not_equals", "in"})
 ALLOWED_RULE_KEYS = frozenset(
     {"id", "priority", "event_type", "when", "decision", "operation", "cooldown_seconds"}
 )
-ALLOWED_OPERATION_KEYS = frozenset({"intent", "target", "catalog_target", "mode", "auto_react"})
+ALLOWED_OPERATION_KEYS = frozenset(
+    {
+        "intent",
+        "target",
+        "target_from",
+        "catalog_target",
+        "catalog_target_from",
+        "mode",
+        "auto_react",
+    }
+)
 ALLOWED_EVENT_KEYS = frozenset(
     {
         "id",
@@ -339,6 +349,7 @@ class TriggerService:
                 rule=matched,
                 source=source,
                 decision_id=decision_id,
+                event=event,
                 event_digest=event_digest,
                 payload_digest=payload_digest,
                 dedupe_key=dedupe_key,
@@ -393,6 +404,7 @@ class TriggerService:
         rule: TriggerRule,
         source: str,
         decision_id: str,
+        event: Mapping[str, Any],
         event_digest: str,
         payload_digest: str,
         dedupe_key: str,
@@ -404,8 +416,15 @@ class TriggerService:
             if operation.get("auto_react") is not None
             else None
         )
-        if catalog_path is not None or operation.get("catalog_target"):
-            catalog_target = str(operation.get("catalog_target") or "").strip()
+        if catalog_path is not None or operation.get("catalog_target") or operation.get(
+            "catalog_target_from"
+        ):
+            catalog_target = _operation_ref(
+                operation,
+                event,
+                literal_key="catalog_target",
+                path_key="catalog_target_from",
+            )
             if not catalog_target:
                 raise RExecOpValidationError("trigger catalog operation requires catalog_target")
             child = self.controller.plan(
@@ -419,7 +438,12 @@ class TriggerService:
                 auto_react=auto_react,
             )
         else:
-            target = str(operation.get("target") or "").strip()
+            target = _operation_ref(
+                operation,
+                event,
+                literal_key="target",
+                path_key="target_from",
+            )
             if environment_path is None or not target:
                 raise RExecOpValidationError("trigger operation requires environment and target")
             child = self.controller.plan(
@@ -530,6 +554,29 @@ def _default_dedupe_key(event: Mapping[str, Any], *, payload_digest: str) -> str
             payload_digest,
         ]
     )
+
+
+def _operation_ref(
+    operation: Mapping[str, Any],
+    event: Mapping[str, Any],
+    *,
+    literal_key: str,
+    path_key: str,
+) -> str:
+    literal = str(operation.get(literal_key) or "").strip()
+    path = str(operation.get(path_key) or "").strip()
+    if literal and path:
+        raise RExecOpValidationError(
+            f"trigger operation cannot set both {literal_key} and {path_key}"
+        )
+    if literal:
+        return literal
+    if not path:
+        return ""
+    value = _resolve_path(event, path)
+    if value is _MISSING or not isinstance(value, str) or not value.strip():
+        raise RExecOpValidationError(f"trigger operation path did not resolve: {path_key}")
+    return value.strip()
 
 
 def _safe_digest(value: str) -> str:

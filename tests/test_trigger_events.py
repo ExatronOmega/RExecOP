@@ -47,7 +47,7 @@ def _profile(tmp_path: Path) -> Path:
                             "decision": "plan_operation",
                             "operation": {
                                 "intent": "inspect_fixture_state",
-                                "target": "fixture-target",
+                                "target_from": "subject",
                                 "mode": "dry_run",
                             },
                             "cooldown_seconds": 60,
@@ -73,6 +73,52 @@ def _profile(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return root
+
+
+def _add_catalog_metadata(profile: Path) -> None:
+    runbook = profile / "docs" / "inspect-fixture.md"
+    runbook.parent.mkdir()
+    runbook.write_text("Fixture inspection runbook.\n", encoding="utf-8")
+    intent_path = profile / "intents" / "inspect_fixture_state.yaml"
+    intent = yaml.safe_load(intent_path.read_text(encoding="utf-8"))
+    intent["intent"]["catalog"] = {
+        "title": "Inspect fixture state",
+        "summary": "Read one bounded fixture state.",
+        "target_kinds": ["fixture"],
+        "required_capabilities": ["fixture_readonly"],
+        "side_effect_class": "none",
+        "validation_ref": "validation_rules/inspect_fixture_state.yaml",
+        "runbook_ref": "docs/inspect-fixture.md",
+    }
+    intent_path.write_text(yaml.safe_dump(intent, sort_keys=False), encoding="utf-8")
+
+
+def _catalog(tmp_path: Path, *, profile: Path, environment: Path) -> Path:
+    catalog = tmp_path / "targets.yaml"
+    catalog.write_text(
+        yaml.safe_dump(
+            {
+                "target_catalog": {
+                    "version": "0.1",
+                    "targets": [
+                        {
+                            "id": "fixture-node-01",
+                            "target_kind": "fixture",
+                            "profile_ref": str(profile),
+                            "environment_ref": str(environment),
+                            "environment_target": "fixture-target",
+                            "capabilities": ["fixture_readonly"],
+                            "connector_refs": ["fixture_source"],
+                            "classification": {"criticality": "low"},
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    return catalog
 
 
 def _event(
@@ -118,6 +164,38 @@ def test_trigger_event_plans_operation_and_records_decision_evidence(tmp_path: P
     )
     events = store.list_evidence_events(operation_id)
     assert [event["event_type"] for event in events if event["event_type"] == "operation_triggered"]
+
+
+def test_trigger_event_plans_catalog_operation_from_event_subject(tmp_path: Path) -> None:
+    profile = _profile(tmp_path)
+    _add_catalog_metadata(profile)
+    catalog = _catalog(tmp_path, profile=profile, environment=POLICY_ENV)
+    rules_path = profile / "triggers" / "trigger_rules.yaml"
+    rules = yaml.safe_load(rules_path.read_text(encoding="utf-8"))
+    rules["trigger_rules"]["rules"][0]["operation"].pop("target_from")
+    rules["trigger_rules"]["rules"][0]["operation"]["catalog_target_from"] = "subject"
+    rules_path.write_text(yaml.safe_dump(rules, sort_keys=False), encoding="utf-8")
+    store = FileStore(tmp_path / "runtime")
+    controller = OperationController(store=store)
+
+    decision = TriggerService(controller).process_event(
+        profile_path=profile,
+        environment_path=None,
+        catalog_path=catalog,
+        event_payload=_event(subject="fixture-node-01"),
+        now=NOW,
+        source="test",
+    )
+
+    assert decision["decision"] == "plan_operation"
+    operation = store.load_operation(decision["operation_id"])
+    assert operation.state == OperationState.PLANNED.value
+    assert operation.target == "fixture-target"
+    assert operation.metadata["catalog_runtime"] == {
+        "catalog_path": str(catalog.resolve()),
+        "target_id": "fixture-node-01",
+    }
+    assert operation.metadata["catalog_binding"]["target_id"] == "fixture-node-01"
 
 
 def test_trigger_event_dedupes_by_event_identity_without_new_operation(tmp_path: Path) -> None:
@@ -195,11 +273,11 @@ def test_worker_processes_trigger_event_inbox_without_autostart(tmp_path: Path) 
     inbox.mkdir(parents=True)
     (inbox / "event-1.json").write_text(
         json.dumps(
-                {
-                    "profile": str(profile),
-                    "env": str(POLICY_ENV),
-                    "trigger_event": _event(occurred_at=datetime.now(UTC)),
-                }
+            {
+                "profile": str(profile),
+                "env": str(POLICY_ENV),
+                "trigger_event": _event(occurred_at=datetime.now(UTC)),
+            }
             ),
         encoding="utf-8",
     )
