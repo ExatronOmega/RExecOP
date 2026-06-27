@@ -20,6 +20,9 @@ echo "==> validate_public_truth"
 echo "==> validate_stack_contracts"
 "$PYTHON" scripts/validate_stack_contracts.py
 
+echo "==> validate_profile_conformance"
+"$PYTHON" scripts/validate_profile_conformance.py
+
 echo "==> core boundary grep"
 if rg -il '\b(tecrax|proxmox|pbs|zabbix|adguard|frigate|hillstone|docker|ubuntu|ntp)\b' src/rexecop --glob '!**/connectors/command_shape.py'; then
   echo "domain token detected in rexecop core"

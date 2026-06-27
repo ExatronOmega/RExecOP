@@ -62,6 +62,13 @@ profile must produce the observation envelope. RExecOp only validates the SCLite
 schema, selected profile id/version/digest, source operation binding, and target
 binding before evaluating the profile-owned reaction pack.
 
+Profiles that want to use `--operation` should declare a neutral
+`reaction_observation` block in the producing intent metadata. RExecOp's
+`validate_profile_conformance()` checks the shared-state key, SCLite schema ref,
+source intent, completed-operation requirement, producer workflow step, operation
+catalog projection, connector contracts, and reaction pack shape. It does not
+interpret finding taxonomy or profile facts.
+
 ## LLM boundary
 
 An LLM may produce only `escalation_proposal.v0.1`. The schema rejects commands

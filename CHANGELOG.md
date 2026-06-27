@@ -17,6 +17,8 @@ PyPI alpha line is **`0.2.7a0`**. Entries under [Releases](#releases) are newest
 - Added a neutral `reaction-plan --operation` path that loads a profile-produced
   SCLite `reaction_observation` from a completed source operation instead of
   requiring a manually supplied observation file.
+- Added neutral profile conformance checks and a CI/sign-off gate for
+  profile-declared reaction-observation handoff contracts.
 
 ## [0.2.7a0] - 2026-06-27
 

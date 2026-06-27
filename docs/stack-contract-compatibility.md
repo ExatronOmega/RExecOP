@@ -33,6 +33,7 @@ Document id: `stack-contract-compatibility`.
 | GovEngine enforcement plan | `PolicyEnforcementPlan`, `RuntimeControlProjection`, existing `GovAdmissionDecision` binding | GovEngine | Consumed by RExecOp B2 before execution and at connector invoke. |
 | RExecOp execution records | `ExecutionRequest` / `ExecutionReceipt` schema `v0.2` | RExecOp | Stored in workflow `shared_state` and bound to policy digests. |
 | RExecOp reaction mechanics | compiled profile reaction pack, `ReactionContext`, `ReactionService`, replayable reaction chain | RExecOp | Deterministic evaluation and child-operation planning mechanics only. |
+| RExecOp profile conformance | `validate_profile_conformance()` and `scripts/validate_profile_conformance.py` | RExecOp | Verifies profile-declared operation/catalog/reaction-observation contracts without importing domain semantics. |
 | RExecOp catalog mechanics | target catalog and profile-derived operation descriptors | RExecOp | Applicability projection and drift rejection, never authorization. |
 | Tecrax host facts | `tecrax.basic_host_inventory@1.0`, `tecrax.ntp_local_health@1.0`, `tecrax.docker_service_health@1.0`, `tecrax.host_security_posture@1.0`, `tecrax.ntp_server_observation@1.0` | Tecrax | Profile-owned facts consumed as bounded workflow outputs. |
 | Tecrax service/API facts | `tecrax.zabbix_api_reachability@1.0`, `tecrax.zabbix_problem_summary@1.0`, `tecrax.zabbix_host_availability_summary@1.0`, `tecrax.adguard_reachability@1.0`, `tecrax.portainer_reachability@1.0` | Tecrax | Read-only infrastructure summaries with secrets outside repositories. |
@@ -54,7 +55,8 @@ Document id: `stack-contract-compatibility`.
 The stack must keep these gates green before implementing later automation:
 
 - RExecOp: `scripts/validate_public_truth.py`, `scripts/validate_stack_contracts.py`,
-  `scripts/secret_scan.sh`, core-domain-token guard, `ruff`, `mypy src/rexecop`, and pytest.
+  `scripts/validate_profile_conformance.py`, `scripts/secret_scan.sh`,
+  core-domain-token guard, `ruff`, `mypy src/rexecop`, and pytest.
 - Tecrax: public truth, active profile validation, secret topology validation, `ruff`, `mypy src/tecrax`, and pytest.
 - GovEngine: public truth, alpha readiness, `ruff`, `mypy govengine`, and pytest.
 - SCLite: public truth, schema/security gates, `ruff`, `mypy`, and pytest.
