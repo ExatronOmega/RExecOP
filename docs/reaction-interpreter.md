@@ -71,6 +71,11 @@ operation and it is ignored unless explicitly requested on the source
 operation. `trigger` accepts the same `auto_react` value from JSON/inbox
 payloads.
 
+When the source operation was planned through a target catalog, reaction-planned
+child operations use the same catalog path and catalog target id. The child plan
+therefore keeps `catalog_binding` / `catalog_runtime` and fails closed on catalog
+applicability or digest drift before any child operation is created.
+
 `reaction-plan` accepts exactly one observation source:
 
 - `--observation` points at an already generated SCLite

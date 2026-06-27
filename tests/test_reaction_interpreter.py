@@ -74,6 +74,58 @@ def _profile(tmp_path: Path, *, pack: dict | None = None, name: str = "runtime_f
     return root
 
 
+def _add_catalog_metadata(profile_root: Path) -> None:
+    runbook = profile_root / "docs" / "inspect-fixture.md"
+    runbook.parent.mkdir()
+    runbook.write_text("Fixture inspection runbook.\n", encoding="utf-8")
+    intent_path = profile_root / "intents" / "inspect_fixture_state.yaml"
+    intent = yaml.safe_load(intent_path.read_text(encoding="utf-8"))
+    intent["intent"]["catalog"] = {
+        "title": "Inspect fixture state",
+        "summary": "Read one bounded fixture state.",
+        "target_kinds": ["fixture"],
+        "required_capabilities": ["fixture_readonly"],
+        "side_effect_class": "none",
+        "validation_ref": "validation_rules/inspect_fixture_state.yaml",
+        "runbook_ref": "docs/inspect-fixture.md",
+    }
+    intent_path.write_text(yaml.safe_dump(intent, sort_keys=False), encoding="utf-8")
+
+
+def _catalog(
+    path: Path,
+    *,
+    profile_root: Path,
+    environment_path: Path,
+    capabilities: list[str] | None = None,
+) -> Path:
+    catalog = path / "targets.yaml"
+    catalog.write_text(
+        yaml.safe_dump(
+            {
+                "target_catalog": {
+                    "version": "0.1",
+                    "targets": [
+                        {
+                            "id": "fixture-node-01",
+                            "target_kind": "fixture",
+                            "profile_ref": str(profile_root),
+                            "environment_ref": str(environment_path),
+                            "environment_target": "fixture-target",
+                            "capabilities": capabilities or ["fixture_readonly"],
+                            "connector_refs": ["fixture_source"],
+                            "classification": {"criticality": "low"},
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    return catalog
+
+
 def _observation(path: Path, profile_root: Path, *, status: str) -> Path:
     value = _observation_value(profile_root, operation_id="source-op", status=status)
     path.write_text(json.dumps(value), encoding="utf-8")
@@ -296,6 +348,102 @@ def test_auto_react_plan_only_no_op_never_creates_child_operation(tmp_path: Path
     assert result["outcome"] == "no_op"
     assert result["child_operation_id"] is None
     assert len(store.list_operations()) == 1
+
+
+def test_reaction_child_plan_preserves_source_catalog_binding(tmp_path: Path) -> None:
+    profile_root = _profile(tmp_path)
+    _add_catalog_metadata(profile_root)
+    environment_path = tmp_path / "environment.yaml"
+    environment_path.write_text(POLICY_ENV.read_text(encoding="utf-8"), encoding="utf-8")
+    catalog_path = _catalog(
+        tmp_path,
+        profile_root=profile_root,
+        environment_path=environment_path,
+    )
+    store = FileStore(tmp_path / "runtime")
+    controller = OperationController(store=store)
+    source = controller.plan(
+        profile_path=None,
+        environment_path=None,
+        catalog_path=catalog_path,
+        intent="inspect_fixture_state",
+        target="fixture-node-01",
+        mode="dry_run",
+    )
+    observation = _observation_value(
+        profile_root,
+        operation_id=source.id,
+        status="degraded",
+    )
+    source.state = OperationState.COMPLETED.value
+    source.metadata["shared_state"] = {"reaction_observation": observation}
+    store.save_operation(source)
+
+    result = ReactionService(controller).plan(
+        profile_path=profile_root,
+        environment_path=environment_path,
+        source_operation_id=source.id,
+        target="fixture-target",
+    )
+
+    child_id = result["reaction_plan"]["child_operation_id"]
+    assert isinstance(child_id, str)
+    child = store.load_operation(child_id)
+    assert child.state == OperationState.PLANNED.value
+    assert child.metadata["catalog_runtime"] == {
+        "catalog_path": str(catalog_path.resolve()),
+        "target_id": "fixture-node-01",
+    }
+    child_plan = store.load_plan(child.id)
+    assert child_plan.catalog_binding["target_id"] == "fixture-node-01"
+    assert child_plan.catalog_binding == child.metadata["catalog_binding"]
+
+
+def test_reaction_child_plan_blocks_catalog_drift_before_child_creation(
+    tmp_path: Path,
+) -> None:
+    profile_root = _profile(tmp_path)
+    _add_catalog_metadata(profile_root)
+    environment_path = tmp_path / "environment.yaml"
+    environment_path.write_text(POLICY_ENV.read_text(encoding="utf-8"), encoding="utf-8")
+    catalog_path = _catalog(
+        tmp_path,
+        profile_root=profile_root,
+        environment_path=environment_path,
+    )
+    store = FileStore(tmp_path / "runtime")
+    controller = OperationController(store=store)
+    source = controller.plan(
+        profile_path=None,
+        environment_path=None,
+        catalog_path=catalog_path,
+        intent="inspect_fixture_state",
+        target="fixture-node-01",
+        mode="dry_run",
+    )
+    observation = _observation_value(
+        profile_root,
+        operation_id=source.id,
+        status="degraded",
+    )
+    source.state = OperationState.COMPLETED.value
+    source.metadata["shared_state"] = {"reaction_observation": observation}
+    store.save_operation(source)
+    _catalog(
+        tmp_path,
+        profile_root=profile_root,
+        environment_path=environment_path,
+        capabilities=["different_capability"],
+    )
+
+    with pytest.raises(RExecOpValidationError, match="catalog operation is not applicable"):
+        ReactionService(controller).plan(
+            profile_path=profile_root,
+            environment_path=environment_path,
+            source_operation_id=source.id,
+            target="fixture-target",
+        )
+    assert [operation.id for operation in store.list_operations()] == [source.id]
 
 
 def test_reaction_plan_rejects_missing_or_ambiguous_observation_source(

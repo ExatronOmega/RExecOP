@@ -98,8 +98,10 @@ class ReactionService:
             )
         profile = load_profile(resolve_profile_path(profile_path))
         pack = compile_reaction_pack(profile)
+        catalog_runtime: tuple[Path, str] | None = None
         if source_operation_id is not None:
             observation = self._observation_from_operation(source_operation_id)
+            catalog_runtime = self._catalog_runtime_from_operation(source_operation_id)
         else:
             assert observation_path is not None
             observation = _read_json(observation_path)
@@ -193,13 +195,20 @@ class ReactionService:
                     reason = f"govengine_reaction_blocked:{verdict.reason_code or verdict.decision}"
                 else:
                     admission_status = "admitted"
+                    plan_kwargs: dict[str, Any] = {
+                        "profile_path": profile.root,
+                        "environment_path": environment_path,
+                        "intent": intent_ref,
+                        "target": target,
+                        "mode": mode,
+                        "requested_by": f"reaction:{reaction_id}",
+                    }
+                    if catalog_runtime is not None:
+                        catalog_path, catalog_target_id = catalog_runtime
+                        plan_kwargs["catalog_path"] = catalog_path
+                        plan_kwargs["target"] = catalog_target_id
                     child = self.controller.plan(
-                        profile_path=profile.root,
-                        environment_path=environment_path,
-                        intent=intent_ref,
-                        target=target,
-                        mode=mode,
-                        requested_by=f"reaction:{reaction_id}",
+                        **plan_kwargs,
                     )
                     child_verdict = child.metadata.get("policy_verdict")
                     if (
@@ -324,3 +333,16 @@ class ReactionService:
         if not isinstance(source, Mapping) or str(source.get("operation_id")) != operation.id:
             raise RExecOpValidationError("reaction observation source operation mismatch")
         return dict(observation)
+
+    def _catalog_runtime_from_operation(self, operation_id: str) -> tuple[Path, str] | None:
+        operation = self.controller.store.load_operation(operation_id)
+        runtime = operation.metadata.get("catalog_runtime")
+        if runtime is None:
+            return None
+        if not isinstance(runtime, Mapping):
+            raise RExecOpValidationError("source operation catalog runtime is invalid")
+        catalog_path = str(runtime.get("catalog_path") or "").strip()
+        target_id = str(runtime.get("target_id") or "").strip()
+        if not catalog_path or not target_id:
+            raise RExecOpValidationError("source operation catalog runtime is incomplete")
+        return Path(catalog_path), target_id

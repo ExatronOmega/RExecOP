@@ -23,6 +23,9 @@ PyPI alpha line is **`0.2.7a0`**. Entries under [Releases](#releases) are newest
   a profile-produced `reaction_observation` is present, RExecOp can create a
   replayable reaction plan and admitted child operation plan without starting
   the child operation.
+- Preserved target catalog binding for reaction-planned child operations when
+  the source operation was planned through a target catalog, including fail-closed
+  catalog applicability/drift checks before child creation.
 
 ## [0.2.7a0] - 2026-06-27
 
