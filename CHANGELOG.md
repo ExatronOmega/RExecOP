@@ -7,9 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.8a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
+
+## [0.2.9a0] - 2026-06-28
+
+- Published the final R0 public stack baseline over `tecrax>=0.3.7a0,<0.4`
+  after the Tecrax trigger/reaction profile line reached PyPI. This is a
+  dependency/documentation truth patch; it does not add new runner behavior.
 
 ## [0.2.8a0] - 2026-06-28
 
@@ -347,6 +353,7 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
+[0.2.9a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.8a0...v0.2.9a0
 [0.2.8a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.7a0...v0.2.8a0
 [0.2.7a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.6a0...v0.2.7a0
 [0.2.6a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.5a0...v0.2.6a0
