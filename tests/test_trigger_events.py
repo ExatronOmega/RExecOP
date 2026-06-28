@@ -164,6 +164,13 @@ def test_trigger_event_plans_operation_and_records_decision_evidence(tmp_path: P
     assert decision["admission"]["admission"]["allowed"] is True
     assert decision["admission"]["request_digest"].startswith("sha256:")
     assert decision["admission"]["admission_digest"].startswith("sha256:")
+    assert decision["sclite"]["schema_ref"] == "schemas/trigger_decision.v0.1.schema.json"
+    assert decision["sclite"]["digest"].startswith("sha256:")
+    assert decision["sclite"]["artifact"]["operation_ref"] == {"operation_id": operation_id}
+    assert decision["sclite"]["artifact"]["admission"]["request_digest"] == (
+        decision["admission"]["request_digest"]
+    )
+    assert "payload" not in decision["sclite"]["artifact"]["event"]
     assert operation.metadata["trigger_decision"]["payload_digest"] == (
         decision["event"]["payload_digest"]
     )
@@ -249,6 +256,8 @@ def test_trigger_event_dedupes_by_event_identity_without_new_operation(tmp_path:
     assert second["decision"] == "drop_duplicate"
     assert second["admission"]["request"]["decision"] == "drop_duplicate"
     assert second["admission"]["admission"]["outcome"] == "record_only"
+    assert second["sclite"]["artifact"]["operation_ref"] is None
+    assert second["sclite"]["artifact"]["decision"] == "drop_duplicate"
     assert [operation.id for operation in store.list_operations()] == [first["operation_id"]]
 
 
@@ -278,6 +287,10 @@ def test_trigger_event_cooldown_blocks_distinct_event_for_same_subject(tmp_path:
     assert second["admission"]["request"]["decision"] == "cooldown_blocked"
     assert second["admission"]["admission"]["outcome"] == "record_only"
     assert second["event"]["cooldown_key"] == "fixture.degraded.inspect:fixture-target"
+    assert second["sclite"]["artifact"]["operation_ref"] is None
+    assert second["sclite"]["artifact"]["event"]["cooldown_key"] == (
+        "fixture.degraded.inspect:fixture-target"
+    )
     assert [operation.id for operation in store.list_operations()] == [first["operation_id"]]
 
 

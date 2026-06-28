@@ -17,7 +17,7 @@ Document id: `stack-contract-compatibility`.
 
 | Package | Public line | Required range in RExecOp | Role |
 | --- | --- | --- | --- |
-| `sclite-core` | `1.0.5` | `sclite-core>=1.0.5,<1.1` | SCLite truth and reaction artifact schemas. |
+| `sclite-core` | `1.0.6` | `sclite-core>=1.0.6,<1.1` | SCLite truth, reaction and trigger-decision artifact schemas. |
 | `govengine` | `0.16.1` | `govengine>=0.16.1,<0.17` | PolicyEngine MVP plus B2 enforcement-plan contracts. |
 | `rexecop` | `0.2.7a0` | current package | Neutral runner, connectors, catalog and reaction mechanics. |
 | `tecrax` | `0.3.6a0` | `tecrax>=0.3.6a0,<0.4` via optional extra | Domain infrastructure profile. |
@@ -29,6 +29,7 @@ Document id: `stack-contract-compatibility`.
 | SCLite lifecycle artifacts | `intent_contract.v0.2`, `policy_decision.v0.2`, `execution_contract.v0.2`, `execution_receipt.v0.2`, `evidence_contract.v0.2`, `artifact_chain_manifest.v0.2` | SCLite | Emitted on completion through the SCLite adapter. |
 | SCLite scoped ticket | `execution_ticket.v0.3` | SCLite | Used for scoped dry-run/review bundle truth. |
 | SCLite reaction artifacts | `observation_envelope.v0.1`, `finding.v0.1`, `reaction_plan.v0.1`, `escalation_proposal.v0.1`, reaction chain manifest | SCLite | Validated/emitted as artifacts; RExecOp does not own domain observation meaning. |
+| SCLite trigger decision artifact | `trigger_decision.v0.1` | SCLite | Stores bounded trigger event, rule, GovEngine admission and optional child-operation references; RExecOp remains the trigger planner. |
 | GovEngine policy request/verdict | `govengine.policy` schema `v0.1` | GovEngine | Used for deterministic policy evaluation when an environment declares `policy_pack`. |
 | GovEngine enforcement plan | `PolicyEnforcementPlan`, `RuntimeControlProjection`, existing `GovAdmissionDecision` binding | GovEngine | Consumed by RExecOp B2 before execution and at connector invoke. |
 | RExecOp execution records | `ExecutionRequest` / `ExecutionReceipt` schema `v0.2` | RExecOp | Stored in workflow `shared_state` and bound to policy digests. |

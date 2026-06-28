@@ -83,6 +83,11 @@ fail closed before operation planning. Record-only decisions such as
 `escalate`, `drop_duplicate`, `cooldown_blocked`, and `ignore` are admitted as
 non-executing records.
 
+Each trigger decision is also projected into the SCLite `trigger_decision.v0.1`
+truth shape. That artifact stores only bounded event/rule/admission digests and
+an optional child operation id; it does not include raw payloads, authorize
+planning, schedule work, or execute anything.
+
 ## systemd unit example
 
 `/etc/systemd/system/rexecop-worker.service`:

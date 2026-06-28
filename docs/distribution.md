@@ -18,7 +18,7 @@ RExecOp `0.2.7a0` is the current published alpha line on
 - Python **3.11+**
 - Network access to install pinned dependencies:
   - `govengine>=0.16.1,<0.17`
-  - `sclite-core>=1.0.5,<1.1`
+  - `sclite-core>=1.0.6,<1.1`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 
 ## Install from PyPI
@@ -61,7 +61,7 @@ Matches the CI `package-dry-run` job:
 ```bash
 python -m pip install --upgrade pip build twine
 python -m pip install -e /path/to/govengine
-python -m pip install "sclite-core>=1.0.5,<1.1"
+python -m pip install "sclite-core>=1.0.6,<1.1"
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*

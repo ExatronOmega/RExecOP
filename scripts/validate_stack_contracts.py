@@ -14,7 +14,7 @@ import rexecop  # noqa: E402
 
 EXPECTED_REXECOP = "0.2.7a0"
 EXPECTED_GOVENGINE = "govengine>=0.16.1,<0.17"
-EXPECTED_SCLITE = "sclite-core>=1.0.5,<1.1"
+EXPECTED_SCLITE = "sclite-core>=1.0.6,<1.1"
 EXPECTED_TECRAX = "tecrax>=0.3.6a0,<0.4"
 
 ACTIVE_READINESS = (
@@ -28,7 +28,7 @@ NON_ACTIVE_READINESS = (
 )
 
 REQUIRED_DOC_MARKERS = (
-    "sclite-core>=1.0.5,<1.1",
+    "sclite-core>=1.0.6,<1.1",
     "govengine>=0.16.1,<0.17",
     "rexecop` | `0.2.7a0`",
     "tecrax>=0.3.6a0,<0.4",

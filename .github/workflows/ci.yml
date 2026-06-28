@@ -21,6 +21,12 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          repository: rozmiarD/SCLite
+          path: ci-deps/sclite
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
           repository: rozmiarD/GovEngine
           path: ci-deps/govengine
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -31,6 +37,7 @@ jobs:
 
       - name: Install
         run: |
+          python -m pip install -e ./ci-deps/sclite
           python -m pip install -e ./ci-deps/govengine
           python -m pip install -e ".[dev]"
           # Cross-source profile smoke; dependency metadata is checked by package gates.
@@ -80,6 +87,12 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          repository: rozmiarD/SCLite
+          path: ci-deps/sclite
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
           repository: rozmiarD/GovEngine
           path: ci-deps/govengine
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +104,7 @@ jobs:
       - name: Install build tooling and runtime dependencies
         run: |
           python -m pip install --upgrade pip build twine
-          python -m pip install "sclite-core>=1.0.5,<1.1"
+          python -m pip install -e ./ci-deps/sclite
           python -m pip install -e ./ci-deps/govengine
 
       - name: Clean build artifacts
@@ -110,7 +123,7 @@ jobs:
         run: |
           python -m venv /tmp/rexecop-wheel-smoke
           /tmp/rexecop-wheel-smoke/bin/python -m pip install --upgrade pip
-          /tmp/rexecop-wheel-smoke/bin/python -m pip install "sclite-core>=1.0.5,<1.1"
+          /tmp/rexecop-wheel-smoke/bin/python -m pip install -e ./ci-deps/sclite
           /tmp/rexecop-wheel-smoke/bin/python -m pip install -e ./ci-deps/govengine
           /tmp/rexecop-wheel-smoke/bin/python -m pip install dist/*.whl
           /tmp/rexecop-wheel-smoke/bin/python -m pip check

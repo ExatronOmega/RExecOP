@@ -16,6 +16,7 @@ from govengine import (
     trigger_planning_admission_digest,
     trigger_planning_request_digest,
 )
+from sclite import build_trigger_decision, trigger_decision_descriptor, trigger_decision_digest
 
 from rexecop.catalog.digest import canonical_digest
 from rexecop.errors import RExecOpValidationError
@@ -308,6 +309,7 @@ class TriggerService:
                 source=source,
                 decision_time=decision_time,
                 admission=admission,
+                domain_authority=profile.name,
             )
 
         matched = self._match_rule(rule_set, event)
@@ -332,6 +334,7 @@ class TriggerService:
                 source=source,
                 decision_time=decision_time,
                 admission=admission,
+                domain_authority=profile.name,
             )
             self._mark_seen(seen_path, result)
             return result
@@ -368,6 +371,7 @@ class TriggerService:
                     rule=matched,
                     cooldown_key=cooldown_key,
                     admission=admission,
+                    domain_authority=profile.name,
                 )
                 self._mark_seen(seen_path, result)
                 return result
@@ -411,6 +415,7 @@ class TriggerService:
             rule=matched,
             cooldown_key=cooldown_key,
             admission=admission,
+            domain_authority=profile.name,
         )
         self._mark_seen(seen_path, result)
         if matched.cooldown_seconds and matched.decision == "plan_operation":
@@ -545,6 +550,7 @@ class TriggerService:
         rule: TriggerRule | None = None,
         cooldown_key: str | None = None,
         admission: Mapping[str, Any] | None = None,
+        domain_authority: str = "profile",
     ) -> dict[str, Any]:
         result: dict[str, Any] = {
             "artifact_type": "trigger_decision",
@@ -576,6 +582,26 @@ class TriggerService:
             result["rule"] = {"id": rule.rule_id, "digest": rule.digest}
         if admission is not None:
             result["admission"] = dict(admission)
+            sclite_artifact = build_trigger_decision(
+                decision_id=decision_id,
+                decision=decision,
+                reason=reason,
+                decided_at=decision_time.isoformat(),
+                source=source,
+                event=result["event"],
+                rule_set=result["rule_set"],
+                rule=result.get("rule"),
+                admission=admission,
+                operation_id=operation_id,
+                domain_authority=domain_authority,
+            )
+            result["sclite"] = {
+                "artifact_type": "trigger_decision",
+                "schema_ref": "schemas/trigger_decision.v0.1.schema.json",
+                "digest": trigger_decision_digest(sclite_artifact),
+                "descriptor": trigger_decision_descriptor(sclite_artifact),
+                "artifact": sclite_artifact,
+            }
         _write_json(self.root / "decisions" / f"{decision_id}.json", result)
         return result
 

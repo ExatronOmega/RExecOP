@@ -26,7 +26,7 @@ policy engine or a parallel truth layer.
 | Delivery | Published B2/R4c alpha line (see [CHANGELOG](CHANGELOG.md)) |
 | Tests | 296 passed, 1 skipped (current local suite; CI reruns the current suite) |
 | Latest PyPI | [`rexecop==0.2.7a0`](https://pypi.org/project/rexecop/0.2.7a0/) |
-| Source dependencies | `govengine>=0.16.1,<0.17`, `sclite-core>=1.0.5,<1.1` (see `pyproject.toml`) |
+| Source dependencies | `govengine>=0.16.1,<0.17`, `sclite-core>=1.0.6,<1.1` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
