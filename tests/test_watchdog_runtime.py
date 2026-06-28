@@ -56,13 +56,20 @@ def test_watchdog_records_worker_heartbeat(tmp_path: Path) -> None:
     assert record["payload"]["worker_id"] == "worker-a"
     assert (store.root / "watchdog").stat().st_mode & 0o777 == 0o700
     assert (store.root / "watchdog" / "heartbeat.json").stat().st_mode & 0o777 == 0o600
-    projections = list((store.root / "watchdog" / "sclite_projection").glob("*.json"))
-    assert len(projections) == 1
-    projection = json.loads(projections[0].read_text(encoding="utf-8"))
-    assert projection["future_artifact"] == "evidence_contract"
-    assert projection["sclite_schema_ref"] == "schemas/evidence_contract.v0.2.schema.json"
-    assert projection["record_ref"]["record_id"] == record["record_id"]
-    assert projection["authority"] == "rexecop_runtime_projection"
+    artifacts = list((store.root / "watchdog" / "sclite").glob("*.json"))
+    assert len(artifacts) == 1
+    artifact = json.loads(artifacts[0].read_text(encoding="utf-8"))
+    assert artifact["artifact_type"] == "watchdog_decision"
+    assert artifact["schema_ref"] == "schemas/watchdog_decision.v0.1.schema.json"
+    assert artifact["observation"]["record_id"] == record["record_id"]
+    assert artifact["admission"]["outcome"] == "record_only"
+    assert artifact["authority"] == {
+        "truth_layer": "sclite",
+        "supervisor": "rexecop",
+        "policy_authority": "govengine",
+        "domain_authority": "runtime-neutral",
+        "execution_authority": "rexecop",
+    }
 
 
 def test_watchdog_moves_stale_inbox_to_dead_letter_without_payload_leak(
@@ -90,6 +97,11 @@ def test_watchdog_moves_stale_inbox_to_dead_letter_without_payload_leak(
     assert "never-write-this-token" not in record_text
     assert records[0]["decision"] == "move_to_dead_letter"
     assert records[0]["payload"]["reason"] == "stale_inbox_item"
+    artifacts = list((controller.store.root / "watchdog" / "sclite").glob("*.json"))
+    artifact = json.loads(artifacts[0].read_text(encoding="utf-8"))
+    assert artifact["decision"] == "move_to_dead_letter"
+    assert artifact["admission"]["allowed"] is True
+    assert artifact["affected"]["inbox_item_name"] == "job-1.json"
 
 
 def test_worker_watchdog_moves_stale_inbox_before_processing(tmp_path: Path) -> None:
@@ -210,6 +222,11 @@ def test_watchdog_records_stale_active_operation_blocker(tmp_path: Path) -> None
     assert events[0]["event_type"] == "watchdog_decision"
     assert events[0]["sanitized_payload"]["record_id"] == records[0]["record_id"]
     assert events[0]["sanitized_payload"]["decision"] == "block_autostart"
+    artifacts = list((store.root / "watchdog" / "sclite").glob("*.json"))
+    artifact = json.loads(artifacts[0].read_text(encoding="utf-8"))
+    assert artifact["decision"] == "block_autostart"
+    assert artifact["admission"]["allowed"] is True
+    assert artifact["affected"]["operation_id"] == "op-stale"
 
 
 def test_watchdog_rejects_invalid_thresholds(tmp_path: Path) -> None:

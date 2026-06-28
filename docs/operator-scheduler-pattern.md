@@ -110,9 +110,11 @@ retry budget and then move to dead-letter. Stale active operations produce a
 hide the stuck state. Watchdog records include file names, operation ids, reasons
 and bounded timing metadata; they do not copy trigger payloads.
 
-Watchdog records are operational runtime records. RExecOp writes bounded SCLite
-projection metadata for the future `evidence_contract` path, but the projection
-is not itself SCLite authority.
+Watchdog records are operational runtime records. For each record RExecOp asks
+GovEngine for bounded supervisor-action admission and writes a SCLite
+`watchdog_decision.v0.1` artifact under `.rexecop/watchdog/sclite/`. RExecOp
+still owns only runtime mechanics; GovEngine owns admission and SCLite owns the
+truth artifact.
 
 ## systemd unit example
 
@@ -158,7 +160,8 @@ ExecStart=/bin/bash -c 'OPERATION=$(/home/rexecop/.venv/bin/rexecop plan ...); /
 
 - Target lock files live under `.rexecop/locks/` (advisory, single-host).
 - Queue file: `.rexecop/queue/run_now.json`.
-- Watchdog records live under `.rexecop/watchdog/`; dead-lettered trigger files
+- Watchdog records live under `.rexecop/watchdog/`; SCLite watchdog decision
+  artifacts live under `.rexecop/watchdog/sclite/`; dead-lettered trigger files
   live under `.rexecop/dead_letter/`.
 - Worker only starts operations in `approved` state on the queue; read-only plans still need `start` unless `trigger --auto-start`.
 - Trigger payloads may opt into `auto_react: "plan_only"`. After the source

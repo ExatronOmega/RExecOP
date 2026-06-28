@@ -1,7 +1,8 @@
 # Distribution and installation
 
 RExecOp `0.2.9a0` is the current published alpha line on
-[PyPI](https://pypi.org/project/rexecop/). It contains full B2 and R4c while retaining the maturity limits in
+[PyPI](https://pypi.org/project/rexecop/). The source line is `0.2.10a0`.
+The published wheel contains full B2 and R4c while retaining the maturity limits in
 [known-limitations.md](known-limitations.md).
 
 ## Supported install paths
@@ -9,7 +10,7 @@ RExecOp `0.2.9a0` is the current published alpha line on
 | Path | When to use |
 | --- | --- |
 | **PyPI** (`pip install rexecop==0.2.9a0`) | Evaluation of the published B2/R4c alpha line |
-| Coordinated editable source (`pip install -e`) | B2/R4c development and operator lab |
+| Coordinated editable source (`pip install -e`) | Watchdog-decision truth binding development and operator lab |
 | Wheel from `dist/` after `python -m build` | Offline install, internal mirrors |
 | Git URL install | Pin a commit or tag without PyPI |
 
@@ -17,8 +18,8 @@ RExecOp `0.2.9a0` is the current published alpha line on
 
 - Python **3.11+**
 - Network access to install pinned dependencies:
-  - `govengine>=0.16.2,<0.17`
-  - `sclite-core>=1.0.6,<1.1`
+  - `govengine>=0.16.4,<0.17`
+  - `sclite-core>=1.0.7,<1.1`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 
 ## Install from PyPI
@@ -61,7 +62,7 @@ Matches the CI `package-dry-run` job:
 ```bash
 python -m pip install --upgrade pip build twine
 python -m pip install -e /path/to/govengine
-python -m pip install "sclite-core>=1.0.6,<1.1"
+python -m pip install "sclite-core>=1.0.7,<1.1"
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
@@ -75,8 +76,9 @@ python -m pip install "govengine @ git+https://github.com/rozmiarD/GovEngine.git
 python -m pip install "rexecop @ git+https://github.com/rozmiarD/RExecOP.git@main"
 ```
 
-RExecOp `0.2.9a0` requires GovEngine `0.16.2`; earlier GovEngine wheels do not
-provide the enforcement-plan imports required by B2.
+The current RExecOp source line requires GovEngine `0.16.4` and
+SCLite `1.0.7`; the published `0.2.9a0` wheel predates the watchdog decision
+truth path.
 
 ## Private index / GitHub Packages (operator-owned)
 

@@ -7,9 +7,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from govengine import (
+    SupervisorActionRequest,
+    admit_supervisor_action,
+    supervisor_action_admission_digest,
+    supervisor_action_request_digest,
+)
+from sclite import build_watchdog_decision
 from sclite.integrity import artifact_descriptor
 
-from rexecop.adapters.sclite_port.contracts import SCLITE_SCHEMA_REFS
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.evidence.manager import EvidenceManager
@@ -39,7 +45,7 @@ class WatchdogService:
         self.root = store.root
         self.watchdog_dir = self.root / "watchdog"
         self.records_dir = self.watchdog_dir / "records"
-        self.projections_dir = self.watchdog_dir / "sclite_projection"
+        self.sclite_dir = self.watchdog_dir / "sclite"
         self.dead_letter_dir = self.root / "dead_letter"
         self.retry_budget_file = self.watchdog_dir / "retry_budget.json"
 
@@ -47,7 +53,7 @@ class WatchdogService:
         self.store.ensure_layout()
         secure_directory(self.watchdog_dir)
         secure_directory(self.records_dir)
-        secure_directory(self.projections_dir)
+        secure_directory(self.sclite_dir)
         secure_directory(self.dead_letter_dir)
 
     def record_heartbeat(
@@ -135,14 +141,13 @@ class WatchdogService:
         if not path.is_file():
             raise RExecOpValidationError(f"inbox item not found: {path.name}")
         secure_file(path)
-        timestamp = _timestamp(observed_at or _utc_now())
+        event_time = observed_at or _utc_now()
+        timestamp = _timestamp(event_time)
         destination = self.dead_letter_dir / f"{timestamp}-{uuid.uuid4().hex[:8]}-{path.name}"
-        path.replace(destination)
-        secure_file(destination)
-        record = self._write_record(
+        record = self._build_record(
             observation="inbox_item",
             decision="move_to_dead_letter",
-            observed_at=observed_at or _utc_now(),
+            observed_at=event_time,
             payload={
                 "reason": reason,
                 "source_name": path.name,
@@ -150,6 +155,10 @@ class WatchdogService:
                 "details": dict(details or {}),
             },
         )
+        admission_context = self._admit_record(record)
+        path.replace(destination)
+        secure_file(destination)
+        self._persist_record(record, admission_context=admission_context)
         return record
 
     def record_inbox_processing_failure(
@@ -261,8 +270,25 @@ class WatchdogService:
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         self.ensure_layout()
+        record = self._build_record(
+            observation=observation,
+            decision=decision,
+            observed_at=observed_at,
+            payload=payload,
+        )
+        self._persist_record(record, admission_context=self._admit_record(record))
+        return record
+
+    def _build_record(
+        self,
+        *,
+        observation: str,
+        decision: str,
+        observed_at: datetime,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
         record_id = f"wd-{_timestamp(observed_at)}-{uuid.uuid4().hex[:12]}"
-        record = {
+        return {
             "schema": WATCHDOG_SCHEMA,
             "record_id": record_id,
             "observed_at": observed_at.isoformat(),
@@ -270,13 +296,19 @@ class WatchdogService:
             "decision": decision,
             "payload": payload,
         }
+
+    def _persist_record(
+        self,
+        record: dict[str, Any],
+        *,
+        admission_context: dict[str, Any],
+    ) -> None:
         atomic_write_text(
-            self.records_dir / f"{record_id}.json",
+            self.records_dir / f"{record['record_id']}.json",
             json.dumps(record, indent=2, sort_keys=True) + "\n",
         )
-        self._write_sclite_projection(record)
+        self._write_sclite_watchdog_decision(record, admission_context=admission_context)
         self._emit_operation_evidence(record)
-        return record
 
     def _load_retry_budget(self) -> dict[str, Any]:
         if not self.retry_budget_file.is_file():
@@ -290,32 +322,74 @@ class WatchdogService:
             json.dumps(data, indent=2, sort_keys=True) + "\n",
         )
 
-    def _write_sclite_projection(self, record: dict[str, Any]) -> None:
-        projection = {
-            "authority": "rexecop_runtime_projection",
-            "future_artifact": "evidence_contract",
-            "sclite_schema_ref": SCLITE_SCHEMA_REFS["evidence_contract"],
-            "record_ref": {
-                "schema": record["schema"],
-                "record_id": record["record_id"],
-                "observed_at": record["observed_at"],
-                "observation": record["observation"],
-                "decision": record["decision"],
-            },
-            "record_descriptor": artifact_descriptor(
-                {
-                    "schema_ref": SCLITE_SCHEMA_REFS["evidence_contract"],
-                    "record": record,
-                }
-            ),
-            "non_claims": [
-                "projection_is_not_sclite_authority",
-                "rexecop_watchdog_does_not_interpret_domain_health",
-            ],
+    def _admit_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        record_ref = _record_digest_ref(record)
+        payload = _payload(record)
+        details = _details(payload)
+        request = SupervisorActionRequest(
+            request_id=str(record["record_id"]),
+            action=str(record["decision"]),
+            reason=str(payload.get("reason") or record["decision"]),
+            watchdog_record_ref=record_ref,
+            observation=str(record["observation"]),
+            affected_kind=_affected_kind(record),
+            operation_id=str(payload.get("operation_id") or ""),
+            event_ref=_sha256_ref_or_empty(payload.get("event_ref")),
+            trigger_ref=_sha256_ref_or_empty(payload.get("trigger_ref")),
+            inbox_item_name=str(payload.get("source_name") or ""),
+            attempt_count=_int(details.get("attempts")),
+            max_attempts=_int(details.get("max_attempts")),
+            age_seconds=_float(details.get("age_seconds")),
+            max_age_seconds=_float(details.get("max_age_seconds")),
+        )
+        admission = admit_supervisor_action(request)
+        if not admission.allowed and record["decision"] in {
+            "move_to_dead_letter",
+            "retry_later",
+            "block_autostart",
+        }:
+            raise RExecOpValidationError(
+                f"watchdog action denied by GovEngine: {admission.reason_code}"
+            )
+        return {
+            "request": request.as_dict(),
+            "request_digest": supervisor_action_request_digest(request),
+            "admission": admission.as_dict(),
+            "admission_digest": supervisor_action_admission_digest(admission),
         }
+
+    def _write_sclite_watchdog_decision(
+        self,
+        record: dict[str, Any],
+        *,
+        admission_context: dict[str, Any],
+    ) -> None:
+        payload = _payload(record)
+        artifact = build_watchdog_decision(
+            decision_id=str(record["record_id"]),
+            decision=str(record["decision"]),
+            reason=str(payload.get("reason") or record["decision"]),
+            decided_at=str(record["observed_at"]),
+            source="rexecop.watchdog",
+            observation={
+                "record_id": record["record_id"],
+                "schema": record["schema"],
+                "observation": record["observation"],
+                "observed_at": record["observed_at"],
+                "digest": _record_digest_ref(record),
+            },
+            admission=admission_context,
+            affected={
+                "operation_id": payload.get("operation_id"),
+                "event_id": payload.get("event_id"),
+                "trigger_id": payload.get("trigger_id"),
+                "inbox_item_name": payload.get("source_name"),
+            },
+            domain_authority="runtime-neutral",
+        )
         atomic_write_text(
-            self.projections_dir / f"{record['record_id']}.json",
-            json.dumps(projection, indent=2, sort_keys=True) + "\n",
+            self.sclite_dir / f"{record['record_id']}.json",
+            json.dumps(artifact, indent=2, sort_keys=True) + "\n",
         )
 
     def _emit_operation_evidence(self, record: dict[str, Any]) -> None:
@@ -343,3 +417,51 @@ def _parse_time(value: str) -> datetime:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
+
+
+def _record_digest_ref(record: dict[str, Any]) -> str:
+    return f"sha256:{artifact_descriptor(record)['digest']}"
+
+
+def _payload(record: dict[str, Any]) -> dict[str, Any]:
+    payload = record.get("payload")
+    return dict(payload) if isinstance(payload, dict) else {}
+
+
+def _details(payload: dict[str, Any]) -> dict[str, Any]:
+    details = payload.get("details")
+    return dict(details) if isinstance(details, dict) else {}
+
+
+def _affected_kind(record: dict[str, Any]) -> str:
+    payload = _payload(record)
+    if payload.get("operation_id"):
+        return "operation"
+    if payload.get("source_name"):
+        return "inbox_item"
+    if payload.get("worker_id"):
+        return "worker"
+    if "depth" in payload:
+        return "queue"
+    return str(record.get("observation") or "")
+
+
+def _sha256_ref_or_empty(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.startswith("sha256:"):
+        return text
+    return f"sha256:{text}"
+
+
+def _int(value: Any) -> int:
+    if value in (None, ""):
+        return 0
+    return int(value)
+
+
+def _float(value: Any) -> float:
+    if value in (None, ""):
+        return 0.0
+    return float(value)

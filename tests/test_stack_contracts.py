@@ -60,7 +60,7 @@ def test_stack_contract_validator_rejects_dependency_drift(
         "typer>=0.12.0",
         "PyYAML>=6.0",
         "govengine>=0.15.0,<0.16",
-        "sclite-core>=1.0.6,<1.1",
+        "sclite-core>=1.0.7,<1.1",
     ]
 
     monkeypatch.setattr(validator, "_pyproject", lambda: project)

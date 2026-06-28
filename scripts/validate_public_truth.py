@@ -12,8 +12,8 @@ if str(SRC) not in sys.path:
 
 import rexecop  # noqa: E402
 
-EXPECTED_GOVENGINE = "govengine>=0.16.2,<0.17"
-EXPECTED_SCLITE = "sclite-core>=1.0.6,<1.1"
+EXPECTED_GOVENGINE = "govengine>=0.16.4,<0.17"
+EXPECTED_SCLITE = "sclite-core>=1.0.7,<1.1"
 EXPECTED_TECRAX_EXTRA = "tecrax>=0.3.7a0,<0.4"
 PUBLISHED_PYPI_VERSION = "0.2.9a0"
 
@@ -122,7 +122,7 @@ def _assert_pypi_docs(errors: list[str], version: str) -> None:
     )
     if version != PUBLISHED_PYPI_VERSION:
         _require(errors, "README.md", f"Current source line | `{version}`")
-        _require(errors, "README.md", "does not contain the B2 enforcement path")
+        _require(errors, "README.md", "does not contain the watchdog decision truth path")
     _require(errors, "docs/distribution.md", "https://pypi.org/project/rexecop/")
     _require(errors, "docs/distribution.md", f"rexecop=={PUBLISHED_PYPI_VERSION}")
 

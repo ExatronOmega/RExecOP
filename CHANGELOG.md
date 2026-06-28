@@ -11,13 +11,15 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+## [0.2.10a0] - 2026-06-28
+
 - Added an opt-in domain-neutral worker watchdog slice. `worker run --watchdog`
   records bounded worker heartbeats and queue depth, moves stale inbox files to
   `.rexecop/dead_letter/` before execution, and dead-letters failed inbox files
   without copying trigger payloads into watchdog records.
 - Extended the watchdog slice with bounded inbox retry budgets, stale active
-  operation `block_autostart` records and non-authoritative SCLite projection
-  metadata for future evidence-contract truth binding.
+  operation `block_autostart` records, GovEngine supervisor-action admission and
+  SCLite `watchdog_decision.v0.1` truth artifacts.
 
 ## [0.2.9a0] - 2026-06-28
 
@@ -52,7 +54,7 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 - Bound trigger decisions to GovEngine `TriggerPlanningRequest` admission before
   creating operation plans; trigger decision artifacts now carry bounded request
   and admission digests.
-- Raised the SCLite source dependency to `sclite-core>=1.0.6,<1.1` and projected
+- Raised the SCLite source dependency to `sclite-core>=1.0.7,<1.1` and projected
   trigger decisions into the SCLite `trigger_decision.v0.1` artifact
   shape with event/rule/admission digests and optional child-operation refs,
   while keeping trigger matching, policy and execution ownership outside SCLite.
@@ -361,6 +363,7 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
+[0.2.10a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.9a0...HEAD
 [0.2.9a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.8a0...v0.2.9a0
 [0.2.8a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.7a0...v0.2.8a0
 [0.2.7a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.6a0...v0.2.7a0
