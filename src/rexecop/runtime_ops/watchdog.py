@@ -27,6 +27,7 @@ WATCHDOG_SCHEMA = "rexecop.watchdog_record.v0.1"
 DEFAULT_WORKER_ID = "local-worker"
 DEFAULT_INBOX_RETRY_BUDGET = 3
 DEFAULT_STALE_OPERATION_SECONDS = 3600.0
+MANUAL_RECOVERY_ACTIONS = {"renew_lease", "mark_stale", "escalate_operator"}
 
 
 def _utc_now() -> datetime:
@@ -261,6 +262,56 @@ class WatchdogService:
             )
         return records
 
+    def record_manual_recovery_action(
+        self,
+        *,
+        action: str,
+        reason: str,
+        actor_ref: str,
+        scope: str,
+        operation_id: str = "",
+        event_ref: str = "",
+        trigger_ref: str = "",
+        inbox_item_name: str = "",
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        action = action.strip()
+        if action not in MANUAL_RECOVERY_ACTIONS:
+            raise RExecOpValidationError(
+                "manual watchdog action must be one of: "
+                + ", ".join(sorted(MANUAL_RECOVERY_ACTIONS))
+            )
+        if not reason.strip():
+            raise RExecOpValidationError("manual watchdog reason must not be empty")
+        if not actor_ref.strip():
+            raise RExecOpValidationError("manual watchdog actor_ref must not be empty")
+        if not scope.strip():
+            raise RExecOpValidationError("manual watchdog scope must not be empty")
+        affected_refs = (
+            operation_id.strip(),
+            event_ref.strip(),
+            trigger_ref.strip(),
+            inbox_item_name.strip(),
+        )
+        if not any(affected_refs):
+            raise RExecOpValidationError("manual watchdog action requires an affected reference")
+
+        return self._write_record(
+            observation="manual_recovery",
+            decision=action,
+            observed_at=now or _utc_now(),
+            payload={
+                "reason": reason,
+                "actor_ref": actor_ref,
+                "scope": scope,
+                "human_signoff": True,
+                "operation_id": operation_id.strip(),
+                "event_ref": event_ref.strip(),
+                "trigger_ref": trigger_ref.strip(),
+                "source_name": inbox_item_name.strip(),
+            },
+        )
+
     def _write_record(
         self,
         *,
@@ -337,10 +388,13 @@ class WatchdogService:
             event_ref=_sha256_ref_or_empty(payload.get("event_ref")),
             trigger_ref=_sha256_ref_or_empty(payload.get("trigger_ref")),
             inbox_item_name=str(payload.get("source_name") or ""),
+            actor_ref=str(payload.get("actor_ref") or ""),
+            scope=str(payload.get("scope") or ""),
             attempt_count=_int(details.get("attempts")),
             max_attempts=_int(details.get("max_attempts")),
             age_seconds=_float(details.get("age_seconds")),
             max_age_seconds=_float(details.get("max_age_seconds")),
+            human_signoff=bool(payload.get("human_signoff", False)),
         )
         admission = admit_supervisor_action(request)
         if not admission.allowed and record["decision"] in {
@@ -381,11 +435,12 @@ class WatchdogService:
             admission=admission_context,
             affected={
                 "operation_id": payload.get("operation_id"),
-                "event_id": payload.get("event_id"),
-                "trigger_id": payload.get("trigger_id"),
+                "event_id": payload.get("event_id") or payload.get("event_ref"),
+                "trigger_id": payload.get("trigger_id") or payload.get("trigger_ref"),
                 "inbox_item_name": payload.get("source_name"),
             },
             domain_authority="runtime-neutral",
+            manual_recovery=_manual_recovery_ref(payload),
         )
         atomic_write_text(
             self.sclite_dir / f"{record['record_id']}.json",
@@ -465,3 +520,14 @@ def _float(value: Any) -> float:
     if value in (None, ""):
         return 0.0
     return float(value)
+
+
+def _manual_recovery_ref(payload: dict[str, Any]) -> dict[str, Any] | None:
+    if not payload.get("human_signoff"):
+        return None
+    return {
+        "actor_ref": str(payload.get("actor_ref") or ""),
+        "scope": str(payload.get("scope") or ""),
+        "human_signoff": bool(payload.get("human_signoff", False)),
+        "reason": str(payload.get("reason") or ""),
+    }

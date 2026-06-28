@@ -12,9 +12,9 @@ if str(SRC) not in sys.path:
 
 import rexecop  # noqa: E402
 
-EXPECTED_REXECOP = "0.2.10a0"
-EXPECTED_GOVENGINE = "govengine>=0.16.4,<0.17"
-EXPECTED_SCLITE = "sclite-core>=1.0.7,<1.1"
+EXPECTED_REXECOP = "0.2.11a0"
+EXPECTED_GOVENGINE = "govengine>=0.16.5,<0.17"
+EXPECTED_SCLITE = "sclite-core>=1.0.8,<1.1"
 EXPECTED_TECRAX = "tecrax>=0.3.7a0,<0.4"
 
 ACTIVE_READINESS = (
@@ -28,9 +28,9 @@ NON_ACTIVE_READINESS = (
 )
 
 REQUIRED_DOC_MARKERS = (
-    "sclite-core>=1.0.7,<1.1",
-    "govengine>=0.16.4,<0.17",
-    "rexecop` | `0.2.10a0`",
+    "sclite-core>=1.0.8,<1.1",
+    "govengine>=0.16.5,<0.17",
+    "rexecop` | `0.2.11a0`",
     "tecrax>=0.3.7a0,<0.4",
     "observation_envelope.v0.1",
     "PolicyEnforcementPlan",

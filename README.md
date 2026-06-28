@@ -21,12 +21,12 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Current source line | `0.2.10a0` |
+| Current source line | `0.2.11a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Delivery | Source watchdog-decision truth line; latest published B2/R4c alpha remains `0.2.9a0` |
+| Delivery | Source manual watchdog recovery record line; latest published B2/R4c alpha remains `0.2.9a0` |
 | Tests | CI reruns the current suite |
 | Latest PyPI | [`rexecop==0.2.9a0`](https://pypi.org/project/rexecop/0.2.9a0/) |
-| Source dependencies | `govengine>=0.16.4,<0.17`, `sclite-core>=1.0.7,<1.1` (see `pyproject.toml`) |
+| Source dependencies | `govengine>=0.16.5,<0.17`, `sclite-core>=1.0.8,<1.1` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
@@ -106,9 +106,9 @@ rexecop version
 ```
 
 The published `0.2.9a0` wheel contains the full B2 enforcement path and R4c
-catalog. It does not contain the watchdog decision truth path added on the
-current source line. That source path requires GovEngine `0.16.4` and
-SCLite `1.0.7`.
+catalog. It does not contain the watchdog decision truth path or manual recovery record path
+added on the current source line. That source path requires GovEngine `0.16.5`
+and SCLite `1.0.8`.
 
 See [docs/distribution.md](docs/distribution.md) for Tecrax extra, wheels, Git URL, and private index notes.
 

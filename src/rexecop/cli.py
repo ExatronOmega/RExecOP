@@ -19,6 +19,7 @@ from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.model import ReactionContext
 from rexecop.reaction.service import ReactionService
+from rexecop.runtime_ops.watchdog import WatchdogService
 from rexecop.runtime_ops.worker import (
     drain_queue,
     parse_trigger_payload,
@@ -414,6 +415,8 @@ def queue_cmd(
 
 worker_app = typer.Typer(help="Background worker commands.")
 app.add_typer(worker_app, name="worker")
+watchdog_app = typer.Typer(help="Runtime watchdog audit commands.", no_args_is_help=True)
+app.add_typer(watchdog_app, name="watchdog")
 
 
 @worker_app.command("run")
@@ -468,6 +471,40 @@ def worker_run_cmd(
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(json.dumps({"started": started}, indent=2, sort_keys=True))
+
+
+@watchdog_app.command("manual-record")
+def watchdog_manual_record_cmd(
+    action: str = typer.Option(
+        ...,
+        "--action",
+        help="Manual watchdog action: renew_lease, mark_stale or escalate_operator.",
+    ),
+    reason: str = typer.Option(..., "--reason", help="Bounded operator reason."),
+    actor_ref: str = typer.Option(..., "--actor-ref", help="Bounded operator reference."),
+    scope: str = typer.Option(..., "--scope", help="Bounded recovery scope."),
+    operation_id: str = typer.Option("", "--operation", help="Affected operation id."),
+    event_ref: str = typer.Option("", "--event-ref", help="Affected event digest ref."),
+    trigger_ref: str = typer.Option("", "--trigger-ref", help="Affected trigger digest ref."),
+    inbox_item_name: str = typer.Option("", "--inbox-item", help="Affected inbox item name."),
+) -> None:
+    """Record a governed manual watchdog decision without executing recovery."""
+    controller = _controller()
+    try:
+        record = WatchdogService(controller.store).record_manual_recovery_action(
+            action=action,
+            reason=reason,
+            actor_ref=actor_ref,
+            scope=scope,
+            operation_id=operation_id,
+            event_ref=event_ref,
+            trigger_ref=trigger_ref,
+            inbox_item_name=inbox_item_name,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(record, indent=2, sort_keys=True))
 
 
 @app.command("trigger")

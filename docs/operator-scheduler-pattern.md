@@ -116,6 +116,22 @@ GovEngine for bounded supervisor-action admission and writes a SCLite
 still owns only runtime mechanics; GovEngine owns admission and SCLite owns the
 truth artifact.
 
+Manual recovery/break-glass is represented as an explicit record, not an
+implicit local override:
+
+```bash
+rexecop watchdog manual-record \
+  --action mark_stale \
+  --reason operator_break_glass \
+  --actor-ref operator:local-admin \
+  --scope operation:op-123 \
+  --operation op-123
+```
+
+The command admits the bounded supervisor action through GovEngine and writes a
+SCLite watchdog decision artifact. It does not requeue, restart, mutate the FSM
+or execute recovery steps.
+
 ## systemd unit example
 
 `/etc/systemd/system/rexecop-worker.service`:

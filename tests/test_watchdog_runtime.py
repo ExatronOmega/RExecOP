@@ -229,6 +229,59 @@ def test_watchdog_records_stale_active_operation_blocker(tmp_path: Path) -> None
     assert artifact["affected"]["operation_id"] == "op-stale"
 
 
+def test_watchdog_records_manual_recovery_with_admission_and_sclite_artifact(
+    tmp_path: Path,
+) -> None:
+    store = FileStore(tmp_path / ".rexecop")
+
+    record = WatchdogService(store).record_manual_recovery_action(
+        action="mark_stale",
+        reason="operator_break_glass",
+        actor_ref="operator:local-admin",
+        scope="operation:op-stale",
+        operation_id="op-stale",
+        now=NOW,
+    )
+
+    assert record["observation"] == "manual_recovery"
+    assert record["decision"] == "mark_stale"
+    assert record["payload"]["actor_ref"] == "operator:local-admin"
+    assert record["payload"]["scope"] == "operation:op-stale"
+    artifacts = list((store.root / "watchdog" / "sclite").glob("*.json"))
+    assert len(artifacts) == 1
+    artifact = json.loads(artifacts[0].read_text(encoding="utf-8"))
+    assert artifact["decision"] == "mark_stale"
+    assert artifact["admission"]["allowed"] is True
+    assert artifact["manual_recovery"] == {
+        "actor_ref": "operator:local-admin",
+        "scope": "operation:op-stale",
+        "human_signoff": True,
+        "reason": "operator_break_glass",
+    }
+    assert artifact["affected"]["operation_id"] == "op-stale"
+
+
+def test_watchdog_manual_recovery_requires_bounded_context(tmp_path: Path) -> None:
+    service = WatchdogService(FileStore(tmp_path / ".rexecop"))
+
+    with pytest.raises(RExecOpValidationError, match="manual watchdog actor_ref"):
+        service.record_manual_recovery_action(
+            action="mark_stale",
+            reason="operator_break_glass",
+            actor_ref="",
+            scope="operation:op-stale",
+            operation_id="op-stale",
+        )
+
+    with pytest.raises(RExecOpValidationError, match="affected reference"):
+        service.record_manual_recovery_action(
+            action="mark_stale",
+            reason="operator_break_glass",
+            actor_ref="operator:local-admin",
+            scope="operation:op-stale",
+        )
+
+
 def test_watchdog_rejects_invalid_thresholds(tmp_path: Path) -> None:
     controller = _controller(tmp_path)
     service = WatchdogService(controller.store)

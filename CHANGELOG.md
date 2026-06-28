@@ -11,6 +11,14 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+## [0.2.11a0] - 2026-06-28
+
+- Added governed manual watchdog recovery records through
+  `rexecop watchdog manual-record`. The command records signed
+  `renew_lease`, `mark_stale` or `escalate_operator` decisions with bounded
+  actor/scope context, GovEngine supervisor-action admission and SCLite
+  `watchdog_decision.v0.1` truth artifacts; it does not execute recovery.
+
 ## [0.2.10a0] - 2026-06-28
 
 - Added an opt-in domain-neutral worker watchdog slice. `worker run --watchdog`
@@ -54,7 +62,7 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 - Bound trigger decisions to GovEngine `TriggerPlanningRequest` admission before
   creating operation plans; trigger decision artifacts now carry bounded request
   and admission digests.
-- Raised the SCLite source dependency to `sclite-core>=1.0.7,<1.1` and projected
+- Raised the SCLite source dependency to `sclite-core>=1.0.8,<1.1` and projected
   trigger decisions into the SCLite `trigger_decision.v0.1` artifact
   shape with event/rule/admission digests and optional child-operation refs,
   while keeping trigger matching, policy and execution ownership outside SCLite.
@@ -363,7 +371,8 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
-[0.2.10a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.9a0...HEAD
+[0.2.11a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.10a0...HEAD
+[0.2.10a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.9a0...3372bb3
 [0.2.9a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.8a0...v0.2.9a0
 [0.2.8a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.7a0...v0.2.8a0
 [0.2.7a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.6a0...v0.2.7a0
