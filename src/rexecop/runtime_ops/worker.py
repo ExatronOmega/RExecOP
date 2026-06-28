@@ -9,6 +9,7 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.controller import OperationController
 from rexecop.operation.model import Operation
+from rexecop.runtime_ops.watchdog import DEFAULT_WORKER_ID, WatchdogService
 from rexecop.storage.atomic import secure_directory, secure_file
 from rexecop.triggers.service import TriggerService
 
@@ -25,18 +26,35 @@ def run_worker(
     poll_interval: float = 5.0,
     max_iterations: int | None = None,
     watch_inbox: bool = False,
+    watchdog: bool = False,
+    worker_id: str = DEFAULT_WORKER_ID,
+    stale_inbox_seconds: float = 3600.0,
 ) -> list[str]:
     """Poll queue (and optional inbox) and start admitted operations."""
     if poll_interval <= 0:
         raise RExecOpValidationError("poll_interval must be positive")
+    if stale_inbox_seconds <= 0:
+        raise RExecOpValidationError("stale_inbox_seconds must be positive")
 
     started: list[str] = []
     iterations = 0
+    watchdog_service = WatchdogService(controller.store) if watchdog else None
     while True:
+        if watchdog_service is not None:
+            watchdog_service.record_heartbeat(worker_id=worker_id)
+            if watch_inbox:
+                watchdog_service.move_stale_inbox_items(
+                    max_age_seconds=stale_inbox_seconds
+                )
+
         if watch_inbox:
-            started.extend(_process_inbox(controller))
+            started.extend(_process_inbox(controller, watchdog_service=watchdog_service))
 
         started.extend(controller.process_queue())
+        if watchdog_service is not None:
+            watchdog_service.record_queue_depth(
+                depth=len(controller.runtime.queue.list_pending())
+            )
 
         iterations += 1
         if once:
@@ -157,7 +175,11 @@ def trigger_event(
     )
 
 
-def _process_inbox(controller: OperationController) -> list[str]:
+def _process_inbox(
+    controller: OperationController,
+    *,
+    watchdog_service: WatchdogService | None = None,
+) -> list[str]:
     root = controller.store.root
     if root is None:
         return []
@@ -198,6 +220,13 @@ def _process_inbox(controller: OperationController) -> list[str]:
                 if parsed["auto_start"]:
                     started.append(operation.id)
             path.unlink(missing_ok=True)
-        except Exception:
-            path.rename(inbox / f"failed-{path.name}")
+        except Exception as exc:
+            if watchdog_service is not None:
+                watchdog_service.move_inbox_item_to_dead_letter(
+                    path,
+                    reason="inbox_processing_failed",
+                    details={"error_type": exc.__class__.__name__},
+                )
+            else:
+                path.rename(inbox / f"failed-{path.name}")
     return started

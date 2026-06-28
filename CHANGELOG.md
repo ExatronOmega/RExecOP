@@ -11,6 +11,11 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 
 ## Unreleased
 
+- Added an opt-in domain-neutral worker watchdog slice. `worker run --watchdog`
+  records bounded worker heartbeats and queue depth, moves stale inbox files to
+  `.rexecop/dead_letter/` before execution, and dead-letters failed inbox files
+  without copying trigger payloads into watchdog records.
+
 ## [0.2.9a0] - 2026-06-28
 
 - Published the final R0 public stack baseline over `tecrax>=0.3.7a0,<0.4`

@@ -89,3 +89,16 @@ def test_worker_processes_inbox_trigger(tmp_path: Path) -> None:
     assert started
     assert not list(inbox.glob("job-1.json"))
     assert inbox.stat().st_mode & 0o777 == 0o700
+
+
+def test_worker_default_failed_inbox_behavior_is_unchanged(tmp_path: Path) -> None:
+    store = FileStore(tmp_path / ".rexecop")
+    controller = OperationController(store=store)
+    inbox = store.root / "inbox"
+    inbox.mkdir(parents=True, exist_ok=True)
+    (inbox / "bad-job.json").write_text(json.dumps({"profile": str(PROFILE)}))
+
+    started = run_worker(controller, once=True, watch_inbox=True)
+
+    assert started == []
+    assert (inbox / "failed-bad-job.json").is_file()

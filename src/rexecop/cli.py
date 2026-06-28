@@ -426,6 +426,18 @@ def worker_run_cmd(
     watch_inbox: bool = typer.Option(
         False, "--watch-inbox", help="Also process .rexecop/inbox/*.json trigger files."
     ),
+    watchdog: bool = typer.Option(
+        False, "--watchdog", help="Record neutral worker health and dead-letter stale inbox files."
+    ),
+    worker_id: str = typer.Option("local-worker", "--worker-id", help="Neutral worker identity."),
+    stale_inbox_seconds: float = typer.Option(
+        3600.0,
+        "--stale-inbox-seconds",
+        help=(
+            "Move inbox JSON older than this many seconds to dead-letter "
+            "when watchdog is enabled."
+        ),
+    ),
 ) -> None:
     """Poll the run-now queue and start admitted operations (systemd-friendly)."""
     controller = _controller()
@@ -436,6 +448,9 @@ def worker_run_cmd(
             poll_interval=poll_interval,
             max_iterations=max_iterations,
             watch_inbox=watch_inbox,
+            watchdog=watchdog,
+            worker_id=worker_id,
+            stale_inbox_seconds=stale_inbox_seconds,
         )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)

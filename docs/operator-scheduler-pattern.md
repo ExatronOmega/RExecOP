@@ -88,6 +88,22 @@ truth shape. That artifact stores only bounded event/rule/admission digests and
 an optional child operation id; it does not include raw payloads, authorize
 planning, schedule work, or execute anything.
 
+### Worker watchdog
+
+The worker can supervise RExecOp's own runtime mechanics:
+
+```bash
+rexecop worker run --watch-inbox --watchdog --stale-inbox-seconds 3600 --poll-interval 60
+```
+
+The watchdog is not infrastructure monitoring and does not interpret profile
+domain health. It records bounded worker heartbeats, queue depth, and inbox
+dead-letter decisions under `.rexecop/watchdog/`. When enabled with
+`--watch-inbox`, inbox files older than `--stale-inbox-seconds` are moved to
+`.rexecop/dead_letter/` before execution. Failed inbox files are also moved to
+dead-letter. Watchdog records include file names, reasons and bounded timing
+metadata; they do not copy trigger payloads.
+
 ## systemd unit example
 
 `/etc/systemd/system/rexecop-worker.service`:
@@ -102,7 +118,7 @@ Type=simple
 User=rexecop
 Environment=REXECOP_SECRETS_FILE=/home/rexecop/.rexecop/secrets.yaml
 WorkingDirectory=/home/rexecop
-ExecStart=/home/rexecop/.venv/bin/rexecop worker run --poll-interval 30 --watch-inbox
+ExecStart=/home/rexecop/.venv/bin/rexecop worker run --poll-interval 30 --watch-inbox --watchdog
 Restart=on-failure
 
 [Install]
@@ -132,6 +148,8 @@ ExecStart=/bin/bash -c 'OPERATION=$(/home/rexecop/.venv/bin/rexecop plan ...); /
 
 - Target lock files live under `.rexecop/locks/` (advisory, single-host).
 - Queue file: `.rexecop/queue/run_now.json`.
+- Watchdog records live under `.rexecop/watchdog/`; dead-lettered trigger files
+  live under `.rexecop/dead_letter/`.
 - Worker only starts operations in `approved` state on the queue; read-only plans still need `start` unless `trigger --auto-start`.
 - Trigger payloads may opt into `auto_react: "plan_only"`. After the source
   operation completes, RExecOp may create a reaction chain and child operation

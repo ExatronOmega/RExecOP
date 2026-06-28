@@ -6,6 +6,7 @@ from rexecop.runtime_ops.monitor import OperationMonitor, StepMonitorStatus, par
 from rexecop.runtime_ops.queue import RunNowQueue
 from rexecop.runtime_ops.rollback import RollbackExecutor
 from rexecop.runtime_ops.target_lock import TargetLockManager
+from rexecop.runtime_ops.watchdog import WatchdogService
 
 __all__ = [
     "OperationMonitor",
@@ -14,6 +15,7 @@ __all__ = [
     "RuntimeCoordinator",
     "StepMonitorStatus",
     "TargetLockManager",
+    "WatchdogService",
     "maintenance_window_allows",
     "parse_timeout_seconds",
 ]
