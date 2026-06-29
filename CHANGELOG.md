@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
 
@@ -31,7 +31,7 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 
 ## [0.2.9a0] - 2026-06-28
 
-- Published the final R0 public stack baseline over `tecrax>=0.3.7a0,<0.4`
+- Published the final R0 public stack baseline over `tecrax==0.3.8a0`
   after the Tecrax trigger/reaction profile line reached PyPI. This is a
   dependency/documentation truth patch; it does not add new runner behavior.
 
@@ -62,7 +62,7 @@ PyPI alpha line is **`0.2.9a0`**. Entries under [Releases](#releases) are newest
 - Bound trigger decisions to GovEngine `TriggerPlanningRequest` admission before
   creating operation plans; trigger decision artifacts now carry bounded request
   and admission digests.
-- Raised the SCLite source dependency to `sclite-core>=1.0.8,<1.1` and projected
+- Raised the SCLite source dependency to `sclite-core==1.0.8` and projected
   trigger decisions into the SCLite `trigger_decision.v0.1` artifact
   shape with event/rule/admission digests and optional child-operation refs,
   while keeping trigger matching, policy and execution ownership outside SCLite.

@@ -1,15 +1,15 @@
 # Distribution and installation
 
-RExecOp `0.2.9a0` is the current published alpha line on
-[PyPI](https://pypi.org/project/rexecop/). The source line is `0.2.11a0`.
-The published wheel contains full B2 and R4c while retaining the maturity limits in
+RExecOp `0.2.11a0` is the current published alpha line on
+[PyPI](https://pypi.org/project/rexecop/).
+The published wheel contains full B2, R4c, watchdog decision truth, and manual recovery records while retaining the maturity limits in
 [known-limitations.md](known-limitations.md).
 
 ## Supported install paths
 
 | Path | When to use |
 | --- | --- |
-| **PyPI** (`pip install rexecop==0.2.9a0`) | Evaluation of the published B2/R4c alpha line |
+| **PyPI** (`pip install rexecop==0.2.11a0`) | Evaluation of the single supported alpha line |
 | Coordinated editable source (`pip install -e`) | Watchdog-decision truth binding development and operator lab |
 | Wheel from `dist/` after `python -m build` | Offline install, internal mirrors |
 | Git URL install | Pin a commit or tag without PyPI |
@@ -18,8 +18,8 @@ The published wheel contains full B2 and R4c while retaining the maturity limits
 
 - Python **3.11+**
 - Network access to install pinned dependencies:
-  - `govengine>=0.16.5,<0.17`
-  - `sclite-core>=1.0.8,<1.1`
+  - `govengine==0.16.5`
+  - `sclite-core==1.0.8`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 
 ## Install from PyPI
@@ -27,14 +27,14 @@ The published wheel contains full B2 and R4c while retaining the maturity limits
 ```bash
 python -m venv .venv && source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "rexecop==0.2.9a0"
+python -m pip install "rexecop==0.2.11a0"
 rexecop version
 ```
 
 With the compatible Tecrax profile:
 
 ```bash
-python -m pip install "rexecop[tecrax]==0.2.9a0"
+python -m pip install "rexecop[tecrax]==0.2.11a0"
 ```
 
 ## Coordinated editable install
@@ -62,7 +62,7 @@ Matches the CI `package-dry-run` job:
 ```bash
 python -m pip install --upgrade pip build twine
 python -m pip install -e /path/to/govengine
-python -m pip install "sclite-core>=1.0.8,<1.1"
+python -m pip install "sclite-core==1.0.8"
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
@@ -76,9 +76,7 @@ python -m pip install "govengine @ git+https://github.com/rozmiarD/GovEngine.git
 python -m pip install "rexecop @ git+https://github.com/rozmiarD/RExecOP.git@main"
 ```
 
-The current RExecOp source line requires GovEngine `0.16.5` and
-SCLite `1.0.8`; the published `0.2.9a0` wheel predates the watchdog decision
-truth path and manual recovery record path.
+The current RExecOp source line and the published `0.2.11a0` wheel require GovEngine `0.16.5` and SCLite `1.0.8`.
 
 ## Private index / GitHub Packages (operator-owned)
 

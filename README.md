@@ -1,7 +1,7 @@
 # RExecOp
 
 [![CI: pytest](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml/badge.svg)](https://github.com/rozmiarD/RExecOP/actions/workflows/ci.yml)
-[![Package: rexecop 0.2.9a0](https://img.shields.io/badge/package-rexecop%200.2.9a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.9a0/)
+[![Package: rexecop 0.2.11a0](https://img.shields.io/badge/package-rexecop%200.2.11a0-blueviolet.svg)](https://pypi.org/project/rexecop/0.2.11a0/)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Dependency: GovEngine](https://img.shields.io/badge/dependency-GovEngine-informational.svg)](https://github.com/rozmiarD/GovEngine)
 [![Dependency: SCLite](https://img.shields.io/badge/dependency-SCLite-informational.svg)](https://github.com/rozmiarD/SCLite)
@@ -23,10 +23,10 @@ policy engine or a parallel truth layer.
 | --- | --- |
 | Current source line | `0.2.11a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Delivery | Source manual watchdog recovery record line; latest published B2/R4c alpha remains `0.2.9a0` |
+| Delivery | Published single supported alpha line; older PyPI releases are archived only |
 | Tests | CI reruns the current suite |
-| Latest PyPI | [`rexecop==0.2.9a0`](https://pypi.org/project/rexecop/0.2.9a0/) |
-| Source dependencies | `govengine>=0.16.5,<0.17`, `sclite-core>=1.0.8,<1.1` (see `pyproject.toml`) |
+| Latest PyPI | [`rexecop==0.2.11a0`](https://pypi.org/project/rexecop/0.2.11a0/) |
+| Source dependencies | `govengine==0.16.5`, `sclite-core==1.0.8` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
@@ -101,14 +101,11 @@ Ravenclaw is legacy and out of scope for RExecOp.
 Published alpha package:
 
 ```bash
-python -m pip install "rexecop==0.2.9a0"
+python -m pip install "rexecop==0.2.11a0"
 rexecop version
 ```
 
-The published `0.2.9a0` wheel contains the full B2 enforcement path and R4c
-catalog. It does not contain the watchdog decision truth path or manual recovery record path
-added on the current source line. That source path requires GovEngine `0.16.5`
-and SCLite `1.0.8`.
+The published `0.2.11a0` wheel contains the full B2 enforcement path, R4c catalog, watchdog decision truth path, and manual recovery record path for the single supported alpha stack line.
 
 See [docs/distribution.md](docs/distribution.md) for Tecrax extra, wheels, Git URL, and private index notes.
 
@@ -126,7 +123,7 @@ pip install -e ".[dev]"
 With the Tecrax profile package:
 
 ```bash
-pip install "rexecop[tecrax]==0.2.9a0"
+pip install "rexecop[tecrax]==0.2.11a0"
 # or, for coordinated development: pip install -e /path/to/tecrax
 ```
 

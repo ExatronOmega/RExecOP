@@ -8,8 +8,8 @@ license = { text = "MIT" }
 dependencies = [
     "typer>=0.12.0",
     "PyYAML>=6.0",
-    "govengine>=0.16.5,<0.17",
-    "sclite-core>=1.0.8,<1.1",
+    "govengine==0.16.5",
+    "sclite-core==1.0.8",
 ]
 
 [project.urls]
@@ -25,10 +25,10 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 sclite = [
-    "sclite-core>=1.0.8,<1.1",
+    "sclite-core==1.0.8",
 ]
 tecrax = [
-    "tecrax>=0.3.7a0,<0.4",
+    "tecrax==0.3.8a0",
 ]
 
 [project.scripts]
