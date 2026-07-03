@@ -160,12 +160,31 @@ def test_profile_conformance_accepts_tecrax_reaction_observation_contract() -> N
     result = validate_profile_conformance(
         "tecrax",
         require_reaction_observation=True,
-        require_readonly=True,
+        track="readonly",
     )
 
     assert result.status == "passed"
+    assert result.track == "readonly"
     assert "diagnose_monitoring_host" in result.reaction_observation_intents
+    assert "configure_chrony_ntp_server" in result.mutation_candidate_intents
+    assert "configure_chrony_ntp_server" in result.skipped_intents
     assert "reaction_pack" in result.checked_surfaces
+
+
+def test_profile_conformance_reports_tecrax_mutation_track_separately() -> None:
+    result = validate_profile_conformance("tecrax", track="mutation")
+
+    assert result.status == "passed"
+    assert result.track == "mutation"
+    assert result.checked_intents == ("configure_chrony_ntp_server",)
+    assert result.mutation_candidate_intents == ("configure_chrony_ntp_server",)
+    assert "diagnose_monitoring_host" in result.skipped_intents
+    assert result.reaction_observation_intents == ()
+
+
+def test_profile_conformance_rejects_unknown_track(tmp_path: Path) -> None:
+    with pytest.raises(RExecOpValidationError, match="profile conformance track"):
+        validate_profile_conformance(_profile(tmp_path), track="invalid")
 
 
 def test_profile_conformance_raises_for_unknown_profile() -> None:

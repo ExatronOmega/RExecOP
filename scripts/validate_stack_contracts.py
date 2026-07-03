@@ -15,7 +15,7 @@ import rexecop  # noqa: E402
 EXPECTED_REXECOP = "0.2.11a0"
 EXPECTED_GOVENGINE = "govengine==0.16.5"
 EXPECTED_SCLITE = "sclite-core==1.0.8"
-EXPECTED_TECRAX = "tecrax==0.3.8a0"
+EXPECTED_TECRAX = "tecrax==0.3.9a0"
 
 ACTIVE_READINESS = (
     "alpha_readonly",
@@ -31,12 +31,13 @@ REQUIRED_DOC_MARKERS = (
     "sclite-core==1.0.8",
     "govengine==0.16.5",
     "rexecop` | `0.2.11a0`",
-    "tecrax==0.3.8a0",
+    "tecrax==0.3.9a0",
     "observation_envelope.v0.1",
     "PolicyEnforcementPlan",
     "ExecutionRequest` / `ExecutionReceipt` schema `v0.2`",
     "tecrax.monitoring_host_diagnosis@1.0",
     "`mutation_ready` | false",
+    "not a `mutation_ready` claim",
 )
 
 
