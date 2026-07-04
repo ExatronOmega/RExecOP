@@ -180,9 +180,15 @@ def bind_step_execution_spec(
     )
     specs = shared_state.setdefault("typed_execution_specs", {})
     if step_id not in specs:
+        capability = spec.get("capability_descriptor")
+        capability_digest = ""
+        if isinstance(capability, Mapping):
+            capability_digest = str(capability.get("digest") or "")
         specs[step_id] = {
             "schema": str(spec.get("schema") or ""),
             "digest": str(spec.get("digest") or ""),
+            "payload_schema": str(spec.get("payload_schema") or ""),
+            "capability_descriptor_digest": capability_digest,
         }
 
 

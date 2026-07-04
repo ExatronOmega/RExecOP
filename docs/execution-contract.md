@@ -62,7 +62,11 @@ outside the profile workflow.
 - `request_digest`, `receipt_digest`, and the same immutable `policy_binding`
 - `enforcement`: resource limits, receipt emission, and output-digest verification status
 - `step_receipts[]`: per-step `success`, `error_class`, `output_digest_refs`,
-  `output_truncated`
+  `output_truncated`, optional `execution_spec_digest` and
+  `capability_descriptor_digest` when typed execution specs were bound
+- `typed_execution_binding`: aggregate digest map (`rexecop.typed_execution_binding.v0.1`)
+  for executed connector steps; binds policy/admission via existing
+  `policy_binding` and per-step typed/output digests without embedding payloads
 
 Receipts reference bounded runtime output-record digests and connector stream
 digests where available; they do **not** embed raw stdout/stderr or HTTP bodies.
@@ -120,6 +124,11 @@ Workflow plan (profile)
 | --- | --- | --- |
 | RExecOp runtime | `execution_request` / `execution_receipt` in `shared_state` | Operator debugging, GovEngine/receipt binding inputs |
 | SCLite | `execution_receipt.v0.2` bundle artifact | Auditable truth on completion export |
+
+SCLite `execution_receipt` may include `rexecop_runtime_binding` with digest-only
+refs to the runtime receipt (`request_digest`, `receipt_digest`, `policy_binding`,
+`typed_execution_binding`). RExecOp remains a runtime projection layer; SCLite
+retains truth authority.
 | GovEngine | runner request/receipt contracts | Governance — see [govengine-integration.md](govengine-integration.md) |
 
 ## GovEngine PolicyEngine (wired)

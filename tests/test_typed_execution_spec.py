@@ -15,6 +15,12 @@ from rexecop.connectors.capability_descriptor import (
 from rexecop.connectors.registry import describe_connector_backend
 from rexecop.errors import RExecOpValidationError
 from rexecop.execution.executor import StepExecutor
+from rexecop.execution.model import (
+    TYPED_EXECUTION_BINDING_SCHEMA,
+    build_typed_execution_binding,
+    execution_receipt_from_results,
+    execution_request_from_workflow,
+)
 from rexecop.execution.typed_spec import (
     COMMAND_EXECUTION_SPEC_SCHEMA,
     HTTP_ACTION_EXECUTION_SPEC_SCHEMA,
@@ -370,3 +376,70 @@ def test_workflow_runner_binds_typed_execution_spec_for_fixture_connector() -> N
     typed_specs = result.shared_state["typed_execution_specs"]
     assert typed_specs["inspect_state"]["digest"].startswith("sha256:")
     assert typed_specs["inspect_state"]["schema"] == STEP_EXECUTION_SPEC_SCHEMA
+    assert typed_specs["inspect_state"]["capability_descriptor_digest"].startswith("sha256:")
+    receipt = result.shared_state["execution_receipt"]
+    binding = receipt["typed_execution_binding"]
+    assert binding["schema"] == TYPED_EXECUTION_BINDING_SCHEMA
+    assert binding["step_digests"]["inspect_state"]["execution_spec_digest"] == (
+        typed_specs["inspect_state"]["digest"]
+    )
+    assert binding["binding_digest"].startswith("sha256:")
+    step_receipt = next(
+        item for item in receipt["step_receipts"] if item["step_id"] == "inspect_state"
+    )
+    assert step_receipt["execution_spec_digest"] == typed_specs["inspect_state"]["digest"]
+
+
+def test_execution_receipt_binds_policy_and_typed_execution_digests() -> None:
+    request = execution_request_from_workflow(
+        operation_id="op-bind",
+        target="fixture-target",
+        mode="dry_run",
+        planned_steps=[
+            {
+                "id": "inspect_state",
+                "type": "connector",
+                "connector": "fixture_source",
+                "action": "read_fixture_state",
+            }
+        ],
+        policy_binding={
+            "schema_version": "v0.1",
+            "enforcement_plan_id": "plan-1",
+            "enforcement_plan_digest": "sha256:" + "a" * 64,
+            "admission_id": "adm-1",
+            "admission_digest": "sha256:" + "b" * 64,
+            "policy_pack_id": "pack-1",
+            "policy_pack_version": "1.0.0",
+            "policy_pack_digest": "sha256:" + "c" * 64,
+            "verdict_id": "verdict-1",
+            "verdict_digest": "sha256:" + "d" * 64,
+        },
+    )
+    typed_specs = {
+        "inspect_state": {
+            "schema": STEP_EXECUTION_SPEC_SCHEMA,
+            "digest": "sha256:" + "e" * 64,
+            "capability_descriptor_digest": "sha256:" + "f" * 64,
+        }
+    }
+    receipt = execution_receipt_from_results(
+        request=request,
+        success=True,
+        executed_steps=["inspect_state"],
+        step_results={
+            "inspect_state": {
+                "success": True,
+                "output": {"data": {"output_digests": {"record": "sha256:" + "0" * 64}}},
+            }
+        },
+        typed_execution_specs=typed_specs,
+    )
+    payload = receipt.as_dict()
+
+    assert payload["policy_binding"] == request.policy_binding.as_dict()
+    assert payload["typed_execution_binding"]["binding_digest"].startswith("sha256:")
+    assert payload["enforcement"]["typed_execution_specs_bound"] is True
+    assert build_typed_execution_binding(["inspect_state"], typed_specs) == (
+        payload["typed_execution_binding"]
+    )

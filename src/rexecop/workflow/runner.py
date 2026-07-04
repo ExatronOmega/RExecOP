@@ -110,6 +110,7 @@ class WorkflowRunner:
                 success=False,
                 executed_steps=executed,
                 step_results=results,
+                typed_execution_specs=state.get("typed_execution_specs"),
                 output_digest_required=output_digest_required,
                 error="policy max_steps is lower than planned workflow",
                 error_class="policy_denied",
@@ -187,6 +188,7 @@ class WorkflowRunner:
                 success=False,
                 executed_steps=executed,
                 step_results=results,
+                typed_execution_specs=state.get("typed_execution_specs"),
                 output_digest_required=output_digest_required,
                 error=result.error or f"step failed: {step_id}",
                 error_class=error_class,
@@ -211,6 +213,7 @@ class WorkflowRunner:
             success=True,
             executed_steps=executed,
             step_results=results,
+            typed_execution_specs=state.get("typed_execution_specs"),
             output_digest_required=output_digest_required,
         )
         state["execution_receipt"] = receipt.as_dict()

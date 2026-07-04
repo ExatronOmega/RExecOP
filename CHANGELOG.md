@@ -11,6 +11,11 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Bound typed execution digests into runtime `ExecutionReceipt`: per-step
+  `execution_spec_digest` / `capability_descriptor_digest`, aggregate
+  `typed_execution_binding` (`rexecop.typed_execution_binding.v0.1`) and
+  SCLite export bridge `rexecop_runtime_binding` with policy/admission/output
+  digest refs only (no typed payload ownership in RExecOp).
 - Added M6 backend capability descriptors with identity class, egress/network
   boundary, secret-ref requirements and live-backend posture projections
   (`rexecop.backend_capability_descriptor.v0.1`). Typed execution compile

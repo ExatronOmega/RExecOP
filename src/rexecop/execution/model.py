@@ -11,6 +11,7 @@ from rexecop.errors import RExecOpValidationError
 
 EXECUTION_REQUEST_SCHEMA_VERSION = "v0.2"
 EXECUTION_RECEIPT_SCHEMA_VERSION = "v0.2"
+TYPED_EXECUTION_BINDING_SCHEMA = "rexecop.typed_execution_binding.v0.1"
 
 
 @dataclass(frozen=True)
@@ -170,15 +171,22 @@ class ExecutionStepReceipt:
     error_class: str = ""
     output_digest_refs: Mapping[str, str] = field(default_factory=dict)
     output_truncated: Mapping[str, bool] = field(default_factory=dict)
+    execution_spec_digest: str = ""
+    capability_descriptor_digest: str = ""
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "step_id": self.step_id,
             "success": self.success,
             "error_class": self.error_class,
             "output_digest_refs": dict(self.output_digest_refs),
             "output_truncated": dict(self.output_truncated),
         }
+        if self.execution_spec_digest:
+            payload["execution_spec_digest"] = self.execution_spec_digest
+        if self.capability_descriptor_digest:
+            payload["capability_descriptor_digest"] = self.capability_descriptor_digest
+        return payload
 
 
 @dataclass(frozen=True)
@@ -194,11 +202,12 @@ class ExecutionReceipt:
     enforcement: Mapping[str, Any] = field(default_factory=dict)
     executed_steps: tuple[str, ...] = field(default_factory=tuple)
     step_receipts: tuple[ExecutionStepReceipt, ...] = field(default_factory=tuple)
+    typed_execution_binding: Mapping[str, Any] = field(default_factory=dict)
     error: str = ""
     error_class: str = ""
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "receipt_id": self.receipt_id,
             "request_id": self.request_id,
             "request_digest": self.request_digest,
@@ -213,6 +222,9 @@ class ExecutionReceipt:
             "error": self.error,
             "error_class": self.error_class,
         }
+        if self.typed_execution_binding:
+            payload["typed_execution_binding"] = dict(self.typed_execution_binding)
+        return payload
 
 
 def execution_request_from_workflow(
@@ -257,12 +269,17 @@ def execution_receipt_from_results(
     success: bool,
     executed_steps: list[str],
     step_results: Mapping[str, Mapping[str, Any]],
+    typed_execution_specs: Mapping[str, Any] | None = None,
     output_digest_required: bool = False,
     error: str = "",
     error_class: str = "",
 ) -> ExecutionReceipt:
     step_receipts = tuple(
-        _step_receipt(step_id, result)
+        _step_receipt(
+            step_id,
+            result,
+            typed_execution_specs=typed_execution_specs,
+        )
         for step_id, result in step_results.items()
     )
     digests_present = all(
@@ -272,6 +289,10 @@ def execution_receipt_from_results(
     )
     if output_digest_required and not digests_present:
         raise RExecOpValidationError("required execution output digest missing")
+    typed_binding = build_typed_execution_binding(
+        executed_steps,
+        typed_execution_specs,
+    )
     enforcement_status = "enforced" if request.policy_binding.present else "not_required"
     receipt = ExecutionReceipt(
         receipt_id=f"exec-receipt:{request.operation_id}",
@@ -284,17 +305,63 @@ def execution_receipt_from_results(
             "status": enforcement_status,
             "receipt_emitted": True,
             "output_digests_verified": digests_present,
+            "typed_execution_specs_bound": bool(typed_binding.get("step_digests")),
             "resource_limits": request.resource_limits.as_dict(),
         },
         executed_steps=tuple(executed_steps),
         step_receipts=step_receipts,
+        typed_execution_binding=typed_binding,
         error=error,
         error_class=error_class,
     )
     return replace(receipt, receipt_digest=execution_receipt_digest(receipt))
 
 
-def _step_receipt(step_id: str, result: Mapping[str, Any]) -> ExecutionStepReceipt:
+def build_typed_execution_binding(
+    executed_steps: list[str] | tuple[str, ...],
+    typed_execution_specs: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(typed_execution_specs, Mapping):
+        return {}
+    step_digests: dict[str, dict[str, str]] = {}
+    for step_id in executed_steps:
+        entry = typed_execution_specs.get(step_id)
+        if not isinstance(entry, Mapping):
+            continue
+        spec_digest = str(entry.get("digest") or "").strip()
+        capability_digest = str(entry.get("capability_descriptor_digest") or "").strip()
+        if not spec_digest and not capability_digest:
+            continue
+        step_digests[str(step_id)] = {
+            "execution_spec_digest": spec_digest,
+            "capability_descriptor_digest": capability_digest,
+            "schema": str(entry.get("schema") or "").strip(),
+        }
+    if not step_digests:
+        return {}
+    binding = {
+        "schema": TYPED_EXECUTION_BINDING_SCHEMA,
+        "step_digests": step_digests,
+        "non_claims": [
+            "Runtime projection only; not a SCLite truth artifact.",
+            "Binds digests only; does not embed typed execution payloads.",
+        ],
+    }
+    binding["binding_digest"] = _record_digest(
+        {
+            "schema": binding["schema"],
+            "step_digests": step_digests,
+        }
+    )
+    return binding
+
+
+def _step_receipt(
+    step_id: str,
+    result: Mapping[str, Any],
+    *,
+    typed_execution_specs: Mapping[str, Any] | None = None,
+) -> ExecutionStepReceipt:
     output = result.get("output")
     output_data = output if isinstance(output, Mapping) else {}
     data = output_data.get("data")
@@ -309,6 +376,15 @@ def _step_receipt(step_id: str, result: Mapping[str, Any]) -> ExecutionStepRecei
     for source in (response_data.get("output_truncated"), output_data.get("output_truncated")):
         if isinstance(source, Mapping):
             truncated.update({str(key): bool(value) for key, value in source.items()})
+    execution_spec_digest = ""
+    capability_descriptor_digest = ""
+    if isinstance(typed_execution_specs, Mapping):
+        entry = typed_execution_specs.get(step_id)
+        if isinstance(entry, Mapping):
+            execution_spec_digest = str(entry.get("digest") or "").strip()
+            capability_descriptor_digest = str(
+                entry.get("capability_descriptor_digest") or ""
+            ).strip()
     return ExecutionStepReceipt(
         step_id=step_id,
         success=bool(result.get("success")),
@@ -319,6 +395,8 @@ def _step_receipt(step_id: str, result: Mapping[str, Any]) -> ExecutionStepRecei
         ),
         output_digest_refs=digests,
         output_truncated=truncated,
+        execution_spec_digest=execution_spec_digest,
+        capability_descriptor_digest=capability_descriptor_digest,
     )
 
 

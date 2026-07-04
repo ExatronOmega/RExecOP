@@ -106,6 +106,8 @@ def test_policy_binding_flows_to_request_receipt_and_sclite(tmp_path: Path) -> N
         == enforcement["plan_digest"]
     )
     assert receipt["policy_binding"] == request["policy_binding"]
+    assert receipt["typed_execution_binding"]["step_digests"]
+    assert receipt["enforcement"]["typed_execution_specs_bound"] is True
     assert receipt["request_digest"].startswith("sha256:")
     assert receipt["receipt_digest"].startswith("sha256:")
     assert receipt["enforcement"]["status"] == "enforced"
@@ -122,6 +124,7 @@ def test_policy_binding_flows_to_request_receipt_and_sclite(tmp_path: Path) -> N
         == enforcement["admission_digest"]
     )
     assert sclite_receipt["policy_enforcement"]["status"] == "enforced"
+    assert sclite_receipt["rexecop_runtime_binding"]["typed_execution_binding"]["step_digests"]
 
 
 def test_policy_verdict_drift_blocks_before_executor(tmp_path: Path) -> None:

@@ -221,6 +221,25 @@ def build_scoped_execution_receipt(
                 "verdict_digest": str(plan.get("verdict_digest") or ""),
                 "status": "enforced",
             }
+    shared_state = operation.metadata.get("shared_state")
+    if isinstance(shared_state, dict):
+        runtime_receipt = shared_state.get("execution_receipt")
+        if isinstance(runtime_receipt, dict):
+            runtime_binding = runtime_receipt.get("typed_execution_binding")
+            if isinstance(runtime_binding, dict) and runtime_binding.get("step_digests"):
+                artifact["rexecop_runtime_binding"] = {
+                    "request_digest": str(runtime_receipt.get("request_digest") or ""),
+                    "receipt_digest": str(runtime_receipt.get("receipt_digest") or ""),
+                    "policy_binding": dict(runtime_receipt.get("policy_binding") or {}),
+                    "typed_execution_binding": {
+                        "schema": str(runtime_binding.get("schema") or ""),
+                        "binding_digest": str(runtime_binding.get("binding_digest") or ""),
+                        "step_digests": dict(runtime_binding.get("step_digests") or {}),
+                    },
+                }
+                artifact["non_claims"] = list(artifact["non_claims"]) + [
+                    "rexecop_runtime_binding_refs_digest_only_runtime_projections",
+                ]
     return validate("execution_receipt", artifact)
 
 
