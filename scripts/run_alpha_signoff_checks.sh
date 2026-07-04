@@ -39,6 +39,12 @@ fi
 echo "==> secret scan"
 bash scripts/secret_scan.sh
 
+echo "==> ruff"
+"$PYTHON" -m ruff check . --exclude ci-deps
+
+echo "==> mypy"
+"$PYTHON" -m mypy src/rexecop
+
 echo "==> delivery pytest suite"
 export REXECOP_SIGNOFF_INNER=1
 "$PYTHON" -m pytest -q -m delivery

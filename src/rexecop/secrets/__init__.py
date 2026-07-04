@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from rexecop.secrets.port import SecretResolver
 from rexecop.secrets.doctor import run_secrets_doctor
+from rexecop.secrets.port import SecretResolver
 from rexecop.secrets.resolver import (
     ChainedSecretResolver,
     EnvSecretResolver,

@@ -192,7 +192,7 @@ def _check_missing_refs(
         return _check("missing_refs", CHECK_PASSED, "no secret_ref bindings require resolution")
 
     file_keys, file_error = _load_secrets_file_keys(secrets_file)
-    missing: list[dict[str, str]] = []
+    missing: list[dict[str, Any]] = []
     for ref in sorted(refs):
         if _ref_available_in_env(ref) or ref in file_keys:
             continue
