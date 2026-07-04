@@ -11,6 +11,12 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Hardened M5 action surface validation and delivery coverage: `action validate`
+  now fails on duplicate `secret_ref` reuse across connector bindings;
+  `tests/test_action_surface.py` covers secret redaction, no backend IO, malformed
+  env/action input, unknown configure templates, shape-digest drift and canonical
+  `patch_digest` output; the module is registered in `tests/delivery_scope.py`
+  (`action_surface` theme).
 - Added M5 read-only action metadata UX: `rexecop action list`,
   `rexecop action show <intent>`, `rexecop action preview <intent>`, and
   `rexecop action validate --all|--intent`, plus `rexecop secrets suggest-ref`
