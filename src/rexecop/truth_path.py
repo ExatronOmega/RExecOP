@@ -261,7 +261,7 @@ def _evidence_claim_summaries(
             subject_ref=subject_ref,
             claim_type="execution_truth",
             statement=statement,
-            receipt_refs=[f"receipt:{operation.id}"],
+            receipt_refs=(f"receipt:{operation.id}",),
             metadata={
                 "admission_digest": admission_digest,
                 "operation_state": operation.state,

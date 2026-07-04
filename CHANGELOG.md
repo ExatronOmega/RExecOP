@@ -7,10 +7,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.13a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
 
+## [0.2.13a0] - 2026-07-04
+
+- Published `rexecop==0.2.13a0` on PyPI with `govengine==0.16.7`, `sclite-core==1.0.8`
+  and `tecrax==0.3.9a0` extra pin.
+- Added M7 truth-path projection: `TruthPathProjection`, `project_truth_path()`,
+  `rexecop operation truth-path --operation <id>` and golden fixture
+  `tests/fixtures/truth_path_golden.json` for Tecrax `diagnose_monitoring_host`.
+- Fixed truth-path digest normalization (`sha256:` prefix) and golden test reload
+  after `export_receipt`.
 - Completed M6.5 stack contract compatibility gates: expanded runtime projection
   matrix (typed execution, action configure CLI, doctor/explain outputs),
   SCLite artifact version pins, `evaluate_stack_contract_compatibility()`,
@@ -509,7 +518,8 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
-[0.2.12a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.11a0...HEAD
+[0.2.13a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.12a0...HEAD
+[0.2.12a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.11a0...v0.2.12a0
 [0.2.11a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.10a0...v0.2.11a0
 [0.2.10a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.9a0...3372bb3
 [0.2.9a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.8a0...v0.2.9a0
