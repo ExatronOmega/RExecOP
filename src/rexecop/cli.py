@@ -26,6 +26,13 @@ from rexecop.cli_errors import (
     lookup_cli_error,
     validation_cli_error,
 )
+from rexecop.cli_output import (
+    DOCTOR_RENDERERS,
+    INIT_RENDERERS,
+    active_cli_output,
+    configure_cli_output,
+    emit_payload,
+)
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
@@ -194,12 +201,32 @@ def main(
         envvar="REXECOP_STORAGE",
         help="Runtime storage backend: file (default) or sqlite.",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON for supported commands.",
+    ),
+    output_format: str = typer.Option(
+        "json",
+        "--format",
+        help="Output format for supported commands: json, table, markdown.",
+    ),
+    quiet: bool = typer.Option(False, "--quiet", help="Suppress non-essential output."),
+    verbose: bool = typer.Option(False, "--verbose", help="Include extended diagnostic output."),
+    no_color: bool = typer.Option(False, "--no-color", help="Disable colorized stderr output."),
 ) -> None:
     """RExecOp operations control-plane."""
     global _runtime_instance, _runtime_root
     _runtime_instance = resolve_runtime_instance(instance)
     _runtime_root = resolve_runtime_root(root, instance=_runtime_instance)
     os.environ["REXECOP_STORAGE"] = resolve_storage_backend(storage)
+    configure_cli_output(
+        json_mode=json_output,
+        output_format=output_format,
+        quiet=quiet,
+        verbose=verbose,
+        no_color=no_color,
+    )
 
 
 def _controller() -> OperationController:
@@ -238,9 +265,17 @@ def init_cmd(
             guided=guided,
         )
     except RExecOpError as exc:
+        if active_cli_output().json_mode:
+            _emit_cli_error(
+                validation_cli_error(
+                    command=('init',),
+                    message=str(exc),
+                    reason_code='runtime_init_failed',
+                )
+            )
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    emit_payload(result, renderers=INIT_RENDERERS)
 
 
 @app.command("doctor")
@@ -258,7 +293,7 @@ def doctor_cmd(
         env_path=env,
         catalog_path=catalog,
     )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    emit_payload(result, renderers=DOCTOR_RENDERERS)
     if result["status"] == CHECK_BLOCKER:
         raise typer.Exit(code=1)
 
