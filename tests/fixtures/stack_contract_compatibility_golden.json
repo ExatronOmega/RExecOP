@@ -1,0 +1,35 @@
+{
+  "schema": "rexecop.stack_contract_compatibility_golden.v0.1",
+  "compatibility_policy": "unknown_major_fail_closed",
+  "required_govengine_contracts": [
+    "gov_admission_decision",
+    "policy_enforcement_plan",
+    "policy_request",
+    "policy_verdict",
+    "runtime_control_projection",
+    "supervisor_action_request",
+    "trigger_planning_request",
+    "typed_execution_control_catalog",
+    "typed_execution_governance_projection",
+    "typed_execution_governance_request",
+    "typed_execution_stack_compatibility"
+  ],
+  "required_runtime_projections": [
+    "action_configure",
+    "doctor_report",
+    "execution_receipt",
+    "execution_request",
+    "operation_explain",
+    "runtime_manifest",
+    "stack_contract_compatibility",
+    "step_execution_spec"
+  ],
+  "sclite_artifact_versions": {
+    "evidence_contract": "v0.2",
+    "execution_contract": "v0.2",
+    "execution_receipt": "v0.2",
+    "execution_ticket": "v0.3",
+    "intent_contract": "v0.2",
+    "policy_decision": "v0.2"
+  }
+}

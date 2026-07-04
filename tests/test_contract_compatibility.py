@@ -7,7 +7,9 @@ from govengine import validate_supported_contract_version
 from rexecop.runtime.contract_compatibility import (
     STACK_CONTRACT_COMPATIBILITY_SCHEMA,
     evaluate_govengine_contract_compatibility,
+    evaluate_stack_contract_compatibility,
     rexecop_runtime_projection_matrix,
+    validate_sclite_artifact_pins,
 )
 from rexecop.runtime.doctor import run_runtime_doctor
 
@@ -40,7 +42,15 @@ def test_validate_supported_contract_version_blocks_unknown_major() -> None:
     assert raised
 
 
-def test_runtime_doctor_includes_govengine_contract_compatibility(tmp_path: Path) -> None:
+def test_evaluate_stack_contract_compatibility_passes() -> None:
+    result = evaluate_stack_contract_compatibility()
+
+    assert result["status"] == "passed"
+    assert not result["blockers"]
+    assert not validate_sclite_artifact_pins()
+
+
+def test_runtime_doctor_includes_stack_contract_compatibility(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     root.mkdir()
     (root / "runtime_manifest.json").write_text("{}\n", encoding="utf-8")
@@ -61,6 +71,8 @@ def test_runtime_doctor_includes_govengine_contract_compatibility(tmp_path: Path
     check = next(
         item
         for item in report["checks"]
-        if item["id"] == "govengine_contract_compatibility"
+        if item["id"] == "stack_contract_compatibility"
     )
     assert check["status"] == "passed"
+    assert report["schema"] == "rexecop.doctor_report.v0.1"
+    assert report["contract_versions"]["status"] == "passed"

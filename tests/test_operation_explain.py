@@ -71,3 +71,5 @@ def test_operation_explain_reports_mutating_contract_completeness() -> None:
     assert payload["runtime_controls"]["postflight_available"] is True
     assert payload["runtime_controls"]["mutation_contract_complete"] is True
     assert payload["governance"]["policy_enforcement"]["plan_status"] == "ready"
+    assert payload["contract_versions"]["compatibility_policy"] == "unknown_major_fail_closed"
+    assert "execution_request" in payload["contract_versions"]["runtime_projections"]

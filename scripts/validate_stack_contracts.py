@@ -11,6 +11,12 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 import rexecop  # noqa: E402
+from rexecop.runtime.contract_compatibility import (  # noqa: E402
+    REQUIRED_RUNTIME_PROJECTION_SURFACES,
+    REXECOP_RUNTIME_PROJECTIONS,
+    evaluate_stack_contract_compatibility,
+    validate_sclite_artifact_pins,
+)
 
 EXPECTED_REXECOP = "0.2.12a0"
 EXPECTED_GOVENGINE = "govengine==0.16.6"
@@ -38,6 +44,9 @@ REQUIRED_DOC_MARKERS = (
     "tecrax.monitoring_host_diagnosis@1.0",
     "`mutation_ready` | false",
     "not a `mutation_ready` claim",
+    "govengine-policy compatibility --json",
+    "unknown_major_fail_closed",
+    "rexecop.profile_contract.v0.1",
 )
 
 
@@ -109,6 +118,18 @@ def collect_errors() -> list[str]:
         errors.append("docs/stack-contract-compatibility.md:advisory_llm_must_not_be_active")
     if "`mutation_ready` | active" in matrix or "`mutation_ready` | true" in matrix:
         errors.append("docs/stack-contract-compatibility.md:mutation_ready_must_not_be_active")
+
+    compatibility = evaluate_stack_contract_compatibility()
+    if compatibility["status"] != "passed":
+        errors.append(
+            "stack_contract_compatibility_failed:"
+            + ",".join(compatibility.get("blockers") or [])
+        )
+    errors.extend(validate_sclite_artifact_pins())
+    surface_ids = {item["surface_id"] for item in REXECOP_RUNTIME_PROJECTIONS}
+    for surface_id in REQUIRED_RUNTIME_PROJECTION_SURFACES:
+        if surface_id not in surface_ids:
+            errors.append(f"missing_runtime_projection_surface:{surface_id}")
     return errors
 
 

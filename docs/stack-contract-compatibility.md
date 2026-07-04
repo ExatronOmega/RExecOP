@@ -38,6 +38,8 @@ Document id: `stack-contract-compatibility`.
 | RExecOp execution records | `ExecutionRequest` / `ExecutionReceipt` schema `v0.2` | RExecOp | Stored in workflow `shared_state` and bound to policy digests. |
 | RExecOp reaction mechanics | compiled profile reaction pack, `ReactionContext`, `ReactionService`, replayable reaction chain | RExecOp | Deterministic evaluation and child-operation planning mechanics only. |
 | RExecOp profile conformance | `validate_profile_conformance()` and `scripts/validate_profile_conformance.py --track readonly` | RExecOp | Verifies profile-declared read-only operation/catalog/reaction-observation contracts without importing domain semantics. Mutation candidates are reported on a separate track and do not widen the read-only readiness claim. |
+| RExecOp profile contract | `rexecop.profile_contract.v0.1` (`profile_contract.version`) | RExecOp/Tecrax | Profiles declare contract version and required governance sections; conformance gates fail closed on missing version. |
+| RExecOp runtime projections | `rexecop.stack_contract_compatibility.v0.1` matrix | RExecOp | Covers typed execution specs, execution request/receipt, action configure/preview CLI JSON, runtime manifest and doctor/explain outputs. |
 | RExecOp catalog mechanics | target catalog and profile-derived operation descriptors | RExecOp | Applicability projection and drift rejection, never authorization. |
 | Tecrax host facts | `tecrax.basic_host_inventory@1.0`, `tecrax.ntp_local_health@1.0`, `tecrax.docker_service_health@1.0`, `tecrax.host_security_posture@1.0`, `tecrax.ntp_server_observation@1.0` | Tecrax | Profile-owned facts consumed as bounded workflow outputs. |
 | Tecrax service/API facts | `tecrax.zabbix_api_reachability@1.0`, `tecrax.zabbix_problem_summary@1.0`, `tecrax.zabbix_host_availability_summary@1.0`, `tecrax.adguard_reachability@1.0`, `tecrax.portainer_reachability@1.0` | Tecrax | Read-only infrastructure summaries with secrets outside repositories. |
@@ -58,6 +60,24 @@ Document id: `stack-contract-compatibility`.
 separate `--track mutation` report is allowed to discover and validate bounded
 mutation candidates such as Tecrax `configure_chrony_ntp_server`, but that report
 is not a `mutation_ready` claim and does not authorize execution.
+
+## Compatibility policy
+
+Stack hosts must treat contract version drift as a release gate, not as a silent
+runtime behavior change. Compatibility policy id: `unknown_major_fail_closed`.
+
+| Rule | Behavior |
+| --- | --- |
+| Unknown major version | Fail closed before execution planning or backend IO. |
+| Unknown minor/patch within supported major | Fail closed until the host explicitly pins the version. |
+| GovEngine catalog | `govengine-policy compatibility --json` is the machine-readable supported-contract report. |
+| RExecOp doctor | `rexecop doctor` emits `rexecop.doctor_report.v0.1` with `contract_versions` and blocker `stack_contract_compatibility`. |
+| RExecOp explain | `rexecop operation explain` includes the same `contract_versions` summary for operator review. |
+| SCLite artifact refs | RExecOp pins `SCLITE_SCHEMA_REFS` to supported `v0.x` artifact versions and validates them in `scripts/validate_stack_contracts.py`. |
+| Profile contract | Profiles declare `profile_contract.version` (`rexecop.profile_contract.v0.1`) for intent/workflow/governance surfaces. |
+
+Golden fixture `tests/fixtures/stack_contract_compatibility_golden.json` guards
+required GovEngine surfaces, runtime projections and SCLite artifact versions.
 
 ## Required gates
 

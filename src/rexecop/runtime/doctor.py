@@ -10,6 +10,11 @@ from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
 from rexecop.profile.conformance import validate_profile_conformance
+from rexecop.runtime.contract_compatibility import (
+    DOCTOR_REPORT_SCHEMA,
+    contract_versions_summary,
+    evaluate_stack_contract_compatibility,
+)
 from rexecop.runtime.init import RUNTIME_DIRECTORIES, RUNTIME_MANIFEST
 from rexecop.storage.factory import resolve_storage_backend
 
@@ -40,7 +45,7 @@ def run_runtime_doctor(
         _check_runtime_layout(root),
         _check_stack_packages(),
         _check_typed_execution_stack_compatibility(),
-        _check_govengine_contract_compatibility(),
+        _check_stack_contract_compatibility(),
         profile_check,
         _check_environment(env_path, expected_profile=expected_profile),
         _check_catalog(catalog_path),
@@ -53,7 +58,11 @@ def run_runtime_doctor(
         for check in checks
         if check.get("next_action")
     ]
+    profile_version = str(
+        (profile_check.get("details") or {}).get("version") or ""
+    )
     return {
+        "schema": DOCTOR_REPORT_SCHEMA,
         "status": status,
         "root": str(root),
         "instance": instance,
@@ -61,6 +70,7 @@ def run_runtime_doctor(
         "blockers": blockers,
         "warnings": warnings,
         "next_actions": sorted(set(next_actions)),
+        "contract_versions": contract_versions_summary(profile_version=profile_version),
     }
 
 
@@ -175,43 +185,40 @@ def _check_typed_execution_stack_compatibility() -> dict[str, Any]:
     )
 
 
-def _check_govengine_contract_compatibility() -> dict[str, Any]:
+def _check_stack_contract_compatibility() -> dict[str, Any]:
     try:
-        from rexecop.runtime.contract_compatibility import (
-            evaluate_govengine_contract_compatibility,
-        )
-
-        result = evaluate_govengine_contract_compatibility()
+        result = evaluate_stack_contract_compatibility()
     except Exception as exc:  # noqa: BLE001 - doctor boundary
         return _check(
-            "govengine_contract_compatibility",
+            "stack_contract_compatibility",
             CHECK_BLOCKER,
-            "GovEngine contract compatibility check failed",
+            "stack contract compatibility check failed",
             details={"error": str(exc)},
             next_action="install compatible govengine and rerun rexecop doctor",
         )
     if result["status"] != "passed":
         return _check(
-            "govengine_contract_compatibility",
+            "stack_contract_compatibility",
             CHECK_BLOCKER,
-            "GovEngine supported contracts do not match RExecOp expectations",
+            "stack contract compatibility failed",
             details={
-                "unsupported_contracts": result["unsupported_contracts"],
-                "missing_contracts": result["missing_contracts"],
                 "blockers": result["blockers"],
+                "govengine_blockers": result["govengine_contracts"].get("blockers"),
             },
-            next_action="align rexecop contract pins with govengine supported-contract report",
-        )
-    return _check(
-        "govengine_contract_compatibility",
-        CHECK_PASSED,
-        "GovEngine supported contracts match RExecOp expectations",
-        details={
-            "govengine_version": result["govengine_version"],
-            "matched_contracts": result["matched_contracts"],
-            "projection_count": len(
-                result["rexecop_runtime_projections"].get("projections") or []
+            next_action=(
+                "align rexecop/govengine/sclite contract pins with supported-contract report"
             ),
+        )
+    govengine = result["govengine_contracts"]
+    return _check(
+        "stack_contract_compatibility",
+        CHECK_PASSED,
+        "stack contract compatibility passed",
+        details={
+            "govengine_version": govengine["govengine_version"],
+            "matched_contracts": govengine["matched_contracts"],
+            "projection_count": len(result["runtime_projections"]["projections"]),
+            "sclite_artifact_count": len(result["sclite_artifact_refs"]),
         },
     )
 

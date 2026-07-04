@@ -11,9 +11,15 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Completed M6.5 stack contract compatibility gates: expanded runtime projection
+  matrix (typed execution, action configure CLI, doctor/explain outputs),
+  SCLite artifact version pins, `evaluate_stack_contract_compatibility()`,
+  golden fixture `tests/fixtures/stack_contract_compatibility_golden.json`,
+  `contract_versions` in doctor/explain and CI validation in
+  `scripts/validate_stack_contracts.py` with `unknown_major_fail_closed` policy.
 - Added M6.5 stack contract compatibility: `rexecop_runtime_projection_matrix()`,
   `evaluate_govengine_contract_compatibility()` and `rexecop doctor` blocker
-  `govengine_contract_compatibility` consume GovEngine `supported_contract_report`.
+  `stack_contract_compatibility` consume GovEngine `supported_contract_report`.
 - Policy-pack `output_digest_required` is carried in the typed execution overlay
   for receipt enforcement and does not block pre-IO governance admission.
 - Typed execution governance overlay now consumes `policy_enforcement.plan.controls`

@@ -15,6 +15,8 @@ OPERATION_EXPLAIN_SCHEMA = "rexecop.operation_explain.v0.1"
 
 def explain_operation(operation: Operation, plan: OperationPlan) -> dict[str, Any]:
     """Build a stable, redacted operator explanation for a stored plan."""
+    from rexecop.runtime.contract_compatibility import contract_versions_summary
+
     return {
         "schema": OPERATION_EXPLAIN_SCHEMA,
         "operation": _operation_summary(operation, plan),
@@ -23,6 +25,9 @@ def explain_operation(operation: Operation, plan: OperationPlan) -> dict[str, An
         "workflow": _workflow(plan),
         "runtime_controls": _runtime_controls(operation, plan),
         "expected_sclite_artifacts": _expected_sclite_artifacts(),
+        "contract_versions": contract_versions_summary(
+            profile_version=str(plan.catalog_binding.get("profile_version") or ""),
+        ),
         "sensitivity_filtering": {
             "status": "redacted",
             "omitted": [
