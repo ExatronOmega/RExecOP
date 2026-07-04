@@ -40,6 +40,7 @@ def run_runtime_doctor(
         _check_runtime_layout(root),
         _check_stack_packages(),
         _check_typed_execution_stack_compatibility(),
+        _check_govengine_contract_compatibility(),
         profile_check,
         _check_environment(env_path, expected_profile=expected_profile),
         _check_catalog(catalog_path),
@@ -169,6 +170,47 @@ def _check_typed_execution_stack_compatibility() -> dict[str, Any]:
             "supported_backends": result["supported_backends"],
             "control_count": len(
                 result["govengine_control_catalog"].get("controls") or []
+            ),
+        },
+    )
+
+
+def _check_govengine_contract_compatibility() -> dict[str, Any]:
+    try:
+        from rexecop.runtime.contract_compatibility import (
+            evaluate_govengine_contract_compatibility,
+        )
+
+        result = evaluate_govengine_contract_compatibility()
+    except Exception as exc:  # noqa: BLE001 - doctor boundary
+        return _check(
+            "govengine_contract_compatibility",
+            CHECK_BLOCKER,
+            "GovEngine contract compatibility check failed",
+            details={"error": str(exc)},
+            next_action="install compatible govengine and rerun rexecop doctor",
+        )
+    if result["status"] != "passed":
+        return _check(
+            "govengine_contract_compatibility",
+            CHECK_BLOCKER,
+            "GovEngine supported contracts do not match RExecOp expectations",
+            details={
+                "unsupported_contracts": result["unsupported_contracts"],
+                "missing_contracts": result["missing_contracts"],
+                "blockers": result["blockers"],
+            },
+            next_action="align rexecop contract pins with govengine supported-contract report",
+        )
+    return _check(
+        "govengine_contract_compatibility",
+        CHECK_PASSED,
+        "GovEngine supported contracts match RExecOp expectations",
+        details={
+            "govengine_version": result["govengine_version"],
+            "matched_contracts": result["matched_contracts"],
+            "projection_count": len(
+                result["rexecop_runtime_projections"].get("projections") or []
             ),
         },
     )

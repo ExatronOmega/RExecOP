@@ -32,6 +32,7 @@ Document id: `stack-contract-compatibility`.
 | SCLite trigger decision artifact | `trigger_decision.v0.1` | SCLite | Stores bounded trigger event, rule, GovEngine admission and optional child-operation references; RExecOp remains the trigger planner. |
 | SCLite watchdog decision artifact | `watchdog_decision.v0.1` | SCLite | Stores bounded watchdog record, supervisor-action admission and affected runtime references; RExecOp remains the runtime supervisor. |
 | GovEngine policy request/verdict | `govengine.policy` schema `v0.1` | GovEngine | Used for deterministic policy evaluation when an environment declares `policy_pack`. |
+| GovEngine supported-contract catalog | `govengine.contract_compatibility` schema `v0.1`, `govengine-policy compatibility --json` | GovEngine | Consumed by RExecOp `doctor` and stack contract validators; unknown major contract versions fail closed. |
 | GovEngine enforcement plan | `PolicyEnforcementPlan`, `RuntimeControlProjection`, existing `GovAdmissionDecision` binding | GovEngine | Consumed by RExecOp B2 before execution and at connector invoke. |
 | GovEngine supervisor action admission | `SupervisorActionRequest`, `admit_supervisor_action()` | GovEngine | Admits bounded watchdog decisions over runtime refs and limits; GovEngine does not supervise workers or write artifacts. |
 | RExecOp execution records | `ExecutionRequest` / `ExecutionReceipt` schema `v0.2` | RExecOp | Stored in workflow `shared_state` and bound to policy digests. |
