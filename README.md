@@ -24,7 +24,7 @@ policy engine or a parallel truth layer.
 | Current source line | `0.2.11a0` |
 | Maturity | **alpha** — operator evaluation with documented limits |
 | Delivery | Published single supported alpha line; older PyPI releases are archived only |
-| Tests | CI reruns the current suite |
+| Tests | CI reruns the current suite; `pytest -m delivery` runs the sign-off scope |
 | Latest PyPI | [`rexecop==0.2.11a0`](https://pypi.org/project/rexecop/0.2.11a0/) |
 | Source dependencies | `govengine==0.16.6`, `sclite-core==1.0.8` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
@@ -68,34 +68,42 @@ Ravenclaw is legacy and out of scope for RExecOp.
 
 ## What RExecOp includes now
 
+**Core execution**
+
 - Deterministic operation state machine and `OperationPlan` runtime artifact
 - GovEngine port: real `GovEngineClient` + bootstrap-only `StaticGovEngineAdapter`
-- SCLite port: full GovEngine-integration bundle emission (scoped ticket v0.3, kernel guard, review pass)
+- SCLite port: GovEngine-integration bundle emission (scoped ticket, kernel guard, review pass)
 - Profile resolution by path or `rexecop.profiles` entry point (`tecrax`)
 - Declarative profile validation rules (YAML, not hardcoded domain logic in core)
-- Domain-neutral `first-run-demo` and `runtime-fixture` examples for onboarding,
-  lifecycle, policy and connector regressions; Tecrax product semantics live only
-  in the external `tecrax` package
-- Operational controls: approve, pause, resume, cancel, retry, rollback, queue, target lock, maintenance windows
-- Runtime readiness CLI: explicit `--root` / `REXECOP_ROOT`, named local
-  `--instance` / `REXECOP_INSTANCE`, `init`, `doctor`, `env lint`, and
-  `profile lint`
-- Runtime worker: `rexecop worker run`, `rexecop queue --drain`, `rexecop trigger` (host-owned scheduling)
-- Connectors: `mock`, config-driven `http_api` (retry, pagination, error mapping), `local_shell_readonly`, `ssh_readonly` (temporary; bounded output + digests)
-- Execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` in workflow `shared_state` (schema `v0.2`)
-- GovEngine `PolicyEngine` when `environment.policy_pack` is set: plan admission,
-  supported neutral controls, pre-execution drift validation, and per-connector invoke gate
-- Operator target catalog and profile-derived operation catalog with deterministic applicability
-  and start-time drift rejection; catalog compatibility never replaces GovEngine admission
-- Read-only action metadata UX: `action list`, `action show`, `action preview`,
-  `action configure --dry-run`, `action validate`, and `secrets suggest-ref`
-  expose profile/env/catalog action contracts, redacted effective-call previews,
-  secret-ref name suggestions and bounded patch operations without backend IO,
-  connector config values, GovEngine admission claims, or SCLite truth emission
+- Deterministic reaction interpreter (`reaction-plan`, `reaction-start`, `reaction-replay`)
+- Connectors: `mock`, `http_api`, `local_shell_readonly`, `ssh_readonly` (bounded output + digests)
+- Execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` (schema `v0.2`)
+- GovEngine `PolicyEngine` when `environment.policy_pack` is set
+- Operator target catalog and profile-derived operation catalog with drift rejection at start
 - Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
-- Operator CLI (`rexecop`); runtime data under an explicit root, named local
-  instance, or default `.rexecop/` in the current working directory
+
+**Runtime readiness and operator UX**
+
+- Runtime root: `--root` / `REXECOP_ROOT`, `--instance` / `REXECOP_INSTANCE`, `init`, `doctor`
+- Input validation: `env lint`, `profile lint`, `secrets doctor`, `secrets suggest-ref`
+- Profile developer surface: `profiles list/show`, `connectors list/show`, `capabilities list`,
+  `profile manifest`, `profile harness`, operator metadata projection
+- M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,
+  `action validate`, `action configure --dry-run`
+- Pre-run inspection: `policy explain`, `operations explain`, `operation explain`,
+  `operation review`, `operation diff`, `runbook show`, `operations unavailable`
+- Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
+  `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record`
+- Lifecycle controls: `plan`, `approve`, `start`, `pause`/`resume`, `cancel`, `retry`,
+  `rollback`, `validate`, `escalate`, `status`, `history`
+- Host-owned scheduling: `queue`, `worker run`, `trigger` (see operator scheduler pattern)
+
+**Examples and fixtures**
+
+- Domain-neutral `examples/first-run-demo/` and `examples/profiles/runtime-fixture/` for
+  onboarding, lifecycle, policy and connector regressions
+- Tecrax product semantics live only in the external `tecrax` package
 
 ## What RExecOp does not include
 
@@ -105,6 +113,7 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Production cron/recurrence scheduler (host-owned worker + systemd/cron pattern only)
 - Web UI or multi-tenant RBAC
 - Unattended apply on critical infrastructure without operator and governance gates
+- `mutation_ready` apply on production targets without explicit stack gate update
 
 ## Installation
 
@@ -115,7 +124,8 @@ python -m pip install "rexecop==0.2.11a0"
 rexecop version
 ```
 
-The published `0.2.11a0` wheel contains the full B2 enforcement path, R4c catalog, watchdog decision truth path, and manual recovery record path for the single supported alpha stack line.
+The published `0.2.11a0` wheel is the single supported alpha stack line for readonly
+evaluation, catalog drift binding, watchdog decision truth and manual recovery record paths.
 
 See [docs/distribution.md](docs/distribution.md) for Tecrax extra, wheels, Git URL, and private index notes.
 
@@ -171,59 +181,25 @@ with lint checks.
 Runtime artifacts live under the selected runtime root: operations, evidence,
 SCLite bundles, receipt exports, queue, locks and trigger inbox.
 
-## CLI commands
+## CLI overview
 
-| Command | Purpose |
+The CLI has grown across M1–M5 milestones. **Full command reference:**
+[docs/cli-reference.md](docs/cli-reference.md).
+
+| Group | Commands |
 | --- | --- |
-| `init` | Create the runtime root layout without secrets or backend IO |
-| `doctor` | Check runtime root, storage, package compatibility, profile, env, catalog and secret refs |
-| `env lint` | Validate environment YAML and inline secret hygiene |
-| `secrets doctor` | Check secret refs, file permissions, duplicates and redaction (no values printed) |
-| `secrets suggest-ref` | Suggest secret reference names from env connector shape without reading values |
-| `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
-| `profile manifest` | Emit extension manifest `v0.1` for profiles, plugins and resolvers |
-| `profile harness` | Run workflow test harness (dry-run fixture, evidence, bundle, policy-blocked path) |
-| `profiles list` / `profiles show` | Discover registered profiles, intents, tracks and developer-check metadata |
-| `connectors list` / `connectors show` | Discover connector backends, modes and certification tier |
-| `capabilities list` | List neutral runtime capabilities and their source |
-| `action list` / `action show` | Inspect profile/env/catalog action metadata, refs and backend constraints without backend IO |
-| `action preview` | Show redacted HTTP/shell/SSH effective-call previews and bounded-output policy without backend IO |
-| `action configure` | Generate bounded dry-run patch operations for action config; `--write-patch` writes the patch file only |
-| `action validate` | Validate profile/env action bindings and catalog applicability without backend IO |
-| `policy explain` | Show GovEngine policy reasoning for one operation-shaped request without execution |
-| `operation explain` | Explain a stored operation plan, expected artifacts, bindings and safe next actions |
-| `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) before start |
-| `operation diff` | Compare stored plan bindings vs current profile/env/catalog (`--format json\|table\|markdown`) |
-| `runbook show` | Show profile-owned runbook ref and bounded content for one intent |
-| `runtime status` | Runtime queue, active operations, locks and dead-letter summary (`--json`) |
-| `ops` | Aggregate queue, blockers, dead letters, stale locks and action-required items |
-| `dead-letter list` / `dead-letter show` | Inspect watchdog dead-letter items (redacted show) |
-| `locks list` | List advisory target locks and stale holders |
-| `explain-error` | Map operation/dead-letter/watchdog ref to failure class and safe next actions |
-| `runtime recover` | Reconcile stale leases, interrupted operations and receipt gaps after restart (`--json`) |
-| `backup create` / `backup restore` | Secret-scanned runtime store tarball + manifest restore |
-| `watchdog manual-record` | Record a governed manual watchdog decision without executing recovery |
-| `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
-| `approve` | Manual approval after `approval_required` |
-| `start` | Execute workflow (queues when lock/capacity busy) |
-| `pause` / `resume` | Pause only at `pause_safe` workflow steps |
-| `cancel` | Abort before completion |
-| `retry` | Operator retry when profile policy allows |
-| `rollback` | Run explicit workflow rollback steps after failure |
-| `validate` | Re-run declarative profile validation |
-| `escalate` | Build operator escalation package |
-| `queue` | Inspect FIFO run-now backlog; `queue --drain` processes pending starts |
-| `worker run` | Poll queue and start approved operations (`--once`, `--poll-interval`, `--watch-inbox`, `--watchdog`, `--inbox-retry-budget`) |
-| `trigger` | Create operation from JSON stdin or CLI flags (webhook-friendly) |
-| `targets list` / `targets show` | Query bounded descriptors from a private target catalog |
-| `operations list` / `operations explain` | Query profile-owned operations and target applicability |
-| `operations unavailable` | List operations not technically applicable to one catalog target |
-| `status` / `history` | Operation state and evidence history |
-| `version` | Package version |
+| Runtime readiness | `init`, `doctor`, `env lint`, `version` |
+| Secrets | `secrets doctor`, `secrets suggest-ref` |
+| Profile developer | `profile lint`, `profile manifest`, `profile harness`, `profiles list/show`, `connectors list/show`, `capabilities list` |
+| Action metadata | `action list`, `action show`, `action preview`, `action validate`, `action configure` |
+| Catalog | `targets list/show`, `operations list`, `operations explain`, `operations unavailable` |
+| Pre-run inspection | `policy explain`, `operation explain`, `operation review`, `operation diff`, `runbook show` |
+| Runtime triage | `runtime status`, `ops`, `explain-error`, `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record` |
+| Lifecycle | `plan`, `approve`, `start`, `pause`, `resume`, `cancel`, `retry`, `rollback`, `validate`, `escalate`, `status`, `history` |
+| Scheduling | `queue`, `worker run`, `trigger` |
+| Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction-proposal-validate` |
 
-Global option: `--root` selects an explicit runtime root, `--instance` selects a named
-local instance under `./.rexecop/instances/`, and `--storage file|sqlite` selects the
-runtime storage backend.
+Global options: `--root`, `--instance`, `--storage file|sqlite`.
 
 ## Development
 
@@ -235,6 +211,7 @@ ruff check .
 mypy src/rexecop
 python -m build && python -m twine check dist/*
 pytest
+pytest -m delivery   # canonical sign-off scope from tests/delivery_scope.py
 ```
 
 GitHub Actions runs on every push and pull request: install `tecrax`, public truth validation,
@@ -243,22 +220,22 @@ grep, secret scan, pytest, and a `package-dry-run` job (`build` + `twine check`)
 
 ## Documentation
 
-- [Deterministic reaction interpreter](docs/reaction-interpreter.md)
-
 | Document | Topic |
 | --- | --- |
+| [docs/cli-reference.md](docs/cli-reference.md) | Complete CLI command reference |
 | [docs/first-run.md](docs/first-run.md) | No-I/O onboarding: init, doctor, lint, plan |
+| [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, lifecycle orchestration, queue/lock |
 | [docs/runtime-recovery-ops.md](docs/runtime-recovery-ops.md) | Triage, explain-error, recovery, backup and watchdog manual-record |
+| [docs/profile-developer-surface.md](docs/profile-developer-surface.md) | Profiles/connectors/capabilities discoverability and extension manifest |
+| [docs/secrets-operator.md](docs/secrets-operator.md) | `secrets doctor`, ref resolution and file policy |
+| [docs/reaction-interpreter.md](docs/reaction-interpreter.md) | Deterministic reaction DSL and CLI |
 | [docs/architecture.md](docs/architecture.md) | Layer boundaries and execution path |
 | [docs/stack-contract-compatibility.md](docs/stack-contract-compatibility.md) | Cross-repo contract matrix and readiness labels |
-| [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, CLI orchestration, queue/lock |
 | [docs/operator-scheduler-pattern.md](docs/operator-scheduler-pattern.md) | Host-owned scheduling with worker/systemd |
 | [docs/govengine-integration.md](docs/govengine-integration.md) | Governance port and apply gating |
 | [docs/sclite-integration.md](docs/sclite-integration.md) | Artifact emission and authority model |
 | [docs/evidence-model.md](docs/evidence-model.md) | Internal events vs SCLite truth |
 | [docs/profile-contract.md](docs/profile-contract.md) | Profile layout and entry points |
-| [docs/profile-developer-surface.md](docs/profile-developer-surface.md) | Profiles/connectors/capabilities discoverability and extension manifest |
-| [docs/secrets-operator.md](docs/secrets-operator.md) | `secrets doctor`, ref resolution and file policy |
 | [docs/connector-contract.md](docs/connector-contract.md) | `http_api`, secrets, error taxonomy |
 | [docs/execution-contract.md](docs/execution-contract.md) | ExecutionRequest/Receipt, bounded output |
 | [docs/environment-contract.md](docs/environment-contract.md) | Target, group, and connector semantics |

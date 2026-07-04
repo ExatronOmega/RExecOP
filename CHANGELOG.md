@@ -11,6 +11,9 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Refreshed README for current M1–M5 CLI surface: grouped overview, accurate capability
+  list, and link to new [docs/cli-reference.md](docs/cli-reference.md); moved the full
+  command table out of README and [docs/operation-lifecycle.md](docs/operation-lifecycle.md).
 - Hardened M5 action surface validation and delivery coverage: `action validate`
   now fails on duplicate `secret_ref` reuse across connector bindings;
   `tests/test_action_surface.py` covers secret redaction, no backend IO, malformed

@@ -31,41 +31,12 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 
 ## CLI orchestration
 
-| Command | Purpose |
-| --- | --- |
-| `init` | Create the runtime root layout without secrets or backend IO |
-| `doctor` | Check runtime root, storage, stack package compatibility and optional profile/env/catalog inputs |
-| `env lint` | Validate an environment file and inline secret hygiene before planning |
-| `secrets doctor` | Check secret ref resolution, file policy and redaction without printing values |
-| `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
-| `profiles list` / `profiles show` | Profile discoverability, tracks and developer-check metadata |
-| `operations unavailable` | Technical unavailability reasoning for one catalog target |
-| `policy explain` | Show GovEngine policy reasoning for an operation-shaped request without execution |
-| `operation explain` | Explain a stored operation plan, bindings, expected artifacts and safe next actions |
-| `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) |
-| `operation diff` | Compare stored plan bindings vs current profile/env/catalog |
-| `runbook show` | Profile-owned runbook for one intent |
-| `runtime status` | Queue, active operations, locks and dead-letter summary (`--json`) |
-| `ops` | Aggregate blockers and action-required runtime items |
-| `dead-letter list` / `show` | Inspect watchdog dead-letter payloads (redacted show) |
-| `locks list` | Advisory target locks |
-| `explain-error` | Failure class and safe next actions for operation/dead-letter/watchdog refs |
-| `runtime recover` | Startup reconciliation after crash or restart (`--json`) |
-| `backup create` / `restore` | Runtime store tarball backup and restore |
-| `watchdog manual-record` | Governed manual watchdog decision record |
-| `plan` | Create operation + `OperationPlan`; GovEngine gate for mutating modes |
-| `approve` | Manual approval after `approval_required` |
-| `start` | Execute workflow (may queue if lock/capacity busy) |
-| `pause` / `resume` | Pause only at workflow `pause_safe` steps |
-| `cancel` | Abort from approved/running/paused/waiting states |
-| `retry` | Operator retry after `failed` when profile retry policy allows |
-| `rollback` | Execute explicit `workflow.rollback.steps` on failed operation |
-| `validate` | Re-run declarative profile validation rules |
-| `escalate` | Package failure for operator handoff |
-| `queue` | Inspect FIFO run-now backlog; `queue --drain` one-shot processing |
-| `worker run` | Poll queue and start approved operations |
-| `trigger` | Create operation from JSON stdin or CLI flags |
-| `status` / `history` | Operation state and evidence history |
+Lifecycle-related commands: `plan`, `approve`, `start`, `pause`, `resume`, `cancel`,
+`retry`, `rollback`, `validate`, `escalate`, `status`, `history`, `queue`, `worker run`
+and `trigger`.
+
+The full grouped CLI reference (including pre-run inspection, triage, profile developer
+surface and reaction commands) lives in [cli-reference.md](cli-reference.md).
 
 See [runtime-recovery-ops.md](runtime-recovery-ops.md) for triage, recovery and backup
 workflows. See [profile-developer-surface.md](profile-developer-surface.md) and
