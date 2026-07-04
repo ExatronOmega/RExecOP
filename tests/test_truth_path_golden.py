@@ -57,6 +57,7 @@ def _golden() -> dict:
     return json.loads(GOLDEN.read_text(encoding="utf-8"))
 
 
+@pytest.mark.delivery
 def test_truth_path_golden_matches_tecrax_diagnosis_flow(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -140,8 +141,9 @@ def test_truth_path_golden_matches_tecrax_diagnosis_flow(
         controller.export_receipt(operation.id)
 
     assert completed.state == OperationState.COMPLETED.value
+    stored = controller.get_operation(operation.id)
     plan = controller.store.load_plan(operation.id)
-    truth_path = project_truth_path(completed, plan)
+    truth_path = project_truth_path(stored, plan)
 
     assert truth_path["schema"] == TRUTH_PATH_PROJECTION_SCHEMA
     for section in golden["required_sections"]:

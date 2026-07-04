@@ -21,6 +21,17 @@ from rexecop.policy.operation import build_operation_policy_request
 
 TRUTH_PATH_PROJECTION_SCHEMA = "rexecop.truth_path_projection.v0.1"
 
+
+def _normalize_digest(value: str) -> str:
+    digest = str(value or "").strip()
+    if not digest:
+        return ""
+    return digest if digest.startswith("sha256:") else f"sha256:{digest}"
+
+
+def _artifact_digest(value: Mapping[str, Any]) -> str:
+    return _normalize_digest(artifact_sha256(dict(value)))
+
 _RECEIPT_STATUS_BY_OPERATION = {
     OperationState.COMPLETED.value: "dry-run",
     OperationState.FAILED.value: "failed",
@@ -122,7 +133,7 @@ def _observation_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
     facts = observation.get("facts")
     facts_digest = ""
     if isinstance(facts, Mapping):
-        facts_digest = artifact_sha256(dict(facts))
+        facts_digest = _artifact_digest(dict(facts))
     source = observation.get("source")
     source_summary: dict[str, str] = {}
     if isinstance(source, Mapping):
@@ -135,7 +146,7 @@ def _observation_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "status": "present",
         "artifact_type": str(observation.get("artifact_type") or ""),
         "schema_ref": str(observation.get("schema_ref") or ""),
-        "observation_digest": artifact_sha256(dict(observation)),
+        "observation_digest": _artifact_digest(dict(observation)),
         "facts_schema_ref": (
             str(facts.get("schema_ref") or "") if isinstance(facts, Mapping) else ""
         ),
@@ -159,7 +170,7 @@ def _auto_reaction_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "status": str(auto_reaction.get("status") or ""),
         "reaction_id": str(auto_reaction.get("reaction_id") or ""),
-        "chain_root": str(auto_reaction.get("chain_root") or ""),
+        "chain_root": _normalize_digest(str(auto_reaction.get("chain_root") or "")),
         "outcome": str(auto_reaction.get("outcome") or ""),
         "rule_id": str(auto_reaction.get("rule_id") or ""),
         "rule_digest": str(auto_reaction.get("rule_digest") or ""),
@@ -179,7 +190,7 @@ def _sclite_ref_summary(refs: Mapping[str, Any]) -> dict[str, Any]:
             {
                 "role": role,
                 "schema_ref": str(item.get("sclite_schema_ref") or ""),
-                "digest": str(item.get("digest") or ""),
+                "digest": _normalize_digest(str(item.get("digest") or "")),
                 "status": str(item.get("status") or ""),
             }
         )
@@ -196,7 +207,7 @@ def _typed_execution_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(execution_receipt, Mapping):
             return {
                 "status": "partial",
-                "execution_receipt_digest": artifact_sha256(dict(execution_receipt)),
+                "execution_receipt_digest": _artifact_digest(dict(execution_receipt)),
             }
         return {"status": "absent"}
     return {
@@ -204,7 +215,7 @@ def _typed_execution_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
         "schema_version": str(binding.get("schema_version") or ""),
         "enforcement_plan_digest": str(binding.get("enforcement_plan_digest") or ""),
         "admission_digest": str(binding.get("admission_digest") or ""),
-        "binding_digest": artifact_sha256(dict(binding)),
+        "binding_digest": _artifact_digest(dict(binding)),
     }
 
 
