@@ -57,6 +57,9 @@ M3_M4_CLI_MARKERS = (
     "profile harness",
     "connectors list",
     "capabilities list",
+    "action list",
+    "action show",
+    "action validate",
     "operations unavailable",
     "runtime recover",
     "backup create",
@@ -216,9 +219,15 @@ def collect_errors() -> list[str]:
     _require(errors, "docs/profile-developer-surface.md", "operator_metadata.yaml")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.operation_profile_explain.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.profile_workflow_harness.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "rexecop.action_list.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "rexecop.action_show.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "rexecop.action_validate.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "profile harness")
     _require(errors, "CHANGELOG.md", "rexecop.profile_workflow_harness.v0.1")
     _require(errors, "CHANGELOG.md", "profile harness")
+    _require(errors, "CHANGELOG.md", "rexecop action list")
+    _require(errors, "CHANGELOG.md", "rexecop action show")
+    _require(errors, "CHANGELOG.md", "rexecop action validate")
     _require(errors, "docs/govengine-integration.md", "profile-governance")
     _require(errors, "CHANGELOG.md", "operator_metadata.yaml")
     _require(errors, "CHANGELOG.md", "rexecop.operation_profile_explain.v0.1")

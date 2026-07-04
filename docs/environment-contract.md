@@ -84,6 +84,26 @@ plan time. Concrete command semantics remain owned by the profile, not RExecOp c
 Profiles can set `enforce_declared_modes: true` on an intent to reject any CLI mode not
 listed by that intent. This is opt-in so older profiles retain their established behavior.
 
+### Action metadata validation
+
+Before planning, operators can inspect and validate profile/environment action
+bindings without contacting backends:
+
+```bash
+rexecop action list --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
+rexecop action show inspect --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
+rexecop action validate --all --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
+```
+
+The action metadata commands report descriptor digests, connector backend
+classes, shape digests when available, required secret refs and catalog
+applicability. They intentionally do not print resolved secret values or
+connector configuration, do not perform backend IO, and do not replace
+GovEngine admission or SCLite truth artifacts.
+
 ## Safety block
 
 `safety` carries runtime policy copied into `operation.metadata.runtime_policy`

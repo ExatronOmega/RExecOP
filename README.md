@@ -87,6 +87,9 @@ Ravenclaw is legacy and out of scope for RExecOp.
   supported neutral controls, pre-execution drift validation, and per-connector invoke gate
 - Operator target catalog and profile-derived operation catalog with deterministic applicability
   and start-time drift rejection; catalog compatibility never replaces GovEngine admission
+- Read-only action metadata UX: `action list`, `action show`, and
+  `action validate` expose profile/env/catalog action contracts without backend IO,
+  connector config values, GovEngine admission claims, or SCLite truth emission
 - Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
 - Operator CLI (`rexecop`); runtime data under an explicit root, named local
@@ -180,6 +183,8 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `profiles list` / `profiles show` | Discover registered profiles, intents, tracks and developer-check metadata |
 | `connectors list` / `connectors show` | Discover connector backends, modes and certification tier |
 | `capabilities list` | List neutral runtime capabilities and their source |
+| `action list` / `action show` | Inspect profile/env/catalog action metadata, refs and backend constraints without backend IO |
+| `action validate` | Validate profile/env action bindings and catalog applicability without backend IO |
 | `policy explain` | Show GovEngine policy reasoning for one operation-shaped request without execution |
 | `operation explain` | Explain a stored operation plan, expected artifacts, bindings and safe next actions |
 | `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) before start |

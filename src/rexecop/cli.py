@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 
 from rexecop import __version__
+from rexecop.action.surface import list_actions, show_action, validate_actions
 from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
@@ -79,6 +80,10 @@ capabilities_app = typer.Typer(
     help="List neutral runtime capabilities and their sources.",
     no_args_is_help=True,
 )
+action_app = typer.Typer(
+    help="Inspect profile action metadata without backend IO.",
+    no_args_is_help=True,
+)
 policy_app = typer.Typer(help="Inspect GovEngine policy decisions.", no_args_is_help=True)
 operation_app = typer.Typer(help="Inspect stored operation plans.", no_args_is_help=True)
 runbook_app = typer.Typer(help="Show profile-owned runbooks.", no_args_is_help=True)
@@ -95,6 +100,7 @@ app.add_typer(profile_app, name="profile")
 app.add_typer(profiles_app, name="profiles")
 app.add_typer(connectors_app, name="connectors")
 app.add_typer(capabilities_app, name="capabilities")
+app.add_typer(action_app, name="action")
 app.add_typer(policy_app, name="policy")
 app.add_typer(operation_app, name="operation")
 app.add_typer(runbook_app, name="runbook")
@@ -324,6 +330,70 @@ def connectors_show_cmd(
 def capabilities_list_cmd() -> None:
     """List neutral capabilities known to the runtime and their source."""
     typer.echo(json.dumps(list_capabilities_manifest(), indent=2, sort_keys=True))
+
+
+@action_app.command("list")
+def action_list_cmd(
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML for backend bindings."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+) -> None:
+    """List profile actions and redacted action metadata without backend IO."""
+    try:
+        result = list_actions(profile=profile, env=env, catalog=catalog, target=target)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@action_app.command("show")
+def action_show_cmd(
+    intent: str = typer.Argument(..., help="Profile intent/action id."),
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML for backend bindings."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+) -> None:
+    """Show one action contract, refs and constraints without backend IO."""
+    try:
+        result = show_action(intent, profile=profile, env=env, catalog=catalog, target=target)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@action_app.command("validate")
+def action_validate_cmd(
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML for backend bindings."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+    intent: str | None = typer.Option(None, "--intent", help="Optional single action id."),
+    all_actions: bool = typer.Option(False, "--all", help="Validate all profile actions."),
+) -> None:
+    """Validate profile/env action bindings without backend IO."""
+    if not all_actions and intent is None:
+        typer.secho(
+            "error: action validate requires --all or --intent",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        result = validate_actions(
+            profile=profile,
+            env=env,
+            catalog=catalog,
+            target=target,
+            intent=intent,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @profile_app.command("harness")
