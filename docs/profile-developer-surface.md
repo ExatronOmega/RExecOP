@@ -177,6 +177,11 @@ These commands do not execute connector backends, create execution requests,
 request or imply GovEngine admission, emit SCLite truth artifacts, or print
 resolved secrets / connector configuration.
 
+Built-in template scope **1.0** ships `http.simple-get`, `shell.readonly-allowlist`
+and `ssh.readonly-allowlist`. List them with `rexecop action templates list`.
+`action show` reports per-step `template_provenance`; `action configure --template`
+uses a built-in skeleton when the profile omits the corresponding shape.
+
 `action configure --dry-run` generates bounded patch operations for profile
 declared `http_api` action shapes and read-only shell/SSH `command_shapes`.
 It never edits the environment YAML. `--write-patch <path>` writes only the

@@ -5,6 +5,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from rexecop.action.templates import (
+    ACTION_TEMPLATE_SCOPE,
+    list_action_templates,
+    template_provenance_for_step,
+)
 from rexecop.catalog.digest import canonical_digest, profile_snapshot_digest, yaml_document_digest
 from rexecop.catalog.service import (
     CatalogService,
@@ -98,10 +103,7 @@ def show_action(
         },
         "source_contracts": _source_contracts(context, operation.digest),
         "required_refs": _required_refs(context, workflow),
-        "template_provenance": {
-            "available": False,
-            "reason": "M5 list/show/validate does not use action templates.",
-        },
+        "template_provenance": _template_provenance(context, workflow),
         "backend_constraints": _backend_constraints(connector_steps),
         "applicability": _applicability(context, operation.id),
         "non_claims": _non_claims(),
@@ -310,12 +312,19 @@ def _shape_digest(
     if not contract:
         return ""
     if backend == "http_api" and config:
-        digest = validate_http_action_shape(
-            connector_name=connector_name,
-            action=action,
-            connector_contract=dict(contract),
-            connector_config=dict(config),
-        )
+        actions = config.get("actions")
+        actual_spec = actions.get(action) if isinstance(actions, Mapping) else None
+        if not isinstance(actual_spec, Mapping):
+            return ""
+        try:
+            digest = validate_http_action_shape(
+                connector_name=connector_name,
+                action=action,
+                connector_contract=dict(contract),
+                connector_config=dict(config),
+            )
+        except RExecOpValidationError:
+            return ""
         return digest or ""
     command_shapes = contract.get("command_shapes")
     if isinstance(command_shapes, Mapping):
@@ -708,6 +717,36 @@ def _catalog_summary(context: _ActionContext) -> dict[str, str] | None:
     return {
         "digest": yaml_document_digest(context.catalog_path),
         "target": context.target or "",
+    }
+
+
+def _template_provenance(context: _ActionContext, workflow: Any) -> dict[str, Any]:
+    steps: list[dict[str, Any]] = []
+    for step in workflow.steps:
+        if step.type != "connector":
+            continue
+        contract = context.profile.connector_contract(step.connector) or {}
+        config = _connector_config(context, step.connector)
+        backend = _backend_class(contract, config) or str(contract.get("backend") or "").strip()
+        provenance = template_provenance_for_step(
+            backend=backend,
+            action=step.action,
+            contract=contract,
+        )
+        steps.append(
+            {
+                "step_id": step.id,
+                "connector": step.connector,
+                "action": step.action,
+                "backend_class": backend,
+                **provenance,
+            }
+        )
+    return {
+        "available": any(item.get("available") for item in steps),
+        "scope": ACTION_TEMPLATE_SCOPE,
+        "library": [item["id"] for item in list_action_templates()["templates"]],
+        "steps": steps,
     }
 
 

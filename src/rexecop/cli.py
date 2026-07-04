@@ -16,6 +16,7 @@ from rexecop.action.surface import (
     show_action,
     validate_actions,
 )
+from rexecop.action.templates import list_action_templates
 from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
@@ -92,6 +93,11 @@ action_app = typer.Typer(
     help="Inspect profile action metadata without backend IO.",
     no_args_is_help=True,
 )
+action_templates_app = typer.Typer(
+    help="Built-in action configuration templates (scope 1.0).",
+    no_args_is_help=True,
+)
+action_app.add_typer(action_templates_app, name="templates")
 policy_app = typer.Typer(help="Inspect GovEngine policy decisions.", no_args_is_help=True)
 operation_app = typer.Typer(help="Inspect stored operation plans.", no_args_is_help=True)
 runbook_app = typer.Typer(help="Show profile-owned runbooks.", no_args_is_help=True)
@@ -435,6 +441,12 @@ def action_preview_cmd(
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
+@action_templates_app.command("list")
+def action_templates_list_cmd() -> None:
+    """List built-in readonly action configuration templates."""
+    typer.echo(json.dumps(list_action_templates(), indent=2, sort_keys=True))
+
+
 @action_app.command("configure")
 def action_configure_cmd(
     intent: str = typer.Argument(..., help="Profile intent/action id."),
@@ -442,6 +454,11 @@ def action_configure_cmd(
     env: Path = typer.Option(..., "--env", help="Environment YAML to inspect."),
     catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
     target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+    template: str | None = typer.Option(
+        None,
+        "--template",
+        help="Optional built-in template id (e.g. http.simple-get).",
+    ),
     dry_run: bool = typer.Option(True, "--dry-run/--no-dry-run", help="Always dry-run in M5."),
     write_patch: Path | None = typer.Option(
         None,
@@ -465,6 +482,7 @@ def action_configure_cmd(
             catalog=catalog,
             target=target,
             write_patch=write_patch,
+            template_id=template,
         )
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)

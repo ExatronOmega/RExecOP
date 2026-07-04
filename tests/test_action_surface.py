@@ -20,6 +20,7 @@ from rexecop.action.surface import (
     show_action,
     validate_actions,
 )
+from rexecop.action.templates import ACTION_TEMPLATE_LIBRARY_SCHEMA, list_action_templates
 from rexecop.cli import app
 from rexecop.errors import RExecOpValidationError
 
@@ -458,7 +459,9 @@ def test_action_configure_reports_unknown_backend_template(tmp_path: Path) -> No
     assert "no minimal configure template" in operation["reason"]
 
 
-def test_action_configure_reports_unknown_http_action_template(tmp_path: Path) -> None:
+def test_action_configure_uses_template_for_undeclared_http_workflow_action(
+    tmp_path: Path,
+) -> None:
     profile, env_path = _write_http_configure_fixture(tmp_path)
     workflow_path = profile.parent / "workflows" / "inspect.yaml"
     workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
@@ -470,9 +473,71 @@ def test_action_configure_reports_unknown_http_action_template(tmp_path: Path) -
     operation = next(
         item
         for item in payload["patch"]["operations"]
-        if item.get("op") == "unsupported"
+        if item.get("path", "").endswith("/actions/undeclared_action")
     )
-    assert "does not declare action_shapes" in operation["reason"]
+    assert operation["op"] == "add"
+    assert operation["value"]["method"] == "GET"
+    assert operation["value"]["path"] == "/"
+
+
+def test_action_templates_list_includes_scope_1_0_library() -> None:
+    payload = list_action_templates()
+
+    assert payload["schema"] == ACTION_TEMPLATE_LIBRARY_SCHEMA
+    assert payload["scope"] == "1.0"
+    template_ids = {item["id"] for item in payload["templates"]}
+    assert template_ids == {
+        "http.simple-get",
+        "shell.readonly-allowlist",
+        "ssh.readonly-allowlist",
+    }
+
+
+def test_action_show_reports_template_provenance_for_http_action(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+
+    payload = show_action("inspect", profile=profile, env=env_path)
+
+    provenance = payload["template_provenance"]
+    assert provenance["available"] is True
+    assert provenance["scope"] == "1.0"
+    assert provenance["steps"][0]["template_id"] == "http.simple-get"
+    assert provenance["steps"][0]["match"] == "profile_declared"
+
+
+def test_action_configure_uses_http_simple_get_template_when_shape_missing(
+    tmp_path: Path,
+) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+    connector_path = profile.parent / "connectors" / "api.yaml"
+    connector = yaml.safe_load(connector_path.read_text(encoding="utf-8"))
+    connector["connector"]["action_shapes"] = {}
+    connector_path.write_text(yaml.safe_dump(connector, sort_keys=False), encoding="utf-8")
+
+    payload = configure_action(
+        "inspect",
+        profile=profile,
+        env=env_path,
+        template_id="http.simple-get",
+    )
+
+    operation = next(
+        item
+        for item in payload["patch"]["operations"]
+        if item.get("path", "").endswith("/actions/read_state")
+    )
+    assert operation["op"] == "add"
+    assert operation["value"]["method"] == "GET"
+    assert operation["value"]["path"] == "/"
+
+
+def test_cli_action_templates_list_emits_json() -> None:
+    result = runner.invoke(app, ["action", "templates", "list"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["scope"] == "1.0"
+    assert any(item["id"] == "http.simple-get" for item in payload["templates"])
 
 
 def test_action_diff_reports_aligned_static_fixture_without_backend_io() -> None:

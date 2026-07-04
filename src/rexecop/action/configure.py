@@ -7,6 +7,11 @@ from typing import Any
 import yaml
 
 from rexecop.action.surface import _backend_class, _resolve_context
+from rexecop.action.templates import (
+    command_shape_from_template,
+    http_shape_from_template,
+    resolve_template_id,
+)
 from rexecop.catalog.digest import canonical_digest
 from rexecop.catalog.service import compile_operation_descriptor
 from rexecop.environment.sanitize import validate_no_inline_secrets
@@ -24,6 +29,7 @@ def configure_action(
     catalog: Path | None = None,
     target: str | None = None,
     write_patch: Path | None = None,
+    template_id: str | None = None,
 ) -> dict[str, Any]:
     """Generate a bounded action configuration patch without mutating env YAML."""
     context = _resolve_context(profile=profile, env=env, catalog=catalog, target=target)
@@ -44,10 +50,25 @@ def configure_action(
             config = {}
         backend = _backend_class(contract, config) or str(contract.get("backend") or "").strip()
         if backend == "http_api":
-            operations.extend(_http_patch_operations(step.connector, step.action, contract, config))
+            operations.extend(
+                _http_patch_operations(
+                    step.connector,
+                    step.action,
+                    contract,
+                    config,
+                    template_id=resolve_template_id(backend=backend, template_id=template_id),
+                )
+            )
         elif backend in {"local_shell_readonly", "ssh_readonly"}:
             operations.extend(
-                _command_patch_operations(step.connector, step.action, backend, contract, config)
+                _command_patch_operations(
+                    step.connector,
+                    step.action,
+                    backend,
+                    contract,
+                    config,
+                    template_id=resolve_template_id(backend=backend, template_id=template_id),
+                )
             )
         else:
             operations.append(
@@ -102,6 +123,8 @@ def _http_patch_operations(
     action: str,
     contract: dict[str, Any],
     config: dict[str, Any],
+    *,
+    template_id: str | None,
 ) -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
     if not config:
@@ -123,14 +146,16 @@ def _http_patch_operations(
     action_shapes = contract.get("action_shapes")
     shape = action_shapes.get(action) if isinstance(action_shapes, dict) else None
     if not isinstance(shape, dict):
-        operations.append(
-            {
-                "op": "unsupported",
-                "path": f"/environment/connectors/{connector}/actions/{action}",
-                "reason": "profile connector does not declare action_shapes for this action",
-            }
-        )
-        return operations
+        if template_id is None:
+            operations.append(
+                {
+                    "op": "unsupported",
+                    "path": f"/environment/connectors/{connector}/actions/{action}",
+                    "reason": "profile connector does not declare action_shapes for this action",
+                }
+            )
+            return operations
+        shape = http_shape_from_template(template_id)
     actions = config.get("actions")
     existing = actions.get(action) if isinstance(actions, dict) else None
     if not isinstance(actions, dict):
@@ -172,6 +197,8 @@ def _command_patch_operations(
     backend: str,
     contract: dict[str, Any],
     config: dict[str, Any],
+    *,
+    template_id: str | None,
 ) -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
     if not config:
@@ -193,14 +220,16 @@ def _command_patch_operations(
     command_shapes = contract.get("command_shapes")
     shape = command_shapes.get(action) if isinstance(command_shapes, dict) else None
     if not isinstance(shape, dict):
-        operations.append(
-            {
-                "op": "unsupported",
-                "path": f"/environment/connectors/{connector}/allowlist",
-                "reason": "profile connector does not declare command_shapes for this action",
-            }
-        )
-        return operations
+        if template_id is None:
+            operations.append(
+                {
+                    "op": "unsupported",
+                    "path": f"/environment/connectors/{connector}/allowlist",
+                    "reason": "profile connector does not declare command_shapes for this action",
+                }
+            )
+            return operations
+        shape = command_shape_from_template(template_id, action=action)
     allowlist = config.get("allowlist")
     if not isinstance(allowlist, list):
         operations.append(

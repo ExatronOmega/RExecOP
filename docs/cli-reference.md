@@ -61,7 +61,8 @@ See [profile-developer-surface.md](profile-developer-surface.md).
 | `action show INTENT [...]` | One action contract, required refs and backend constraints |
 | `action preview INTENT [...]` | Redacted HTTP/shell/SSH effective-call previews and bounded-output policy |
 | `action validate --all\|--intent INTENT [...]` | Profile/env bindings, secret hygiene, duplicate refs, workflow contract |
-| `action configure INTENT --env PATH [--dry-run] [--write-patch PATH]` | Bounded dry-run patch operations; never mutates `--env` |
+| `action templates list` | Built-in readonly templates: `http.simple-get`, `shell.readonly-allowlist`, `ssh.readonly-allowlist` |
+| `action configure INTENT --env PATH [--template ID] [--dry-run] [--write-patch PATH]` | Bounded dry-run patch operations; never mutates `--env` |
 | `action diff INTENT --env PATH` | Profile contract vs environment binding diff with shape digests and configure hint |
 
 Profile/env/catalog resolution matches `action list`. `action configure` supports
@@ -164,6 +165,7 @@ rexecop [--root] [--instance] [--storage]
   profiles list | profiles show
   connectors list | connectors show
   capabilities list
+  action templates list
   action list | show | preview | validate | configure | diff
   targets list | show
   operations list | explain | unavailable

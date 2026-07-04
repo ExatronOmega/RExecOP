@@ -62,6 +62,8 @@ M3_M4_CLI_MARKERS = (
     "action preview",
     "action configure",
     "action diff",
+    "action templates",
+    "http.simple-get",
     "action validate",
     "secrets suggest-ref",
     "operations unavailable",
@@ -228,6 +230,8 @@ def collect_errors() -> list[str]:
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_preview.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_configure.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_diff.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "http.simple-get")
+    _require(errors, "docs/profile-developer-surface.md", "shell.readonly-allowlist")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_validate.v0.1")
     _require(errors, "docs/secrets-operator.md", "rexecop.secrets_suggest_ref.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "profile harness")

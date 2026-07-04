@@ -11,6 +11,10 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added M5 action template scope 1.0: built-in `http.simple-get`,
+  `shell.readonly-allowlist` and `ssh.readonly-allowlist` skeletons exposed via
+  `rexecop action templates list`, `action show` template provenance and
+  `action configure --template` fallback when profile shapes are missing.
 - Added `rexecop action diff <intent> --env <path>` to compare profile connector
   contracts against operator environment bindings for one intent. Output uses
   `rexecop.action_diff.v0.1`, reports per-step drift/incomplete checks, HTTP

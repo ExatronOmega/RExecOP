@@ -90,7 +90,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Profile developer surface: `profiles list/show`, `connectors list/show`, `capabilities list`,
   `profile manifest`, `profile harness`, operator metadata projection
 - M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,
-  `action validate`, `action diff --env`, `action configure --dry-run`
+  `action validate`, `action diff --env`, `action configure --dry-run`,
+  `action templates list` (scope 1.0: `http.simple-get`, shell/SSH allowlist skeletons)
 - Pre-run inspection: `policy explain`, `operations explain`, `operation explain`,
   `operation review`, `operation diff`, `runbook show`, `operations unavailable`
 - Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
