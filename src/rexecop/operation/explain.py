@@ -201,4 +201,9 @@ def _safe_next_actions(operation: Operation) -> list[str]:
             f"rexecop history --operation {operation.id}",
             f"rexecop escalate --operation {operation.id}",
         ]
+    if operation.state == "completed":
+        return [
+            f"rexecop operation truth-path --operation {operation.id}",
+            f"rexecop status --operation {operation.id}",
+        ]
     return [f"rexecop status --operation {operation.id}"]

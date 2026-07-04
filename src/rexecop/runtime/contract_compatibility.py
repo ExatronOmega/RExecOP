@@ -170,6 +170,12 @@ REXECOP_RUNTIME_PROJECTIONS: tuple[dict[str, Any], ...] = (
         "schema": PROFILE_CONTRACT_SCHEMA,
         "supported_versions": ("v0.1",),
     },
+    {
+        "surface_id": "truth_path_projection",
+        "owner": "rexecop.truth_path",
+        "schema": "rexecop.truth_path_projection.v0.1",
+        "supported_versions": ("v0.1",),
+    },
 )
 
 REQUIRED_RUNTIME_PROJECTION_SURFACES = (
@@ -195,6 +201,7 @@ REXECOP_EXPECTED_GOVENGINE_CONTRACTS: tuple[dict[str, str], ...] = (
     {"surface_id": "typed_execution_governance_projection", "schema_version": "v0.1"},
     {"surface_id": "typed_execution_stack_compatibility", "schema_version": "v0.1"},
     {"surface_id": "typed_execution_control_catalog", "schema_version": "v0.1"},
+    {"surface_id": "governance_trace", "schema_version": "v0.1"},
 )
 
 _PROJECTION_INDEX = {item["surface_id"]: item for item in REXECOP_RUNTIME_PROJECTIONS}

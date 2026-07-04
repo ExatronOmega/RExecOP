@@ -12,7 +12,8 @@
     "typed_execution_control_catalog",
     "typed_execution_governance_projection",
     "typed_execution_governance_request",
-    "typed_execution_stack_compatibility"
+    "typed_execution_stack_compatibility",
+    "governance_trace"
   ],
   "required_runtime_projections": [
     "action_configure",
@@ -22,7 +23,8 @@
     "operation_explain",
     "runtime_manifest",
     "stack_contract_compatibility",
-    "step_execution_spec"
+    "step_execution_spec",
+    "truth_path_projection"
   ],
   "sclite_artifact_versions": {
     "evidence_contract": "v0.2",

@@ -1,0 +1,44 @@
+{
+  "schema": "rexecop.truth_path_golden.v0.1",
+  "flow": "tecrax.diagnose_monitoring_host.auto_react_plan_only",
+  "required_sections": [
+    "operation",
+    "governance_trace",
+    "observation",
+    "auto_reaction",
+    "links",
+    "evidence_claims"
+  ],
+  "observation": {
+    "status": "present",
+    "artifact_type": "observation_envelope",
+    "schema_ref": "schemas/observation_envelope.v0.1.schema.json",
+    "facts_schema_ref": "schemas/monitoring_host_diagnosis.v1.schema.json"
+  },
+  "auto_reaction": {
+    "status": "planned",
+    "outcome": "run_intent",
+    "rule_id": "monitoring.zabbix-unhealthy"
+  },
+  "child_intent": "check_zabbix_container_health",
+  "evidence_claim_types": [
+    "read_only_execution",
+    "dry_run_execution"
+  ],
+  "required_link_kinds": [
+    "operation",
+    "governance_trace",
+    "observation_envelope",
+    "diagnosis_facts",
+    "reaction_chain",
+    "child_operation"
+  ],
+  "required_sclite_roles": [
+    "execution_receipt",
+    "intent_contract",
+    "policy_decision"
+  ],
+  "governance_trace_controls": [
+    "receipt_required"
+  ]
+}

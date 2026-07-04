@@ -69,6 +69,7 @@ from rexecop.runtime_ops.worker import (
 from rexecop.secrets.doctor import run_secrets_doctor
 from rexecop.secrets.suggest import suggest_secret_refs
 from rexecop.storage.factory import create_store, resolve_storage_backend
+from rexecop.truth_path import project_truth_path
 
 app = typer.Typer(
     name="rexecop",
@@ -659,6 +660,22 @@ def operation_explain_cmd(
         item = controller.get_operation(operation)
         plan = controller.store.load_plan(operation)
         result = explain_operation(item, plan)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@operation_app.command("truth-path")
+def operation_truth_path_cmd(
+    operation: str = typer.Option(..., "--operation", help="Operation id."),
+) -> None:
+    """Project digest-bound truth-path summary for a stored operation."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        plan = controller.store.load_plan(operation)
+        result = project_truth_path(item, plan)
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
