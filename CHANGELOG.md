@@ -7,9 +7,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.13a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newest first.
 
 ## Unreleased
+
+## [0.2.14a0] - 2026-07-04
+
+- Published `rexecop==0.2.14a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
+  and `tecrax==0.3.9a0` extra pin.
+- Added `rexecop.profile_connector_execution_spec.v0.1` typed execution compilation
+  for registered plugin connector backends.
+- Allow registered plugin backends under `fixture_only` connector posture.
+- Pass `registered_plugin_backend` metadata into GovEngine typed execution admission.
 
 ## [0.2.13a0] - 2026-07-04
 
@@ -518,7 +527,8 @@ Roadmap versions before the Phase 10 reset (`0.1.0a0`). Listed oldest → newest
 
 - Phases 0–2A: repository bootstrap, operation core, static GovEngine gating
 
-[0.2.13a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.12a0...HEAD
+[0.2.14a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.13a0...HEAD
+[0.2.13a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.12a0...v0.2.13a0
 [0.2.12a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.11a0...v0.2.12a0
 [0.2.11a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.10a0...v0.2.11a0
 [0.2.10a0]: https://github.com/rozmiarD/RExecOP/compare/v0.2.9a0...3372bb3

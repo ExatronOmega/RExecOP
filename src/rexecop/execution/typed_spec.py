@@ -13,6 +13,7 @@ from rexecop.connectors.action_shape import (
 from rexecop.connectors.capability_descriptor import compile_connector_capability_descriptor
 from rexecop.connectors.command_shape import normalize_allowlisted_argv
 from rexecop.connectors.errors import READ_ONLY_MODES
+from rexecop.connectors.fixture_loader import list_registered_connector_backends
 from rexecop.errors import RExecOpValidationError
 from rexecop.profile.loader import LoadedProfile, load_profile
 from rexecop.profile.resolver import resolve_profile_path
@@ -21,6 +22,7 @@ STEP_EXECUTION_SPEC_SCHEMA = "rexecop.step_execution_spec.v0.1"
 COMMAND_EXECUTION_SPEC_SCHEMA = "rexecop.command_execution_spec.v0.1"
 HTTP_ACTION_EXECUTION_SPEC_SCHEMA = "rexecop.http_action_execution_spec.v0.1"
 STATIC_FIXTURE_EXECUTION_SPEC_SCHEMA = "rexecop.static_fixture_execution_spec.v0.1"
+PROFILE_CONNECTOR_EXECUTION_SPEC_SCHEMA = "rexecop.profile_connector_execution_spec.v0.1"
 
 TYPED_EXECUTION_SCHEMA_VERSION = "v0.1"
 SUPPORTED_TYPED_EXECUTION_SCHEMAS: dict[str, frozenset[str]] = {
@@ -28,6 +30,7 @@ SUPPORTED_TYPED_EXECUTION_SCHEMAS: dict[str, frozenset[str]] = {
     COMMAND_EXECUTION_SPEC_SCHEMA: frozenset({TYPED_EXECUTION_SCHEMA_VERSION}),
     HTTP_ACTION_EXECUTION_SPEC_SCHEMA: frozenset({TYPED_EXECUTION_SCHEMA_VERSION}),
     STATIC_FIXTURE_EXECUTION_SPEC_SCHEMA: frozenset({TYPED_EXECUTION_SCHEMA_VERSION}),
+    PROFILE_CONNECTOR_EXECUTION_SPEC_SCHEMA: frozenset({TYPED_EXECUTION_SCHEMA_VERSION}),
 }
 
 _RUNTIME_PROJECTION_NON_CLAIMS = (
@@ -98,6 +101,15 @@ def compile_step_execution_spec(
             mode=mode,
         )
         payload_schema = STATIC_FIXTURE_EXECUTION_SPEC_SCHEMA
+    elif backend in list_registered_connector_backends():
+        payload = _compile_profile_connector_execution_spec(
+            connector=connector,
+            action=action,
+            backend=backend,
+            connector_config=connector_config,
+            mode=mode,
+        )
+        payload_schema = PROFILE_CONNECTOR_EXECUTION_SPEC_SCHEMA
     else:
         raise RExecOpValidationError(
             f"typed execution unsupported backend: {backend or 'missing'}"
@@ -268,6 +280,36 @@ def _compile_command_execution_spec(
         "max_output_bytes": int(connector_config.get("max_output_bytes") or 65536),
         "timeout_seconds": float(connector_config.get("timeout_seconds") or 10),
         "read_only": True,
+    }
+    validate_typed_execution_schema_version(payload)
+    return payload
+
+
+def _compile_profile_connector_execution_spec(
+    *,
+    connector: str,
+    action: str,
+    backend: str,
+    connector_config: Mapping[str, Any],
+    mode: str,
+) -> dict[str, Any]:
+    mutating = mode not in READ_ONLY_MODES
+    payload = {
+        "schema": PROFILE_CONNECTOR_EXECUTION_SPEC_SCHEMA,
+        "schema_version": TYPED_EXECUTION_SCHEMA_VERSION,
+        "connector": connector,
+        "action": action,
+        "backend_class": backend,
+        "mutating": mutating,
+        "action_digest": "sha256:"
+        + canonical_digest(
+            {
+                "connector": connector,
+                "action": action,
+                "backend_class": backend,
+                "mutating": mutating,
+            }
+        ),
     }
     validate_typed_execution_schema_version(payload)
     return payload

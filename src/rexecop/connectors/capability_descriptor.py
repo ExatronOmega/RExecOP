@@ -101,9 +101,13 @@ def assert_backend_capability_allowed(
         )
     posture = str(descriptor.get("live_backend_posture") or "").strip()
     if posture == "fixture_only" and backend != "static_fixture":
-        raise RExecOpValidationError(
-            f"fixture-only posture blocks live backend class {backend}"
+        plugin_fixture = (
+            str(descriptor.get("certification_tier") or "").strip() == "plugin"
         )
+        if not plugin_fixture:
+            raise RExecOpValidationError(
+                f"fixture-only posture blocks live backend class {backend}"
+            )
     if posture == "mock" and backend not in {"mock", "static_fixture"}:
         raise RExecOpValidationError(f"mock posture blocks undeclared live backend {backend}")
 

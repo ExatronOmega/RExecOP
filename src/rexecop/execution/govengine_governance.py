@@ -15,6 +15,7 @@ from govengine.typed_execution_governance import (
 
 from rexecop.catalog.digest import canonical_digest
 from rexecop.connectors.errors import READ_ONLY_MODES
+from rexecop.connectors.fixture_loader import list_registered_connector_backends
 from rexecop.errors import RExecOpValidationError
 from rexecop.execution.typed_spec import (
     COMMAND_EXECUTION_SPEC_SCHEMA,
@@ -148,6 +149,9 @@ def build_typed_execution_governance_request(
     allowed_backends = overlay.get("allowed_backend_classes")
     if isinstance(allowed_backends, list) and allowed_backends:
         request_metadata["allowed_backend_classes"] = list(allowed_backends)
+    backend_class = str(spec.get("backend_class") or "").strip()
+    if backend_class in list_registered_connector_backends():
+        request_metadata["registered_plugin_backend"] = True
     if not required:
         declared = capability.get("declared_capability_descriptors")
         required = list(declared) if isinstance(declared, list) else []
