@@ -14,7 +14,7 @@ profile lint --track readonly
   -> profiles show (intents, tracks, developer_check)
   -> profile harness --profile <profile>   # when a fixture environment is available
   -> secrets doctor --env <environment.yaml>
-  -> action list/show/preview/configure/validate --profile <profile> --env <environment.yaml>
+  -> action list/show/preview/diff/configure/validate --profile <profile> --env <environment.yaml>
   -> operations unavailable --catalog <targets.yaml> --target <id>   # when using a catalog
   -> plan / operation review
 ```
@@ -147,19 +147,22 @@ rexecop action show inspect --profile examples/first-run-demo/profile/profile.ya
   --env examples/first-run-demo/environment.yaml
 rexecop action preview inspect --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
+rexecop action diff inspect --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
 rexecop action configure inspect --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml --dry-run
 rexecop action validate --all --catalog examples/first-run-demo/catalog.yaml \
   --target fixture-target
 ```
 
-`action list`, `action show`, `action preview`, `action configure`, and
+`action list`, `action show`, `action preview`, `action diff`, `action configure`, and
 `action validate` are read-only metadata commands for profile authors and
 operators. They compile profile-owned action descriptors, connector workflow
 steps, backend classes, shape digests when available, required secret refs and
 catalog applicability. Output uses stable schemas (`rexecop.action_list.v0.1`,
 `rexecop.action_show.v0.1`, `rexecop.action_preview.v0.1`,
-`rexecop.action_configure.v0.1`, `rexecop.action_validate.v0.1`) and reports
+`rexecop.action_configure.v0.1`, `rexecop.action_diff.v0.1`,
+`rexecop.action_validate.v0.1`) and reports
 source digests instead of local operator file paths.
 
 `action preview` renders redacted effective-call previews for `http_api`,
@@ -194,6 +197,6 @@ bounded JSON errors without backend IO.
 | `profiles *` | Profile metadata, conformance, plugin registration | Domain semantics, policy verdicts |
 | `connectors *` | Backend descriptors and certification tier | Connector execution |
 | `capabilities list` | Neutral capability registry | Target catalog capabilities |
-| `action list/show/preview/configure/validate` | Action metadata, shape digests, redacted call preview, patch ops and env binding checks | Backend execution, GovEngine admission, SCLite truth |
+| `action list/show/preview/diff/configure/validate` | Action metadata, shape digests, profile-vs-env diff, redacted call preview, patch ops and env binding checks | Backend execution, GovEngine admission, SCLite truth |
 | `profile manifest` | Host extension contract | Profile content |
 | `operations unavailable` | Technical applicability reasoning | GovEngine admission |

@@ -98,6 +98,8 @@ rexecop action preview inspect --profile examples/first-run-demo/profile/profile
   --env examples/first-run-demo/environment.yaml
 rexecop action configure inspect --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml --dry-run
+rexecop action diff inspect --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
 rexecop action validate --all --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
 ```
@@ -109,6 +111,12 @@ and auth material; shell/SSH previews omit private endpoint and identity
 configuration; fixture previews expose only data digests. They intentionally do
 not print resolved secret values or connector configuration, do not perform
 backend IO, and do not replace GovEngine admission or SCLite truth artifacts.
+
+`action diff` compares profile connector contracts against the operator
+environment for one intent: connector presence, backend class, action/allowlist
+bindings and HTTP shape digests. It includes an advisory `configure_hint` with
+the patch digest that `action configure --dry-run` would emit, without mutating
+the environment file.
 
 `action configure --dry-run` emits bounded patch operations for missing
 profile-declared HTTP action entries or read-only shell/SSH allowlist entries.

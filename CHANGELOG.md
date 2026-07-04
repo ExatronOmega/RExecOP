@@ -11,7 +11,10 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
-_No unreleased changes._
+- Added `rexecop action diff <intent> --env <path>` to compare profile connector
+  contracts against operator environment bindings for one intent. Output uses
+  `rexecop.action_diff.v0.1`, reports per-step drift/incomplete checks, HTTP
+  shape digests and an advisory `configure_hint` without backend IO or env mutation.
 
 ## [0.2.12a0] - 2026-07-04
 

@@ -9,6 +9,7 @@ import yaml
 from typer.testing import CliRunner
 
 from rexecop.action.configure import ACTION_CONFIGURE_SCHEMA, configure_action
+from rexecop.action.diff import ACTION_DIFF_SCHEMA, diff_action
 from rexecop.action.surface import (
     ACTION_LIST_SCHEMA,
     ACTION_PREVIEW_SCHEMA,
@@ -472,6 +473,80 @@ def test_action_configure_reports_unknown_http_action_template(tmp_path: Path) -
         if item.get("op") == "unsupported"
     )
     assert "does not declare action_shapes" in operation["reason"]
+
+
+def test_action_diff_reports_aligned_static_fixture_without_backend_io() -> None:
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = diff_action("inspect", profile=PROFILE, env=ENVIRONMENT)
+
+    backend.assert_not_called()
+    assert payload["schema"] == ACTION_DIFF_SCHEMA
+    assert payload["status"] == "aligned"
+    assert payload["steps"][0]["status"] == "aligned"
+    assert payload["configure_hint"]["operation_count"] == 0
+    rendered = json.dumps(payload, sort_keys=True)
+    assert "first-run-demo" not in rendered
+    assert "ready" not in rendered
+
+
+def test_action_diff_reports_http_shape_drift_without_backend_io(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+    env = yaml.safe_load(env_path.read_text(encoding="utf-8"))
+    env["environment"]["connectors"]["api"]["actions"] = {
+        "read_state": {
+            "method": "GET",
+            "path": "/wrong",
+            "unwrap": "state",
+            "max_response_bytes": 2048,
+        }
+    }
+    env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
+
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = diff_action("inspect", profile=profile, env=env_path)
+
+    backend.assert_not_called()
+    assert payload["status"] == "drifted"
+    step = payload["steps"][0]
+    assert step["status"] == "drifted"
+    assert "path" in step["drift_fields"]
+    assert step["expected_shape_digest"] != step["actual_shape_digest"]
+    shape_check = next(item for item in step["checks"] if item["id"] == "shape_match")
+    assert shape_check["status"] == "failed"
+
+
+def test_action_diff_reports_missing_http_action_as_incomplete(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+
+    payload = diff_action("inspect", profile=profile, env=env_path)
+
+    assert payload["status"] == "drifted"
+    step = payload["steps"][0]
+    assert step["status"] == "incomplete"
+    assert payload["configure_hint"]["operation_count"] > 0
+    assert payload["configure_hint"]["patch_digest"].startswith("sha256:")
+
+
+def test_cli_action_diff_emits_json_and_exits_on_drift(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+
+    result = runner.invoke(
+        app,
+        [
+            "action",
+            "diff",
+            "inspect",
+            "--profile",
+            str(profile),
+            "--env",
+            str(env_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == ACTION_DIFF_SCHEMA
+    assert payload["status"] == "drifted"
 
 
 def test_action_configure_patch_digest_is_canonical_and_deterministic(

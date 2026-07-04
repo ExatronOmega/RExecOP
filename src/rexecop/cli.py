@@ -9,6 +9,7 @@ import typer
 
 from rexecop import __version__
 from rexecop.action.configure import configure_action
+from rexecop.action.diff import diff_action
 from rexecop.action.surface import (
     list_actions,
     preview_action,
@@ -469,6 +470,31 @@ def action_configure_cmd(
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@action_app.command("diff")
+def action_diff_cmd(
+    intent: str = typer.Argument(..., help="Profile intent/action id."),
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path = typer.Option(..., "--env", help="Environment YAML to compare."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+) -> None:
+    """Compare profile connector contracts against environment bindings without backend IO."""
+    try:
+        result = diff_action(
+            intent,
+            profile=profile,
+            env=env,
+            catalog=catalog,
+            target=target,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == "drifted":
+        raise typer.Exit(code=1)
 
 
 @profile_app.command("harness")

@@ -61,6 +61,7 @@ M3_M4_CLI_MARKERS = (
     "action show",
     "action preview",
     "action configure",
+    "action diff",
     "action validate",
     "secrets suggest-ref",
     "operations unavailable",
@@ -226,6 +227,7 @@ def collect_errors() -> list[str]:
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_show.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_preview.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_configure.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "rexecop.action_diff.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_validate.v0.1")
     _require(errors, "docs/secrets-operator.md", "rexecop.secrets_suggest_ref.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "profile harness")
@@ -235,6 +237,7 @@ def collect_errors() -> list[str]:
     _require(errors, "CHANGELOG.md", "rexecop action show")
     _require(errors, "CHANGELOG.md", "rexecop action preview")
     _require(errors, "CHANGELOG.md", "rexecop action configure")
+    _require(errors, "CHANGELOG.md", "rexecop action diff")
     _require(errors, "CHANGELOG.md", "rexecop action validate")
     _require(errors, "CHANGELOG.md", "rexecop secrets suggest-ref")
     _require(errors, "docs/govengine-integration.md", "profile-governance")

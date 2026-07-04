@@ -62,6 +62,7 @@ See [profile-developer-surface.md](profile-developer-surface.md).
 | `action preview INTENT [...]` | Redacted HTTP/shell/SSH effective-call previews and bounded-output policy |
 | `action validate --all\|--intent INTENT [...]` | Profile/env bindings, secret hygiene, duplicate refs, workflow contract |
 | `action configure INTENT --env PATH [--dry-run] [--write-patch PATH]` | Bounded dry-run patch operations; never mutates `--env` |
+| `action diff INTENT --env PATH` | Profile contract vs environment binding diff with shape digests and configure hint |
 
 Profile/env/catalog resolution matches `action list`. `action configure` supports
 `--dry-run` only in M5.
@@ -163,7 +164,7 @@ rexecop [--root] [--instance] [--storage]
   profiles list | profiles show
   connectors list | connectors show
   capabilities list
-  action list | show | preview | validate | configure
+  action list | show | preview | validate | configure | diff
   targets list | show
   operations list | explain | unavailable
   policy explain
