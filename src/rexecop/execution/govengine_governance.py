@@ -333,6 +333,10 @@ def _merge_typed_execution_policy_overlay(
     policy_evidence = policy_overlay.get("evidence_requirements")
     if isinstance(policy_evidence, Mapping):
         evidence.update(dict(policy_evidence))
+    if evidence.pop("output_digest_required", None):
+        overlay["output_digest_required"] = True
+    if policy_overlay.get("output_digest_required"):
+        overlay["output_digest_required"] = True
     for key in (
         "allowed_network_egress",
         "allowed_backend_classes",

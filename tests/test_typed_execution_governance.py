@@ -344,12 +344,13 @@ def test_policy_enforcement_controls_flow_into_typed_execution_overlay() -> None
     }
     overlay = typed_execution_governance_overlay(operation)
 
-    assert overlay["evidence_requirements"]["output_digest_required"] is True
+    assert overlay["output_digest_required"] is True
+    assert "output_digest_required" not in overlay["evidence_requirements"]
     assert overlay["allowed_network_egress"] == ["no_network"]
     assert overlay["no_raw_shell"] is True
 
 
-def test_policy_output_digest_required_blocks_without_ref_in_overlay() -> None:
+def test_policy_output_digest_required_does_not_block_pre_io_governance() -> None:
     spec = _fixture_spec()
     shared_state = {
         "typed_execution_governance": typed_execution_governance_overlay(
@@ -375,8 +376,8 @@ def test_policy_output_digest_required_blocks_without_ref_in_overlay() -> None:
         shared_state=shared_state,
     )
 
-    assert result["status"] == "blocked"
-    assert "missing_output_digest_ref" in result["governance"]["blockers"]
+    assert result["status"] == "passed"
+    assert shared_state["typed_execution_governance"]["output_digest_required"] is True
 
 
 def test_enforce_typed_execution_governance_stores_admission_record() -> None:

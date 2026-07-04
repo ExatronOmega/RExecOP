@@ -11,6 +11,8 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Policy-pack `output_digest_required` is carried in the typed execution overlay
+  for receipt enforcement and does not block pre-IO governance admission.
 - Typed execution governance overlay now consumes `policy_enforcement.plan.controls`
   via GovEngine `project_typed_execution_policy_overlay()` so policy-pack
   `output_digest_required`, `allowed_network_egress`, `no_raw_shell` and related
