@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -632,6 +633,7 @@ def _validate_one(context: _ActionContext, operation_id: str) -> dict[str, Any]:
             checks.append(_check("secret_hygiene", "failed", str(exc)))
         try:
             workflow = load_workflow(context.profile.resolve_workflow_path(operation_id))
+            checks.append(_check_duplicate_secret_refs(context, workflow))
             validate_workflow_contract(workflow, context.environment, context.profile)
             checks.append(_check("workflow_contract", "passed", workflow.id))
         except RExecOpValidationError as exc:
@@ -652,6 +654,31 @@ def _validate_one(context: _ActionContext, operation_id: str) -> dict[str, Any]:
 
 def _check(check_id: str, status: str, summary: str) -> dict[str, str]:
     return {"id": check_id, "status": status, "summary": summary}
+
+
+def _check_duplicate_secret_refs(context: _ActionContext, workflow: Any) -> dict[str, str]:
+    if context.environment is None:
+        return _check("duplicate_refs", "passed", "environment is required for ref bindings")
+    connectors = {step.connector for step in workflow.steps if step.type == "connector"}
+    selected = {
+        name: config
+        for name, config in context.environment.connectors.items()
+        if name in connectors and isinstance(config, Mapping)
+    }
+    by_ref: dict[str, list[str]] = defaultdict(list)
+    for binding in collect_secret_ref_bindings({"connectors": selected}):
+        ref = str(binding.get("ref") or "").strip()
+        if not ref:
+            continue
+        by_ref[ref].append(str(binding.get("path") or ""))
+    duplicates = {ref: sorted(paths) for ref, paths in by_ref.items() if len(paths) > 1}
+    if duplicates:
+        return _check(
+            "duplicate_refs",
+            "failed",
+            "one or more secret_ref names are reused across multiple bindings",
+        )
+    return _check("duplicate_refs", "passed", "no duplicate secret_ref reuse detected")
 
 
 def _profile_summary(profile: LoadedProfile) -> dict[str, str]:

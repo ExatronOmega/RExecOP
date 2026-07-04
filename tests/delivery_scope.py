@@ -6,6 +6,7 @@ from pathlib import Path
 
 # Behavioral modules included in `pytest -m delivery` and sign-off script.
 DELIVERY_TEST_MODULES: tuple[str, ...] = (
+    "test_action_surface",
     "test_alpha_gate",
     "test_apply_gating",
     "test_apply_vertical_slice_e2e",
@@ -34,6 +35,7 @@ DELIVERY_TEST_MODULES: tuple[str, ...] = (
 
 # Documented themes mapped to delivery modules (values must stay in DELIVERY_TEST_MODULES).
 DELIVERY_THEMES: dict[str, str] = {
+    "action_surface": "test_action_surface",
     "alpha_gate": "test_alpha_gate",
     "apply_gating": "test_apply_gating",
     "apply_slice": "test_apply_vertical_slice_e2e",

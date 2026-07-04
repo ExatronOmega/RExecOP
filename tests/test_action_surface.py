@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -19,6 +20,7 @@ from rexecop.action.surface import (
     validate_actions,
 )
 from rexecop.cli import app
+from rexecop.errors import RExecOpValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples/first-run-demo/profile/profile.yaml"
@@ -394,6 +396,116 @@ def test_cli_action_validate_requires_scope() -> None:
     assert "requires --all or --intent" in result.stderr
 
 
+def test_action_validate_rejects_malformed_environment_yaml(tmp_path: Path) -> None:
+    env_path = tmp_path / "malformed-env.yaml"
+    env_path.write_text("connectors: {}\n", encoding="utf-8")
+
+    with pytest.raises(RExecOpValidationError, match="environment mapping required"):
+        validate_actions(profile=PROFILE, env=env_path, intent="inspect")
+
+
+def test_action_validate_reports_duplicate_secret_refs_without_backend_io(
+    tmp_path: Path,
+) -> None:
+    env = yaml.safe_load(ENVIRONMENT.read_text(encoding="utf-8"))
+    env["environment"]["connectors"]["fixture"]["base_url_secret_ref"] = "shared_ref"
+    env["environment"]["connectors"]["fixture"]["auth"] = {"secret_ref": "shared_ref"}
+    env_path = tmp_path / "duplicate-refs-env.yaml"
+    env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
+
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = validate_actions(profile=PROFILE, env=env_path, intent="inspect")
+
+    backend.assert_not_called()
+    assert payload["status"] == "failed"
+    assert "inspect:duplicate_refs" in payload["blockers"]
+    check = next(
+        item for item in payload["checks"][0]["checks"] if item["id"] == "duplicate_refs"
+    )
+    assert check["status"] == "failed"
+
+
+def test_action_validate_reports_inline_secret_hygiene_failure(tmp_path: Path) -> None:
+    env = yaml.safe_load(ENVIRONMENT.read_text(encoding="utf-8"))
+    env["environment"]["connectors"]["fixture"]["api_token"] = "inline-secret-value"
+    env_path = tmp_path / "inline-secret-env.yaml"
+    env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
+
+    payload = validate_actions(profile=PROFILE, env=env_path, intent="inspect")
+
+    assert payload["status"] == "failed"
+    assert "inspect:secret_hygiene" in payload["blockers"]
+
+
+def test_action_configure_rejects_inline_secrets(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+    env = yaml.safe_load(env_path.read_text(encoding="utf-8"))
+    env["environment"]["connectors"]["api"]["api_token"] = "inline-secret-value"
+    env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(RExecOpValidationError, match="inline secret"):
+        configure_action("inspect", profile=profile, env=env_path)
+
+
+def test_action_configure_reports_unknown_backend_template(tmp_path: Path) -> None:
+    profile, env_path = _write_unknown_backend_configure_fixture(tmp_path)
+
+    payload = configure_action("inspect", profile=profile, env=env_path)
+
+    operation = payload["patch"]["operations"][-1]
+    assert operation["op"] == "unsupported"
+    assert "no minimal configure template" in operation["reason"]
+
+
+def test_action_configure_reports_unknown_http_action_template(tmp_path: Path) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+    workflow_path = profile.parent / "workflows" / "inspect.yaml"
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    workflow["workflow"]["steps"][0]["action"] = "undeclared_action"
+    workflow_path.write_text(yaml.safe_dump(workflow, sort_keys=False), encoding="utf-8")
+
+    payload = configure_action("inspect", profile=profile, env=env_path)
+
+    operation = next(
+        item
+        for item in payload["patch"]["operations"]
+        if item.get("op") == "unsupported"
+    )
+    assert "does not declare action_shapes" in operation["reason"]
+
+
+def test_action_configure_patch_digest_is_canonical_and_deterministic(
+    tmp_path: Path,
+) -> None:
+    profile, env_path = _write_http_configure_fixture(tmp_path)
+    patch_a = tmp_path / "patch-a.json"
+    patch_b = tmp_path / "patch-b.json"
+
+    first = configure_action(
+        "inspect",
+        profile=profile,
+        env=env_path,
+        write_patch=patch_a,
+    )
+    second = configure_action(
+        "inspect",
+        profile=profile,
+        env=env_path,
+        write_patch=patch_b,
+    )
+
+    assert first["patch_digest"] == second["patch_digest"]
+    assert first["patch_digest"].startswith("sha256:")
+    for patch_path in (patch_a, patch_b):
+        patch = json.loads(patch_path.read_text(encoding="utf-8"))
+        assert list(patch.keys()) == sorted(patch.keys())
+        assert patch_path.read_text(encoding="utf-8") == json.dumps(
+            patch,
+            indent=2,
+            sort_keys=True,
+        ) + "\n"
+
+
 def _write_command_preview_fixture(root: Path, backend: str) -> tuple[Path, Path]:
     profile = root / "profile"
     (profile / "connectors").mkdir(parents=True)
@@ -619,6 +731,109 @@ def _write_http_configure_fixture(root: Path) -> tuple[Path, Path]:
                     "profile": "http_configure",
                     "targets": {"fixture-target": {"type": "fixture"}},
                     "connectors": {"api": {"enabled": True, "backend": "http_api"}},
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    return profile / "profile.yaml", env_path
+
+
+def _write_unknown_backend_configure_fixture(root: Path) -> tuple[Path, Path]:
+    profile = root / "profile"
+    (profile / "connectors").mkdir(parents=True)
+    (profile / "intents").mkdir()
+    (profile / "workflows").mkdir()
+    (profile / "validation_rules").mkdir()
+    (profile / "profile.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "profile_contract": {
+                    "name": "unknown_backend_configure",
+                    "version": "0.1.0",
+                    "intents": {"required": True},
+                    "workflows": {"required": True},
+                    "connector_requirements": {"required": True},
+                    "risk_classes": {"required": True},
+                    "evidence_requirements": {"required": True},
+                    "governance_expectations": {"required": True},
+                    "validation_rules": {"required": True},
+                    "escalation_rules": {"required": True},
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "connectors" / "plugin.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "connector": {
+                    "name": "plugin",
+                    "backend": "custom_plugin",
+                    "capabilities": ["inspect"],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "intents" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "intent": {
+                    "id": "inspect",
+                    "workflow": "workflows/inspect.yaml",
+                    "risk": "low",
+                    "modes": ["dry_run"],
+                    "catalog": {
+                        "title": "Inspect",
+                        "summary": "Inspect unknown backend configure target.",
+                        "target_kinds": ["fixture"],
+                        "required_capabilities": ["readonly_plugin"],
+                        "side_effect_class": "none",
+                        "validation_ref": "validation_rules/inspect.yaml",
+                        "runbook_ref": "docs/inspect.md",
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "workflows" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "workflow": {
+                    "id": "unknown_backend_configure.inspect",
+                    "intent": "inspect",
+                    "mode": "read_only",
+                    "risk": "low",
+                    "steps": [
+                        {
+                            "id": "read",
+                            "type": "connector",
+                            "connector": "plugin",
+                            "action": "inspect",
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "validation_rules" / "inspect.yaml").write_text("rules: []\n", encoding="utf-8")
+    env_path = root / "env.yaml"
+    env_path.write_text(
+        yaml.safe_dump(
+            {
+                "environment": {
+                    "id": "unknown-backend-configure",
+                    "profile": "unknown_backend_configure",
+                    "targets": {"fixture-target": {"type": "fixture"}},
+                    "connectors": {"plugin": {"enabled": True, "backend": "custom_plugin"}},
                 }
             },
             sort_keys=False,
