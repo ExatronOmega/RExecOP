@@ -20,7 +20,12 @@ from rexecop.action.surface import (
 from rexecop.action.templates import list_action_templates
 from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.cli_contracts import cli_contract_registry
-from rexecop.cli_errors import cli_error_json, cli_error_payload, validation_cli_error
+from rexecop.cli_errors import (
+    cli_error_json,
+    cli_error_payload,
+    lookup_cli_error,
+    validation_cli_error,
+)
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
@@ -751,9 +756,26 @@ def operation_diff_cmd(
         plan = controller.store.load_plan(operation)
         result = diff_operation_plan(item, plan)
         output = render_operation_plan_diff(result, fmt)
-    except (RExecOpError, ValueError) as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+    except ValueError as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("operation", "diff"),
+                reason_code="invalid_output_format",
+                message=str(exc),
+                safe_next_actions=("Use --format json, table or markdown.",),
+            )
+        )
+    except RExecOpError as exc:
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("operation", "diff"),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation id.",
+                    "Run rexecop status --operation <id> from the same runtime root.",
+                ),
+            )
+        )
     typer.echo(output, nl=not output.endswith("\n"))
     if result["status"] == "drifted":
         raise typer.Exit(code=1)
@@ -775,9 +797,26 @@ def operation_review_cmd(
         plan = controller.store.load_plan(operation)
         result = review_operation(item, plan)
         output = render_operation_review(result, fmt)
-    except (RExecOpError, ValueError) as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+    except ValueError as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("operation", "review"),
+                reason_code="invalid_output_format",
+                message=str(exc),
+                safe_next_actions=("Use --format json, table or markdown.",),
+            )
+        )
+    except RExecOpError as exc:
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("operation", "review"),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation id.",
+                    "Run rexecop operation explain --operation <id>.",
+                ),
+            )
+        )
     typer.echo(output, nl=not output.endswith("\n"))
     if result["status"] == "blocked":
         raise typer.Exit(code=1)
@@ -832,8 +871,16 @@ def evidence_show_cmd(
         item = controller.get_operation(operation)
         result = show_evidence(item, controller.store)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("evidence", "show"),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation id.",
+                    "Run rexecop history --operation <id> from the same runtime root.",
+                ),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -848,8 +895,16 @@ def chain_summary_cmd(
         plan = controller.store.load_plan(operation_or_reaction)
         result = summarize_chain(item, plan, controller.store)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("chain", "summary"),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation or reaction id.",
+                    "Run rexecop history from the same runtime root.",
+                ),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -1133,8 +1188,16 @@ def status_cmd(
     try:
         item = _controller().get_operation(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("status",),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation id.",
+                    "Run rexecop history from the same runtime root.",
+                ),
+            )
+        )
 
     typer.echo(
         json.dumps(
@@ -1271,17 +1334,29 @@ def runtime_recover_cmd(
 
 @runtime_app.command("status")
 def runtime_status_cmd(
-    as_json: bool = typer.Option(True, "--json", help="Emit JSON status."),
+    as_json: bool = typer.Option(True, "--json/--no-json", help="Emit JSON status."),
 ) -> None:
     """Show runtime queue, active operations, locks and dead-letter summary."""
     if not as_json:
-        typer.secho("error: only --json output is supported", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
+        _emit_cli_error(
+            validation_cli_error(
+                command=("runtime", "status"),
+                reason_code="unsupported_output_format",
+                message="only --json output is supported",
+                safe_next_actions=("Re-run with --json.",),
+            )
+        )
     try:
         result = collect_runtime_status(_controller().store)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            validation_cli_error(
+                command=("runtime", "status"),
+                reason_code="runtime_status_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -1291,8 +1366,14 @@ def dead_letter_list_cmd() -> None:
     try:
         result = list_dead_letter_manifest(_controller().store)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            validation_cli_error(
+                command=("dead-letter", "list"),
+                reason_code="dead_letter_list_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -1304,8 +1385,17 @@ def dead_letter_show_cmd(
     try:
         result = show_dead_letter_item(_controller().store, name)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            validation_cli_error(
+                command=("dead-letter", "show"),
+                reason_code="dead_letter_lookup_failed",
+                message=str(exc),
+                safe_next_actions=(
+                    "Run rexecop dead-letter list.",
+                    "Use the exact dead-letter file name from the manifest.",
+                ),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -1315,8 +1405,14 @@ def locks_list_cmd() -> None:
     try:
         result = list_locks_manifest(_controller().store)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            validation_cli_error(
+                command=("locks", "list"),
+                reason_code="locks_list_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
@@ -1356,8 +1452,17 @@ def explain_error_cmd(
     try:
         result = explain_error(_controller().store, ref)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _emit_cli_error(
+            validation_cli_error(
+                command=("explain-error",),
+                reason_code="explain_error_unavailable",
+                message=str(exc),
+                safe_next_actions=(
+                    "Use an operation id, dead-letter file name, or watchdog record id.",
+                    "Run rexecop ops --json for action-required items.",
+                ),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 

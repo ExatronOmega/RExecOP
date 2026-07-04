@@ -123,7 +123,10 @@ tests. It is the M8 anti-drift surface for release-closure checks.
 
 ## CLI Error Envelope
 
-Selected M8 failure paths emit `rexecop.cli_error.v0.1` on exit code `1`.
+Every command in `contracts cli` emits `rexecop.cli_error.v0.1` on exit code `1`
+for operator-facing validation, lookup and runtime failures. Exit code `0` keeps
+the command-specific success schema from the registry.
+
 The envelope contains:
 
 - `error_class`: normalized class such as `validation_error`, `missing_artifact`
@@ -134,10 +137,20 @@ The envelope contains:
 - `safe_next_actions`: bounded operator next steps;
 - `details`: redacted diagnostic projection from the failing command when useful.
 
-Initial covered paths: missing `operation explain`, failed `profile lint`, `ops`
-with blockers, broken `receipt show` digest, and unredacted `support bundle`
-requests. Other commands still use their existing error surface until M8
-normalization expands.
+Exit-code policy for registry commands:
+
+| Exit code | Meaning | Output |
+| --- | --- | --- |
+| `0` | Success | Command schema from `contracts cli` |
+| `1` | Validation, lookup or runtime failure | `rexecop.cli_error.v0.1` |
+
+Representative failure paths include missing operation lookups (`status`,
+`operation explain`, `operation review`, `operation diff`), audit projection
+failures (`receipt show`, `evidence show`, `chain summary`, unredacted
+`support bundle`), runtime triage failures (`runtime status --no-json`,
+`dead-letter show`, `explain-error`), runtime blockers in `ops`, and failed
+`profile lint` conformance. `runtime status` is JSON-only: use `--json` (default)
+or `--no-json` triggers `unsupported_output_format`.
 
 ## Runtime triage and recovery
 

@@ -55,3 +55,18 @@ def validation_cli_error(
         safe_next_actions=safe_next_actions,
         details=details,
     )
+
+
+def lookup_cli_error(
+    *,
+    command: tuple[str, ...],
+    message: str,
+    reason_code: str = "operation_lookup_failed",
+    safe_next_actions: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    return validation_cli_error(
+        command=command,
+        reason_code=reason_code,
+        message=message,
+        safe_next_actions=safe_next_actions,
+    )

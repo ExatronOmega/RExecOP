@@ -92,8 +92,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - CLI contract registry: `contracts cli` emits command schemas, formats, exit-code policy
   and redaction/authority claims for operator-facing surfaces, including
   command groups, `format_matrix` and `exit_code_matrix`
-- CLI error envelope: selected M8 failure paths emit `rexecop.cli_error.v0.1`
-  with normalized class, reason code, redacted message and safe next actions
+- CLI error envelope: registry commands emit `rexecop.cli_error.v0.1` on exit
+  code `1` with normalized class, reason code, redacted message and safe next actions
 - M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,
   `action policy-preview`, `action validate`, `action diff --env`,
   `action configure --dry-run`, `action templates list` (scope 1.0: `http.simple-get`,

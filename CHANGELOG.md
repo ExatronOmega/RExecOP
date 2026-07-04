@@ -26,6 +26,11 @@ PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newes
 - Extended `rexecop.cli_contract_registry.v0.1` with command groups,
   `format_matrix`, and `exit_code_matrix` so M8 can audit JSON-only,
   `--json` and `--format` command surfaces before broader CLI normalization.
+- Extended `rexecop.cli_error.v0.1` to all commands in the CLI contract
+  registry: audit, operation inspection, runtime triage and profile lint
+  failure paths now emit the normalized envelope on exit code `1`; added
+  anti-drift coverage in `tests/test_cli_errors.py` and documented the
+  registry-wide exit-code policy in `docs/cli-reference.md`.
 
 ## [0.2.14a0] - 2026-07-04
 

@@ -4,16 +4,22 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from rexecop.cli import app
+from rexecop.cli_contracts import CLI_CONTRACTS
 from rexecop.operation.model import Operation
 from rexecop.operation.state import OperationState
 from rexecop.storage.file_store import FileStore
 
 runner = CliRunner()
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
+ENVIRONMENT = REPO_ROOT / "examples/environments/runtime-fixture.example.yaml"
 FAILED_PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
+
+REGISTRY_COMMANDS = frozenset(" ".join(item.command) for item in CLI_CONTRACTS)
 
 
 def _json_error(result) -> dict:
@@ -27,19 +33,103 @@ def _json_error(result) -> dict:
     return payload
 
 
-def test_operation_explain_missing_operation_uses_cli_error_schema(tmp_path: Path) -> None:
-    root = tmp_path / "runtime"
+def _json_success(result) -> dict:
+    assert result.exit_code == 0, result.output
+    return json.loads(result.stdout)
 
-    result = runner.invoke(
-        app,
-        ["--root", str(root), "operation", "explain", "--operation", "op-missing"],
+
+def _invoke(root: Path, *args: str):
+    return runner.invoke(app, ["--root", str(root), *args])
+
+
+def _planned_operation(tmp_path: Path):
+    root = tmp_path / ".rexecop"
+    store = FileStore(root)
+    store.ensure_layout()
+    from rexecop.operation.controller import OperationController
+
+    controller = OperationController(store=store)
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
     )
+    return root, operation
 
+
+@pytest.mark.parametrize(
+    ("args", "expected_command", "expected_reason"),
+    [
+        (
+            ("operation", "explain", "--operation", "op-missing"),
+            "operation explain",
+            "operation_lookup_failed",
+        ),
+        (
+            ("status", "--operation", "op-missing"),
+            "status",
+            "operation_lookup_failed",
+        ),
+        (
+            ("operation", "review", "--operation", "op-missing"),
+            "operation review",
+            "operation_lookup_failed",
+        ),
+        (
+            ("operation", "diff", "--operation", "op-missing"),
+            "operation diff",
+            "operation_lookup_failed",
+        ),
+        (
+            ("receipt", "show", "op-missing"),
+            "receipt show",
+            "receipt_lookup_failed",
+        ),
+        (
+            ("evidence", "show", "op-missing"),
+            "evidence show",
+            "operation_lookup_failed",
+        ),
+        (
+            ("chain", "summary", "op-missing"),
+            "chain summary",
+            "operation_lookup_failed",
+        ),
+        (
+            ("support", "bundle", "op-missing"),
+            "support bundle",
+            "support_bundle_unavailable",
+        ),
+        (
+            ("dead-letter", "show", "missing.json"),
+            "dead-letter show",
+            "dead_letter_lookup_failed",
+        ),
+        (
+            ("explain-error", "unsupported-ref"),
+            "explain-error",
+            "explain_error_unavailable",
+        ),
+        (
+            ("runtime", "status", "--no-json"),
+            "runtime status",
+            "unsupported_output_format",
+        ),
+    ],
+)
+def test_registry_commands_emit_cli_error_on_failure(
+    tmp_path: Path,
+    args: tuple[str, ...],
+    expected_command: str,
+    expected_reason: str,
+) -> None:
+    root = tmp_path / "runtime"
+    result = _invoke(root, *args)
     payload = _json_error(result)
-    assert payload["error_class"] == "validation_error"
-    assert payload["reason_code"] == "operation_lookup_failed"
-    assert payload["command"] == "operation explain"
-    assert "op-missing" in payload["message"]
+    assert payload["command"] == expected_command
+    assert payload["reason_code"] == expected_reason
 
 
 def test_ops_blockers_use_cli_error_schema_with_details(tmp_path: Path) -> None:
@@ -62,9 +152,7 @@ def test_ops_blockers_use_cli_error_schema_with_details(tmp_path: Path) -> None:
         )
     )
 
-    result = runner.invoke(app, ["--root", str(root), "ops"])
-
-    payload = _json_error(result)
+    payload = _json_error(_invoke(root, "ops"))
     assert payload["error_class"] == "runtime_failure"
     assert payload["reason_code"] == "runtime_blockers_present"
     assert payload["command"] == "ops"
@@ -76,12 +164,12 @@ def test_ops_blockers_use_cli_error_schema_with_details(tmp_path: Path) -> None:
 
 
 def test_profile_lint_failed_uses_cli_error_schema() -> None:
-    result = runner.invoke(
-        app,
-        ["profile", "lint", "--profile", str(FAILED_PROFILE), "--track", "readonly"],
+    payload = _json_error(
+        runner.invoke(
+            app,
+            ["profile", "lint", "--profile", str(FAILED_PROFILE), "--track", "readonly"],
+        )
     )
-
-    payload = _json_error(result)
     assert payload["error_class"] == "validation_error"
     assert payload["reason_code"] == "profile_conformance_failed"
     assert payload["command"] == "profile lint"
@@ -90,8 +178,62 @@ def test_profile_lint_failed_uses_cli_error_schema() -> None:
 
 
 def test_support_bundle_unredacted_uses_cli_error_schema(tmp_path: Path) -> None:
-    result = runner.invoke(app, ["--root", str(tmp_path / "runtime"), "support", "bundle", "op-1"])
-
-    payload = _json_error(result)
+    payload = _json_error(_invoke(tmp_path / "runtime", "support", "bundle", "op-1"))
     assert payload["reason_code"] == "support_bundle_unavailable"
     assert payload["command"] == "support bundle"
+
+
+def test_audit_group_success_schemas(tmp_path: Path) -> None:
+    root, operation = _planned_operation(tmp_path)
+
+    evidence = _json_success(_invoke(root, "evidence", "show", operation.id))
+    assert evidence["schema"] == "rexecop.evidence_show.v0.1"
+
+    chain = _json_success(_invoke(root, "chain", "summary", operation.id))
+    assert chain["schema"] == "rexecop.chain_summary.v0.1"
+
+
+def test_operation_group_success_schemas(tmp_path: Path) -> None:
+    root, operation = _planned_operation(tmp_path)
+
+    status = _json_success(_invoke(root, "status", "--operation", operation.id))
+    assert status["schema"] == "rexecop.operation_status.v0.1"
+
+    review = _json_success(
+        _invoke(root, "operation", "review", "--operation", operation.id)
+    )
+    assert review["schema"] == "rexecop.operation_review.v0.1"
+
+
+def test_runtime_group_success_schemas(tmp_path: Path) -> None:
+    root, _operation = _planned_operation(tmp_path)
+
+    dead_letters = _json_success(_invoke(root, "dead-letter", "list"))
+    assert dead_letters["schema"] == "rexecop.dead_letter_list.v0.1"
+
+    locks = _json_success(_invoke(root, "locks", "list"))
+    assert locks["schema"] == "rexecop.locks_list.v0.1"
+
+    runtime_status = _json_success(_invoke(root, "runtime", "status", "--json"))
+    assert runtime_status["schema"] == "rexecop.runtime_status.v0.1"
+
+
+def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
+    covered = {
+        "status",
+        "operation explain",
+        "operation review",
+        "operation diff",
+        "receipt show",
+        "evidence show",
+        "chain summary",
+        "support bundle",
+        "runtime status",
+        "dead-letter list",
+        "dead-letter show",
+        "locks list",
+        "explain-error",
+        "ops",
+        "profile lint",
+    }
+    assert REGISTRY_COMMANDS == covered
