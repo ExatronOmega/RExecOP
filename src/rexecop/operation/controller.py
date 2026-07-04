@@ -39,6 +39,12 @@ from rexecop.policy.pack import compile_environment_policy_pack, policy_decision
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.model import ReactionContext
+from rexecop.runtime_ops.idempotency import (
+    attach_operation_idempotency,
+    plan_idempotency_key,
+    start_idempotency_key,
+)
+from rexecop.runtime_ops.recovery import ensure_terminal_receipt, start_is_idempotent
 from rexecop.storage.atomic import atomic_write_text
 from rexecop.storage.factory import create_store
 from rexecop.storage.port import RuntimeStore
@@ -232,6 +238,22 @@ class OperationController:
                 "catalog_path": str(resolved_catalog_path),
                 "target_id": catalog_resolution.target.id,
             }
+
+        attach_operation_idempotency(
+            operation.metadata,
+            plan_key=plan_idempotency_key(
+                profile=profile.name,
+                environment=environment.id,
+                intent=intent,
+                target=target,
+                mode=mode,
+                catalog_binding=(
+                    catalog_resolution.binding.as_dict() if catalog_resolution is not None else None
+                ),
+                auto_react=auto_react_mode or None,
+            ),
+            start_key=start_idempotency_key(operation.id),
+        )
 
         govengine_preview: dict[str, Any] = {
             "profile": profile.name,
@@ -498,6 +520,8 @@ class OperationController:
 
     def _start_operation(self, operation_id: str, *, drain_queue: bool) -> Operation:
         operation = self.get_operation(operation_id)
+        if start_is_idempotent(operation):
+            return operation
         plan = self.store.load_plan(operation_id)
         self._verify_catalog_binding(operation, plan)
         if operation.state == OperationState.APPROVED.value and is_mutating_mode(operation.mode):
@@ -506,6 +530,7 @@ class OperationController:
                 return self.get_operation(operation_id)
         result = self.orchestrator.start(operation_id)
         self._release_runtime_if_terminal(result)
+        self._ensure_terminal_receipt_if_needed(operation_id)
         if drain_queue:
             self._drain_queue()
         return self.get_operation(operation_id)
@@ -544,6 +569,9 @@ class OperationController:
         }:
             self.runtime.release_operation(operation)
 
+    def _ensure_terminal_receipt_if_needed(self, operation_id: str) -> None:
+        ensure_terminal_receipt(self, operation_id)
+
     def _drain_queue(self) -> list[str]:
         started: list[str] = []
         while True:
@@ -568,6 +596,7 @@ class OperationController:
                 return self.get_operation(operation_id)
         result = self.orchestrator.advance(operation_id, max_steps=max_steps)
         self._release_runtime_if_terminal(result)
+        self._ensure_terminal_receipt_if_needed(operation_id)
         return self.get_operation(operation_id)
 
     def approve(self, operation_id: str, *, approved_by: str = "operator") -> Operation:
@@ -613,6 +642,7 @@ class OperationController:
                 return self.get_operation(operation_id)
         result = self.orchestrator.resume(operation_id)
         self._release_runtime_if_terminal(result)
+        self._ensure_terminal_receipt_if_needed(operation_id)
         self._drain_queue()
         return self.get_operation(operation_id)
 
@@ -632,6 +662,7 @@ class OperationController:
                 return self.get_operation(operation_id)
         result = self.orchestrator.retry(operation_id)
         self._release_runtime_if_terminal(result)
+        self._ensure_terminal_receipt_if_needed(operation_id)
         self._drain_queue()
         return self.get_operation(operation_id)
 
@@ -639,7 +670,9 @@ class OperationController:
         return self.orchestrator.validate(operation_id)
 
     def escalate(self, operation_id: str) -> dict[str, object]:
-        return self.orchestrator.escalate(operation_id)
+        package = self.orchestrator.escalate(operation_id)
+        self._ensure_terminal_receipt_if_needed(operation_id)
+        return package
 
     def _emit_sclite_intent(self, operation: Operation, plan: OperationPlan) -> None:
         intent = self.sclite_emitter.emit_intent_contract(operation, plan)

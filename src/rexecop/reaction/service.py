@@ -27,6 +27,7 @@ from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.compiler import compile_reaction_pack
 from rexecop.reaction.evaluator import evaluate_reaction
 from rexecop.reaction.model import ReactionContext
+from rexecop.runtime_ops.idempotency import reaction_child_plan_key
 from rexecop.storage.atomic import atomic_write_text, secure_directory
 
 MAX_OBSERVATION_BYTES = 1_048_576
@@ -210,6 +211,14 @@ class ReactionService:
                     child = self.controller.plan(
                         **plan_kwargs,
                     )
+                    child_keys = child.metadata.get("idempotency")
+                    if isinstance(child_keys, dict):
+                        child_keys["reaction_child_plan_key"] = reaction_child_plan_key(
+                            reaction_id=reaction_id,
+                            child_operation_id=child.id,
+                        )
+                        child.metadata["idempotency"] = child_keys
+                        self.controller.store.save_operation(child)
                     child_verdict = child.metadata.get("policy_verdict")
                     if (
                         not isinstance(child_verdict, dict)

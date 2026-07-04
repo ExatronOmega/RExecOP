@@ -24,6 +24,7 @@ from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.controller import OperationController
 from rexecop.profile.loader import LoadedProfile, load_profile
 from rexecop.profile.resolver import resolve_profile_path
+from rexecop.runtime_ops.idempotency import trigger_plan_key
 from rexecop.storage.atomic import atomic_write_text, secure_directory
 
 TRIGGER_RULES_RELATIVE_PATH = Path("triggers") / "trigger_rules.yaml"
@@ -510,7 +511,15 @@ class TriggerService:
             "event_digest": event_digest,
             "payload_digest": payload_digest,
             "dedupe_key": dedupe_key,
+            "trigger_plan_key": trigger_plan_key(
+                dedupe_key=dedupe_key,
+                decision_id=decision_id,
+            ),
         }
+        child_keys = child.metadata.get("idempotency")
+        if isinstance(child_keys, dict):
+            child_keys["trigger_plan_key"] = child.metadata["trigger_decision"]["trigger_plan_key"]
+            child.metadata["idempotency"] = child_keys
         event_id = self.controller.evidence.emit(
             operation_id=child.id,
             event_type=EvidenceEventType.OPERATION_TRIGGERED,
@@ -577,6 +586,10 @@ class TriggerService:
                 "digest": rule_set.digest,
             },
             "operation_id": operation_id,
+            "trigger_plan_key": trigger_plan_key(
+                dedupe_key=dedupe_key,
+                decision_id=decision_id,
+            ),
         }
         if rule is not None:
             result["rule"] = {"id": rule.rule_id, "digest": rule.digest}

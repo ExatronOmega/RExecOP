@@ -33,6 +33,8 @@ from rexecop.reaction.service import ReactionService
 from rexecop.runtime.doctor import CHECK_BLOCKER, count_secret_refs, run_runtime_doctor
 from rexecop.runtime.init import initialize_runtime_root
 from rexecop.runtime.root import resolve_runtime_instance, resolve_runtime_root
+from rexecop.runtime_ops.backup import create_runtime_backup, restore_runtime_backup
+from rexecop.runtime_ops.recovery import run_startup_recovery
 from rexecop.runtime_ops.triage import (
     collect_ops_snapshot,
     collect_runtime_status,
@@ -79,6 +81,11 @@ app.add_typer(operations_app, name="operations")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(dead_letter_app, name="dead-letter")
 app.add_typer(locks_app, name="locks")
+backup_app = typer.Typer(
+    help="Backup and restore the operator runtime store.",
+    no_args_is_help=True,
+)
+app.add_typer(backup_app, name="backup")
 
 _runtime_root: Path | None = None
 _runtime_instance: str | None = None
@@ -676,6 +683,23 @@ def rollback_cmd(
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
+@runtime_app.command("recover")
+def runtime_recover_cmd(
+    as_json: bool = typer.Option(True, "--json", help="Emit JSON recovery report."),
+) -> None:
+    """Reconcile stale leases, interrupted operations and receipt gaps after restart."""
+    if not as_json:
+        typer.secho("error: only --json output is supported", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    try:
+        controller = _controller()
+        result = run_startup_recovery(controller.store, controller=controller)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
 @runtime_app.command("status")
 def runtime_status_cmd(
     as_json: bool = typer.Option(True, "--json", help="Emit JSON status."),
@@ -769,6 +793,39 @@ def queue_cmd(
         return
     pending = controller.runtime.queue.list_pending()
     typer.echo(json.dumps({"pending": pending}, indent=2, sort_keys=True))
+
+
+@backup_app.command("create")
+def backup_create_cmd(
+    output: Path = typer.Option(..., "--output", help="Archive path or output directory."),
+) -> None:
+    """Create a secret-scanned tarball backup of the runtime store."""
+    try:
+        result = create_runtime_backup(_controller().store.root, output=output)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@backup_app.command("restore")
+def backup_restore_cmd(
+    archive: Path = typer.Option(..., "--archive", help="Backup tarball path."),
+    manifest: Path | None = typer.Option(
+        None, "--manifest", help="Optional manifest path when not adjacent to the archive."
+    ),
+) -> None:
+    """Restore a runtime backup into the configured runtime root."""
+    try:
+        result = restore_runtime_backup(
+            archive=archive,
+            target_root=_controller().store.root,
+            manifest=manifest,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 worker_app = typer.Typer(help="Background worker commands.")

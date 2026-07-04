@@ -9,6 +9,8 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.controller import OperationController
 from rexecop.operation.model import Operation
+from rexecop.runtime_ops.lease import WorkerLeaseManager
+from rexecop.runtime_ops.recovery import run_startup_recovery
 from rexecop.runtime_ops.watchdog import (
     DEFAULT_INBOX_RETRY_BUDGET,
     DEFAULT_STALE_OPERATION_SECONDS,
@@ -50,7 +52,11 @@ def run_worker(
     started: list[str] = []
     iterations = 0
     watchdog_service = WatchdogService(controller.store) if watchdog else None
+    lease_manager = WorkerLeaseManager(controller.store.root)
+    run_startup_recovery(controller.store, controller=controller)
+    lease_manager.acquire(worker_id=worker_id)
     while True:
+        lease_manager.renew(worker_id=worker_id)
         if watchdog_service is not None:
             watchdog_service.record_heartbeat(worker_id=worker_id)
             if watch_inbox:
