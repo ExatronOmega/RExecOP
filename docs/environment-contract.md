@@ -94,15 +94,19 @@ rexecop action list --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
 rexecop action show inspect --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
+rexecop action preview inspect --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
 rexecop action validate --all --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
 ```
 
 The action metadata commands report descriptor digests, connector backend
-classes, shape digests when available, required secret refs and catalog
-applicability. They intentionally do not print resolved secret values or
-connector configuration, do not perform backend IO, and do not replace
-GovEngine admission or SCLite truth artifacts.
+classes, shape digests when available, required secret refs, redacted
+effective-call previews and catalog applicability. HTTP previews omit base URLs
+and auth material; shell/SSH previews omit private endpoint and identity
+configuration; fixture previews expose only data digests. They intentionally do
+not print resolved secret values or connector configuration, do not perform
+backend IO, and do not replace GovEngine admission or SCLite truth artifacts.
 
 ## Safety block
 

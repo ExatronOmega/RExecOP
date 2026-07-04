@@ -14,7 +14,7 @@ profile lint --track readonly
   -> profiles show (intents, tracks, developer_check)
   -> profile harness --profile <profile>   # when a fixture environment is available
   -> secrets doctor --env <environment.yaml>
-  -> action list/show/validate --profile <profile> --env <environment.yaml>
+  -> action list/show/preview/validate --profile <profile> --env <environment.yaml>
   -> operations unavailable --catalog <targets.yaml> --target <id>   # when using a catalog
   -> plan / operation review
 ```
@@ -145,17 +145,27 @@ rexecop action list --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
 rexecop action show inspect --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml
+rexecop action preview inspect --profile examples/first-run-demo/profile/profile.yaml \
+  --env examples/first-run-demo/environment.yaml
 rexecop action validate --all --catalog examples/first-run-demo/catalog.yaml \
   --target fixture-target
 ```
 
-`action list`, `action show`, and `action validate` are read-only metadata
-commands for profile authors and operators. They compile profile-owned action
+`action list`, `action show`, `action preview`, and `action validate` are
+read-only metadata commands for profile authors and operators. They compile profile-owned action
 descriptors, connector workflow steps, backend classes, shape digests when
 available, required secret refs and catalog applicability. Output uses stable
 schemas (`rexecop.action_list.v0.1`, `rexecop.action_show.v0.1`,
-`rexecop.action_validate.v0.1`) and reports source digests instead of local
-operator file paths.
+`rexecop.action_preview.v0.1`, `rexecop.action_validate.v0.1`) and reports
+source digests instead of local operator file paths.
+
+`action preview` renders redacted effective-call previews for `http_api`,
+`local_shell_readonly`, `ssh_readonly`, and `static_fixture`. HTTP previews show
+method, path template/preview, query keys, body shape, auth header name and
+bounded response policy, but never base URLs, auth refs, auth prefixes or
+resolved headers. Shell/SSH previews show the allowlisted command argv and
+output limits, but never SSH host, user, port, identity file refs or resolved
+identity paths. Static fixture previews expose only fixture data digests.
 
 These commands do not execute connector backends, create execution requests,
 request or imply GovEngine admission, emit SCLite truth artifacts, or print
@@ -175,6 +185,6 @@ bounded JSON errors without backend IO.
 | `profiles *` | Profile metadata, conformance, plugin registration | Domain semantics, policy verdicts |
 | `connectors *` | Backend descriptors and certification tier | Connector execution |
 | `capabilities list` | Neutral capability registry | Target catalog capabilities |
-| `action list/show/validate` | Action metadata, shape digests, env binding checks | Backend execution, GovEngine admission, SCLite truth |
+| `action list/show/preview/validate` | Action metadata, shape digests, redacted call preview and env binding checks | Backend execution, GovEngine admission, SCLite truth |
 | `profile manifest` | Host extension contract | Profile content |
 | `operations unavailable` | Technical applicability reasoning | GovEngine admission |

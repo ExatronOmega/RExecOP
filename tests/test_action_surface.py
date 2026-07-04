@@ -9,9 +9,11 @@ from typer.testing import CliRunner
 
 from rexecop.action.surface import (
     ACTION_LIST_SCHEMA,
+    ACTION_PREVIEW_SCHEMA,
     ACTION_SHOW_SCHEMA,
     ACTION_VALIDATE_SCHEMA,
     list_actions,
+    preview_action,
     show_action,
     validate_actions,
 )
@@ -21,7 +23,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples/first-run-demo/profile/profile.yaml"
 ENVIRONMENT = ROOT / "examples/first-run-demo/environment.yaml"
 CATALOG = ROOT / "examples/first-run-demo/catalog.yaml"
-
 runner = CliRunner()
 
 
@@ -75,6 +76,189 @@ def test_action_validate_all_passes_without_backend_io() -> None:
     assert payload["blockers"] == []
 
 
+def test_action_preview_redacts_http_effective_call_without_backend_io(tmp_path: Path) -> None:
+    profile = tmp_path / "profile"
+    (profile / "connectors").mkdir(parents=True)
+    (profile / "intents").mkdir()
+    (profile / "workflows").mkdir()
+    (profile / "validation_rules").mkdir()
+    (profile / "profile.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "profile_contract": {
+                    "name": "http_preview",
+                    "version": "0.1.0",
+                    "intents": {"required": True},
+                    "workflows": {"required": True},
+                    "connector_requirements": {"required": True},
+                    "risk_classes": {"required": True},
+                    "evidence_requirements": {"required": True},
+                    "governance_expectations": {"required": True},
+                    "validation_rules": {"required": True},
+                    "escalation_rules": {"required": True},
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "connectors" / "api.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "connector": {
+                    "name": "api",
+                    "backend": "http_api",
+                    "capabilities": ["read_state"],
+                    "action_shapes": {
+                        "read_state": {
+                            "method": "GET",
+                            "path": "/fixture/{target}/state",
+                            "unwrap": "state",
+                            "mutating": False,
+                            "max_response_bytes": 2048,
+                        }
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "intents" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "intent": {
+                    "id": "inspect",
+                    "workflow": "workflows/inspect.yaml",
+                    "risk": "low",
+                    "modes": ["dry_run"],
+                    "catalog": {
+                        "title": "Inspect",
+                        "summary": "Inspect HTTP preview target.",
+                        "target_kinds": ["fixture"],
+                        "required_capabilities": ["readonly_api"],
+                        "side_effect_class": "none",
+                        "validation_ref": "validation_rules/inspect.yaml",
+                        "runbook_ref": "docs/inspect.md",
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "workflows" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "workflow": {
+                    "id": "http_preview.inspect",
+                    "intent": "inspect",
+                    "mode": "read_only",
+                    "risk": "low",
+                    "steps": [
+                        {
+                            "id": "read",
+                            "type": "connector",
+                            "connector": "api",
+                            "action": "read_state",
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "validation_rules" / "inspect.yaml").write_text("rules: []\n", encoding="utf-8")
+    env_path = tmp_path / "env.yaml"
+    env_path.write_text(
+        yaml.safe_dump(
+            {
+                "environment": {
+                    "id": "http-preview",
+                    "profile": "http_preview",
+                    "targets": {"fixture-target": {"type": "fixture"}},
+                    "connectors": {
+                        "api": {
+                            "enabled": True,
+                            "backend": "http_api",
+                            "base_url_secret_ref": "fixture_base_url",
+                            "auth": {
+                                "secret_ref": "fixture_api_token",
+                                "header": "Authorization",
+                                "prefix": "Bearer ",
+                            },
+                            "actions": {
+                                "read_state": {
+                                    "method": "GET",
+                                    "path": "/fixture/{target}/state",
+                                    "unwrap": "state",
+                                    "max_response_bytes": 2048,
+                                }
+                            },
+                        }
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = preview_action(
+            "inspect",
+            profile=profile / "profile.yaml",
+            env=env_path,
+            target="fixture-target",
+        )
+
+    backend.assert_not_called()
+    assert payload["schema"] == ACTION_PREVIEW_SCHEMA
+    preview = payload["previews"][0]["call_preview"]
+    assert preview["kind"] == "http_api"
+    assert preview["method"] == "GET"
+    assert preview["path_preview"] == "/fixture/fixture-target/state"
+    assert preview["headers"]["auth_configured"] is True
+    assert preview["bounded_output"]["max_response_bytes"] == 2048
+    rendered = json.dumps(payload, sort_keys=True)
+    assert "fixture_base_url" not in rendered
+    assert "fixture_api_token" not in rendered
+    assert "Bearer" not in rendered
+    assert "Does not execute backend IO." in payload["non_claims"]
+
+
+def test_action_preview_redacts_static_fixture_data_without_backend_io() -> None:
+    payload = preview_action("inspect", profile=PROFILE, env=ENVIRONMENT)
+
+    assert payload["schema"] == ACTION_PREVIEW_SCHEMA
+    preview = payload["previews"][0]["call_preview"]
+    assert preview["kind"] == "static_fixture"
+    assert preview["data_digest"].startswith("sha256:")
+    rendered = json.dumps(payload, sort_keys=True)
+    assert "ready" not in rendered
+    assert "observed" not in rendered
+
+
+def test_action_preview_renders_readonly_command_shapes_without_endpoint_data(
+    tmp_path: Path,
+) -> None:
+    for backend in ("local_shell_readonly", "ssh_readonly"):
+        profile, env_path = _write_command_preview_fixture(tmp_path / backend, backend)
+
+        payload = preview_action("inspect", profile=profile, env=env_path)
+
+        preview = payload["previews"][0]["call_preview"]
+        assert preview["kind"] == backend
+        assert preview["command"]["argv"] == ["uptime", "-p"]
+        assert preview["command"]["argv_digest"].startswith("sha256:")
+        assert preview["bounded_output"]["max_output_bytes"] == 4096
+        rendered = json.dumps(payload, sort_keys=True)
+        assert "private-host" not in rendered
+        assert "operator-user" not in rendered
+        assert "identity_key" not in rendered
+
+
 def test_action_list_can_resolve_profile_and_env_from_catalog() -> None:
     payload = list_actions(catalog=CATALOG, target="fixture-target")
 
@@ -123,6 +307,15 @@ def test_cli_action_commands_emit_json() -> None:
         ],
         [
             "action",
+            "preview",
+            "inspect",
+            "--profile",
+            str(PROFILE),
+            "--env",
+            str(ENVIRONMENT),
+        ],
+        [
+            "action",
             "validate",
             "--all",
             "--profile",
@@ -145,3 +338,126 @@ def test_cli_action_validate_requires_scope() -> None:
 
     assert result.exit_code == 1
     assert "requires --all or --intent" in result.stderr
+
+
+def _write_command_preview_fixture(root: Path, backend: str) -> tuple[Path, Path]:
+    profile = root / "profile"
+    (profile / "connectors").mkdir(parents=True)
+    (profile / "intents").mkdir()
+    (profile / "workflows").mkdir()
+    (profile / "validation_rules").mkdir()
+    (profile / "profile.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "profile_contract": {
+                    "name": f"{backend}_preview",
+                    "version": "0.1.0",
+                    "intents": {"required": True},
+                    "workflows": {"required": True},
+                    "connector_requirements": {"required": True},
+                    "risk_classes": {"required": True},
+                    "evidence_requirements": {"required": True},
+                    "governance_expectations": {"required": True},
+                    "validation_rules": {"required": True},
+                    "escalation_rules": {"required": True},
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "connectors" / "host.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "connector": {
+                    "name": "host",
+                    "backend": backend,
+                    "capabilities": ["uptime"],
+                    "command_shapes": {
+                        "uptime": {
+                            "command": "uptime",
+                            "args": ["-p"],
+                        }
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "intents" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "intent": {
+                    "id": "inspect",
+                    "workflow": "workflows/inspect.yaml",
+                    "risk": "low",
+                    "modes": ["dry_run"],
+                    "catalog": {
+                        "title": "Inspect",
+                        "summary": "Inspect command preview target.",
+                        "target_kinds": ["host"],
+                        "required_capabilities": ["readonly_shell"],
+                        "side_effect_class": "none",
+                        "validation_ref": "validation_rules/inspect.yaml",
+                        "runbook_ref": "docs/inspect.md",
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "workflows" / "inspect.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "workflow": {
+                    "id": f"{backend}_preview.inspect",
+                    "intent": "inspect",
+                    "mode": "read_only",
+                    "risk": "low",
+                    "steps": [
+                        {
+                            "id": "read",
+                            "type": "connector",
+                            "connector": "host",
+                            "action": "uptime",
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile / "validation_rules" / "inspect.yaml").write_text("rules: []\n", encoding="utf-8")
+    config: dict[str, object] = {
+        "enabled": True,
+        "backend": backend,
+        "allowlist": [{"action": "uptime", "command": "uptime", "args": ["-p"]}],
+        "max_output_bytes": 4096,
+    }
+    if backend == "ssh_readonly":
+        config.update(
+            {
+                "host": "private-host",
+                "user": "operator-user",
+                "identity_file_secret_ref": "identity_key",
+            }
+        )
+    env_path = root / "env.yaml"
+    env_path.write_text(
+        yaml.safe_dump(
+            {
+                "environment": {
+                    "id": f"{backend}-preview",
+                    "profile": f"{backend}_preview",
+                    "targets": {"host-01": {"type": "host"}},
+                    "connectors": {"host": config},
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    return profile / "profile.yaml", env_path

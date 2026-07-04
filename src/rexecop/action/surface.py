@@ -10,7 +10,11 @@ from rexecop.catalog.service import (
     compile_operation_descriptor,
     compile_profile_operations,
 )
-from rexecop.connectors.action_shape import validate_http_action_shape
+from rexecop.connectors.action_shape import (
+    canonical_http_action_shape,
+    validate_http_action_shape,
+)
+from rexecop.connectors.command_shape import normalize_allowlisted_argv
 from rexecop.environment.loader import load_environment
 from rexecop.environment.model import Environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
@@ -24,6 +28,7 @@ from rexecop.workflow.loader import load_workflow
 ACTION_LIST_SCHEMA = "rexecop.action_list.v0.1"
 ACTION_SHOW_SCHEMA = "rexecop.action_show.v0.1"
 ACTION_VALIDATE_SCHEMA = "rexecop.action_validate.v0.1"
+ACTION_PREVIEW_SCHEMA = "rexecop.action_preview.v0.1"
 
 
 class _ActionContext:
@@ -132,6 +137,53 @@ def validate_actions(
         "checks": checks,
         "blockers": blockers,
         "non_claims": _non_claims(),
+    }
+
+
+def preview_action(
+    intent: str,
+    *,
+    profile: str | Path | None = None,
+    env: Path | None = None,
+    catalog: Path | None = None,
+    target: str | None = None,
+) -> dict[str, Any]:
+    """Preview bounded connector call shapes without backend IO or admission."""
+    if env is None and not (catalog is not None and target is not None):
+        raise RExecOpValidationError("action preview requires --env or --catalog with --target")
+    context = _resolve_context(profile=profile, env=env, catalog=catalog, target=target)
+    operation = compile_operation_descriptor(context.profile, intent)
+    workflow = load_workflow(context.profile.resolve_workflow_path(intent))
+    connector_steps = _connector_steps(context, workflow)
+    previews = [
+        _step_preview(context, workflow.mode, step)
+        for step in workflow.steps
+        if step.type == "connector"
+    ]
+    return {
+        "schema": ACTION_PREVIEW_SCHEMA,
+        "action": {
+            "id": operation.id,
+            "title": operation.title,
+            "side_effect_class": operation.side_effect_class,
+            "operation_descriptor_digest": operation.digest,
+        },
+        "workflow": {
+            "id": workflow.id,
+            "mode": workflow.mode,
+            "risk": workflow.risk,
+            "connector_step_count": len(connector_steps),
+        },
+        "source_contracts": _source_contracts(context, operation.digest),
+        "previews": previews,
+        "bounded_output": _bounded_output_summary(previews),
+        "applicability": _applicability(context, operation.id),
+        "non_claims": _non_claims()
+        + [
+            "Does not print base URLs, hosts, users, identity files, auth material "
+            "or raw connector action data.",
+            "Does not prove the backend will respond successfully.",
+        ],
     }
 
 
@@ -277,6 +329,227 @@ def _shape_digest(
                 }
             )
     return ""
+
+
+def _step_preview(context: _ActionContext, mode: str, step: Any) -> dict[str, Any]:
+    contract = context.profile.connector_contract(step.connector) or {}
+    config = _connector_config(context, step.connector)
+    backend = _backend_class(contract, config)
+    base: dict[str, Any] = {
+        "step_id": step.id,
+        "connector": step.connector,
+        "action": step.action,
+        "backend_class": backend,
+        "enabled": _connector_enabled(config),
+        "contract_declared": bool(contract),
+        "environment_configured": bool(config),
+        "shape_digest": _shape_digest(
+            connector_name=step.connector,
+            action=step.action,
+            backend=backend,
+            contract=contract,
+            config=config,
+        ),
+    }
+    if backend == "http_api":
+        base["call_preview"] = _http_call_preview(context, step, contract, config)
+    elif backend in {"local_shell_readonly", "ssh_readonly"}:
+        base["call_preview"] = _command_call_preview(
+            backend=backend,
+            action=step.action,
+            mode=mode,
+            config=config,
+        )
+    elif backend == "static_fixture":
+        base["call_preview"] = _static_fixture_preview(step.action, config)
+    else:
+        base["call_preview"] = {
+            "kind": "unsupported_preview",
+            "reason": "No redacted preview renderer for this backend class.",
+        }
+    return base
+
+
+def _http_call_preview(
+    context: _ActionContext,
+    step: Any,
+    contract: Mapping[str, Any],
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    action_spec = _http_action_spec(step.connector, step.action, contract, config)
+    shape = canonical_http_action_shape(dict(action_spec), dict(config))
+    return {
+        "kind": "http_api",
+        "method": shape["method"],
+        "path_template": shape["path"],
+        "path_preview": _render_preview_template(str(shape["path"]), context),
+        "query_keys": sorted(str(key) for key in shape["query"]),
+        "body_shape": _payload_shape(shape["body"]),
+        "unwrap": shape["unwrap"],
+        "pagination": shape["pagination"],
+        "mutating": shape["mutating"],
+        "headers": {
+            "accept": "application/json",
+            "content_type": "application/json" if shape["body"] is not None else "",
+            "auth_configured": _http_auth_configured(config),
+            "auth_header": _http_auth_header(config),
+        },
+        "bounded_output": {
+            "max_response_bytes": shape["max_response_bytes"],
+            "json_only": True,
+            "redacted_payload": True,
+        },
+        "redactions": [
+            "base_url",
+            "base_url_secret_ref",
+            "auth.secret_ref",
+            "auth.prefix",
+            "resolved headers",
+        ],
+    }
+
+
+def _http_action_spec(
+    connector: str,
+    action: str,
+    contract: Mapping[str, Any],
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    actions = config.get("actions")
+    config_spec = actions.get(action) if isinstance(actions, Mapping) else None
+    if isinstance(config_spec, Mapping):
+        return dict(config_spec)
+    action_shapes = contract.get("action_shapes")
+    contract_spec = action_shapes.get(action) if isinstance(action_shapes, Mapping) else None
+    if isinstance(contract_spec, Mapping):
+        return dict(contract_spec)
+    raise RExecOpValidationError(f"http action not configured: {connector}.{action}")
+
+
+def _http_auth_configured(config: Mapping[str, Any]) -> bool:
+    auth = config.get("auth")
+    return isinstance(auth, Mapping) and bool(str(auth.get("secret_ref") or "").strip())
+
+
+def _http_auth_header(config: Mapping[str, Any]) -> str:
+    auth = config.get("auth")
+    if not isinstance(auth, Mapping):
+        return ""
+    return str(auth.get("header") or "Authorization")
+
+
+def _command_call_preview(
+    *,
+    backend: str,
+    action: str,
+    mode: str,
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    allowlist = config.get("allowlist")
+    if not isinstance(allowlist, list):
+        raise RExecOpValidationError(f"{backend} preview requires allowlist")
+    entry = _find_allowlist_entry(allowlist, action)
+    if entry is None:
+        raise RExecOpValidationError(f"{backend} action not allowlisted: {action}")
+    allowed_tools = {
+        str(item.get("command")).strip().lower()
+        for item in allowlist
+        if isinstance(item, Mapping) and str(item.get("command") or "").strip()
+    }
+    argv = normalize_allowlisted_argv(
+        tool=str(entry.get("command") or "").strip(),
+        args=entry.get("args") or [],
+        allowed_tools=allowed_tools,
+    )
+    return {
+        "kind": backend,
+        "mode": mode,
+        "readonly_only": True,
+        "command": {
+            "argv": argv,
+            "argv_digest": "sha256:" + canonical_digest(argv),
+        },
+        "bounded_output": {
+            "max_output_bytes": int(config.get("max_output_bytes") or 65536),
+            "stdout_digest_expected": True,
+            "stderr_digest_expected": True,
+            "redacted_payload": True,
+        },
+        "timeout_seconds": float(
+            config.get("timeout_seconds") or (15 if backend == "ssh_readonly" else 10)
+        ),
+        "redactions": _command_redactions(backend),
+    }
+
+
+def _find_allowlist_entry(allowlist: list[Any], action: str) -> Mapping[str, Any] | None:
+    for item in allowlist:
+        if not isinstance(item, Mapping):
+            continue
+        if str(item.get("action") or item.get("command")) == action:
+            return item
+    return None
+
+
+def _command_redactions(backend: str) -> list[str]:
+    if backend == "ssh_readonly":
+        return [
+            "host",
+            "user",
+            "port",
+            "known_hosts_file",
+            "identity_file_secret_ref",
+            "resolved identity file",
+        ]
+    return []
+
+
+def _static_fixture_preview(action: str, config: Mapping[str, Any]) -> dict[str, Any]:
+    actions = config.get("actions")
+    spec = actions.get(action) if isinstance(actions, Mapping) else None
+    if not isinstance(spec, Mapping):
+        raise RExecOpValidationError(f"static_fixture action not configured: {action}")
+    return {
+        "kind": "static_fixture",
+        "fixture_only": bool(config.get("fixture_only", False)),
+        "mutating": bool(spec.get("mutating", False)),
+        "data_digest": "sha256:" + canonical_digest(spec.get("data") or {}),
+        "redactions": ["raw fixture data"],
+        "bounded_output": {
+            "redacted_payload": True,
+            "raw_data_printed": False,
+        },
+    }
+
+
+def _render_preview_template(template: str, context: _ActionContext) -> str:
+    if context.target is None:
+        return template
+    return template.replace("{target}", context.target)
+
+
+def _payload_shape(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _payload_shape(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_payload_shape(value[0])] if value else []
+    if value is None:
+        return None
+    return f"<{type(value).__name__}>"
+
+
+def _bounded_output_summary(previews: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "per_step": [
+            {
+                "step_id": preview["step_id"],
+                "backend_class": preview["backend_class"],
+                "bounded_output": preview.get("call_preview", {}).get("bounded_output", {}),
+            }
+            for preview in previews
+        ],
+        "raw_backend_output_printed": False,
+    }
 
 
 def _source_contracts(context: _ActionContext, operation_digest: str) -> dict[str, str]:

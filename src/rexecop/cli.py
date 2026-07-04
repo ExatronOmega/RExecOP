@@ -8,7 +8,12 @@ from pathlib import Path
 import typer
 
 from rexecop import __version__
-from rexecop.action.surface import list_actions, show_action, validate_actions
+from rexecop.action.surface import (
+    list_actions,
+    preview_action,
+    show_action,
+    validate_actions,
+)
 from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
@@ -390,6 +395,23 @@ def action_validate_cmd(
             target=target,
             intent=intent,
         )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@action_app.command("preview")
+def action_preview_cmd(
+    intent: str = typer.Argument(..., help="Profile intent/action id."),
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML for backend bindings."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str | None = typer.Option(None, "--target", help="Catalog target id."),
+) -> None:
+    """Preview redacted effective call shapes without backend IO."""
+    try:
+        result = preview_action(intent, profile=profile, env=env, catalog=catalog, target=target)
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc

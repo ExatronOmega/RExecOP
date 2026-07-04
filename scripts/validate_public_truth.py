@@ -59,6 +59,7 @@ M3_M4_CLI_MARKERS = (
     "capabilities list",
     "action list",
     "action show",
+    "action preview",
     "action validate",
     "operations unavailable",
     "runtime recover",
@@ -221,12 +222,14 @@ def collect_errors() -> list[str]:
     _require(errors, "docs/profile-developer-surface.md", "rexecop.profile_workflow_harness.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_list.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_show.v0.1")
+    _require(errors, "docs/profile-developer-surface.md", "rexecop.action_preview.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "rexecop.action_validate.v0.1")
     _require(errors, "docs/profile-developer-surface.md", "profile harness")
     _require(errors, "CHANGELOG.md", "rexecop.profile_workflow_harness.v0.1")
     _require(errors, "CHANGELOG.md", "profile harness")
     _require(errors, "CHANGELOG.md", "rexecop action list")
     _require(errors, "CHANGELOG.md", "rexecop action show")
+    _require(errors, "CHANGELOG.md", "rexecop action preview")
     _require(errors, "CHANGELOG.md", "rexecop action validate")
     _require(errors, "docs/govengine-integration.md", "profile-governance")
     _require(errors, "CHANGELOG.md", "operator_metadata.yaml")
