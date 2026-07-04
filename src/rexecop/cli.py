@@ -22,6 +22,12 @@ from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
+from rexecop.operation.audit import (
+    build_support_bundle,
+    show_evidence,
+    show_receipt,
+    summarize_chain,
+)
 from rexecop.operation.controller import OperationController
 from rexecop.operation.diff import (
     diff_operation_plan,
@@ -102,6 +108,10 @@ action_templates_app = typer.Typer(
 action_app.add_typer(action_templates_app, name="templates")
 policy_app = typer.Typer(help="Inspect GovEngine policy decisions.", no_args_is_help=True)
 operation_app = typer.Typer(help="Inspect stored operation plans.", no_args_is_help=True)
+receipt_app = typer.Typer(help="Inspect redacted receipt and SCLite refs.", no_args_is_help=True)
+evidence_app = typer.Typer(help="Inspect bounded operation evidence.", no_args_is_help=True)
+chain_app = typer.Typer(help="Summarize digest-linked operation chains.", no_args_is_help=True)
+support_app = typer.Typer(help="Build redacted support diagnostics.", no_args_is_help=True)
 runbook_app = typer.Typer(help="Show profile-owned runbooks.", no_args_is_help=True)
 operations_app = typer.Typer(
     help="Query profile-defined operations and target applicability.",
@@ -119,6 +129,10 @@ app.add_typer(capabilities_app, name="capabilities")
 app.add_typer(action_app, name="action")
 app.add_typer(policy_app, name="policy")
 app.add_typer(operation_app, name="operation")
+app.add_typer(receipt_app, name="receipt")
+app.add_typer(evidence_app, name="evidence")
+app.add_typer(chain_app, name="chain")
+app.add_typer(support_app, name="support")
 app.add_typer(runbook_app, name="runbook")
 app.add_typer(operations_app, name="operations")
 app.add_typer(runtime_app, name="runtime")
@@ -727,6 +741,78 @@ def operation_review_cmd(
         raise typer.Exit(code=1) from exc
     typer.echo(output, nl=not output.endswith("\n"))
     if result["status"] == "blocked":
+        raise typer.Exit(code=1)
+
+
+@receipt_app.command("show")
+def receipt_show_cmd(
+    operation: str = typer.Argument(..., help="Operation id."),
+) -> None:
+    """Show redacted receipt export and SCLite refs for one operation."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        plan = controller.store.load_plan(operation)
+        result = show_receipt(item, plan, controller.store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == "broken":
+        raise typer.Exit(code=1)
+
+
+@evidence_app.command("show")
+def evidence_show_cmd(
+    operation: str = typer.Argument(..., help="Operation id."),
+) -> None:
+    """Show bounded, redacted evidence events for one operation."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        result = show_evidence(item, controller.store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@chain_app.command("summary")
+def chain_summary_cmd(
+    operation_or_reaction: str = typer.Argument(..., help="Operation id or reaction id."),
+) -> None:
+    """Summarize digest-linked operation, reaction, evidence and SCLite refs."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation_or_reaction)
+        plan = controller.store.load_plan(operation_or_reaction)
+        result = summarize_chain(item, plan, controller.store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@support_app.command("bundle")
+def support_bundle_cmd(
+    operation: str = typer.Argument(..., help="Operation id."),
+    redacted: bool = typer.Option(
+        False,
+        "--redacted",
+        help="Required: emit only redacted diagnostic content.",
+    ),
+) -> None:
+    """Emit a redacted support bundle projection for one operation."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        plan = controller.store.load_plan(operation)
+        result = build_support_bundle(item, plan, controller.store, redacted=redacted)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == "action_required":
         raise typer.Exit(code=1)
 
 

@@ -94,8 +94,13 @@ See [operator-catalog.md](operator-catalog.md).
 | `operation review --operation ID [--format json\|table\|markdown]` | Decision screen for a stored plan |
 | `operation diff --operation ID [--format json\|table\|markdown]` | Stored plan bindings vs current profile/env/catalog |
 | `runbook show INTENT --profile PATH [--format json\|table\|markdown]` | Profile-owned runbook ref and bounded content |
+| `receipt show OPERATION_ID` | Redacted receipt export and SCLite refs with descriptor digest checks |
+| `evidence show OPERATION_ID` | Bounded, redacted internal evidence event summary |
+| `chain summary OPERATION_ID` | Digest-linked operation, evidence, reaction and SCLite chain summary |
+| `support bundle OPERATION_ID --redacted` | Redacted diagnostic bundle combining receipt, evidence and chain projections |
 
-`operation *` commands require a runtime store and an existing operation id from `plan`.
+Inspection commands require a runtime store and an existing operation id from `plan`.
+Audit commands are projections only: SCLite remains the authoritative truth layer.
 
 ## Runtime triage and recovery
 

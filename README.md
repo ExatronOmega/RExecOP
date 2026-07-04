@@ -95,6 +95,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
   shell/SSH allowlist skeletons)
 - Pre-run inspection: `policy explain`, `operations explain`, `operation explain`,
   `operation review`, `operation diff`, `runbook show`, `operations unavailable`
+- Audit inspection: `receipt show`, `evidence show`, `chain summary`,
+  `support bundle --redacted` for redacted, digest-bound runtime/SCLite projections
 - Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
   `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record`
 - Lifecycle controls: `plan`, `approve`, `start`, `pause`/`resume`, `cancel`, `retry`,

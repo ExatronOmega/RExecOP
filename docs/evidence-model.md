@@ -55,6 +55,20 @@ Written as an operator summary export after bundle emission.
 
 The deprecated `PlaceholderSCLiteEmitter` path remains for offline tests only.
 
+## Audit CLI projections
+
+M7 audit commands expose operator-facing projections over the existing runtime store:
+
+| Command | Schema | Purpose |
+| --- | --- | --- |
+| `receipt show OPERATION_ID` | `rexecop.receipt_show.v0.1` | Redacted receipt export and SCLite descriptor refs with missing/broken digest status |
+| `evidence show OPERATION_ID` | `rexecop.evidence_show.v0.1` | Bounded internal evidence events plus sensitivity summary |
+| `chain summary OPERATION_ID` | `rexecop.chain_summary.v0.1` | Operation/evidence/reaction/SCLite digest-link summary |
+| `support bundle OPERATION_ID --redacted` | `rexecop.support_bundle.v0.1` | Redacted diagnostic bundle for handoff/support |
+
+These commands do not create new truth artifacts, do not read secrets and do not print raw
+connector output. `support bundle` deliberately requires `--redacted`.
+
 ## Connector and API payloads
 
 Connector responses (including `http_api` JSON) pass through `redact_payload()` before

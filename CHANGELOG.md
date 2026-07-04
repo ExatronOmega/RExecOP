@@ -11,6 +11,11 @@ PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added M7 audit CLI projections: `receipt show`, `evidence show`,
+  `chain summary`, and required-redaction `support bundle --redacted` with
+  stable JSON schemas, digest checks, bounded evidence previews, SCLite-ref
+  integrity status, and no new truth-store ownership.
+
 ## [0.2.14a0] - 2026-07-04
 
 - Published `rexecop==0.2.14a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
