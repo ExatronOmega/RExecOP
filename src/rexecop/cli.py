@@ -29,6 +29,8 @@ from rexecop.cli_errors import (
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
+from rexecop.observability.diagnostics import collect_runtime_diagnostics
+from rexecop.observability.structured_log import list_structured_logs
 from rexecop.operation.audit import (
     build_support_bundle,
     show_evidence,
@@ -128,6 +130,14 @@ operations_app = typer.Typer(
 runtime_app = typer.Typer(help="Runtime triage and status.", no_args_is_help=True)
 dead_letter_app = typer.Typer(help="Inspect dead-letter items.", no_args_is_help=True)
 locks_app = typer.Typer(help="Inspect advisory target locks.", no_args_is_help=True)
+observability_app = typer.Typer(
+    help="Bounded structured logs and runtime diagnostics.",
+    no_args_is_help=True,
+)
+observability_logs_app = typer.Typer(
+    help="List structured observability logs.",
+    no_args_is_help=True,
+)
 app.add_typer(targets_app, name="targets")
 app.add_typer(env_app, name="env")
 app.add_typer(profile_app, name="profile")
@@ -147,6 +157,8 @@ app.add_typer(operations_app, name="operations")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(dead_letter_app, name="dead-letter")
 app.add_typer(locks_app, name="locks")
+observability_app.add_typer(observability_logs_app, name="logs")
+app.add_typer(observability_app, name="observability")
 backup_app = typer.Typer(
     help="Backup and restore the operator runtime store.",
     no_args_is_help=True,
@@ -1461,6 +1473,51 @@ def explain_error_cmd(
                     "Use an operation id, dead-letter file name, or watchdog record id.",
                     "Run rexecop ops --json for action-required items.",
                 ),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@observability_logs_app.command("list")
+def observability_logs_list_cmd(
+    operation_id: str = typer.Option("", "--operation", help="Filter by operation id."),
+    correlation_id: str = typer.Option(
+        "", "--correlation-id", help="Filter by correlation id."
+    ),
+    limit: int = typer.Option(50, "--limit", min=1, max=200, help="Maximum events."),
+) -> None:
+    """List bounded structured logs with correlation and artifact refs."""
+    try:
+        result = list_structured_logs(
+            _controller().store,
+            operation_id=operation_id,
+            correlation_id=correlation_id,
+            limit=limit,
+        )
+    except RExecOpError as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("observability", "logs", "list"),
+                reason_code="structured_logs_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@observability_app.command("diagnostics")
+def observability_diagnostics_cmd() -> None:
+    """Show runtime diagnostics using explain-error failure classes."""
+    try:
+        result = collect_runtime_diagnostics(_controller().store)
+    except RExecOpError as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("observability", "diagnostics"),
+                reason_code="runtime_diagnostics_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
             )
         )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))

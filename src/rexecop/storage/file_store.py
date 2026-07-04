@@ -19,6 +19,7 @@ class FileStore:
         self.receipts_dir = self.root / "receipts"
         self.sclite_dir = self.root / "sclite"
         self.approvals_dir = self.root / "approvals"
+        self.observability_dir = self.root / "observability" / "events"
 
     def ensure_layout(self) -> None:
         secure_directory(self.root)
@@ -29,6 +30,7 @@ class FileStore:
             self.receipts_dir,
             self.sclite_dir,
             self.approvals_dir,
+            self.observability_dir,
         ):
             secure_directory(path)
 
@@ -91,6 +93,40 @@ class FileStore:
         for path in sorted(op_dir.glob("*.json")):
             events.append(json.loads(path.read_text()))
         return events
+
+    def save_structured_log_event(self, event: dict[str, Any]) -> None:
+        self.ensure_layout()
+        event_id = str(event["event_id"])
+        path = self.observability_dir / f"{event_id}.json"
+        self._write_json(path, event)
+
+    def list_structured_log_events(
+        self,
+        *,
+        operation_id: str | None = None,
+        correlation_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        self.ensure_layout()
+        if not self.observability_dir.is_dir():
+            return []
+        bounded_limit = max(1, min(int(limit), 200))
+        items: list[dict[str, Any]] = []
+        for path in sorted(self.observability_dir.glob("*.json"), reverse=True):
+            event = json.loads(path.read_text())
+            refs = event.get("refs")
+            if operation_id and (
+                not isinstance(refs, dict)
+                or str(refs.get("operation_id") or "") != operation_id
+            ):
+                continue
+            if correlation_id and str(event.get("correlation_id") or "") != correlation_id:
+                continue
+            items.append(event)
+            if len(items) >= bounded_limit:
+                break
+        items.reverse()
+        return items
 
     def save_receipt_export(self, operation_id: str, export: dict[str, Any]) -> Path:
         self.ensure_layout()

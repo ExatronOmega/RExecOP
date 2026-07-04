@@ -27,7 +27,9 @@ from rexecop.environment.sanitize import sanitize_connectors_for_storage, valida
 from rexecop.environment.targets import validate_operation_target
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
-from rexecop.evidence.manager import EvidenceManager
+from rexecop.observability.emitter import StructuredLogEmitter
+from rexecop.observability.evidence import ObservabilityEvidenceManager
+from rexecop.observability.structured_log import StructuredLogRefs
 from rexecop.operation.model import Operation, StateTransitionRecord, utc_now_iso
 from rexecop.operation.plan import OperationPlan
 from rexecop.operation.state import OperationState, validate_transition
@@ -70,7 +72,8 @@ class OperationController:
         govengine_adapter: GovEngineAdapter | None = None,
     ) -> None:
         self.store = store or create_store()
-        self.evidence = EvidenceManager(self.store)
+        self.structured_log = StructuredLogEmitter(self.store)
+        self.evidence = ObservabilityEvidenceManager(self.store, self.structured_log)
         self.govengine_adapter = govengine_adapter or default_govengine_adapter()
         from rexecop.adapters.sclite_port.emitter import SCLiteArtifactEmitter
         from rexecop.runtime_ops.coordinator import RuntimeCoordinator
@@ -82,6 +85,7 @@ class OperationController:
         self.orchestrator = OperationOrchestrator(
             store=self.store,
             evidence=self.evidence,
+            structured_log=self.structured_log,
             transition=self._transition,
             export_receipt=self.export_receipt,
             auto_reaction_handler=self._maybe_plan_auto_reaction,
@@ -346,6 +350,21 @@ class OperationController:
         operation.evidence_event_ids.append(plan_event)
 
         self.store.save_plan(plan)
+        self.structured_log.emit(
+            event_kind="plan_recorded",
+            correlation_id=correlation_id,
+            message="Operation plan recorded",
+            refs=StructuredLogRefs(
+                operation_id=operation.id,
+                plan_id=plan.operation_id,
+                evidence_ref=plan_event,
+            ),
+            details={
+                "intent": intent,
+                "mode": mode,
+                "planned_steps": len(plan.planned_steps),
+            },
+        )
 
         if is_mutating_mode(mode):
             decision = self._evaluate_governance(operation, plan, correlation_id)
@@ -479,6 +498,20 @@ class OperationController:
             },
         )
         operation.evidence_event_ids.append(receipt_event)
+        self.structured_log.emit(
+            event_kind="receipt_exported",
+            correlation_id=operation.correlation_id,
+            message="Receipt export recorded",
+            refs=StructuredLogRefs(
+                operation_id=operation_id,
+                receipt_ref=str(path),
+                evidence_ref=receipt_event,
+            ),
+            details={
+                "authority": SCLITE_ARTIFACT_AUTHORITY,
+                "review_verdict": emission.review_record.get("verdict"),
+            },
+        )
         self.store.save_operation(operation)
         return {
             "export": export_summary,
@@ -732,6 +765,26 @@ class OperationController:
             payload=decision.as_dict(),
         )
         operation.evidence_event_ids.append(received_event)
+        admission_ref = str(
+            decision.as_dict().get("request_digest")
+            or decision.as_dict().get("decision_type")
+            or operation.id
+        )
+        self.structured_log.emit(
+            event_kind="admission_decided",
+            correlation_id=correlation_id,
+            message=f"GovEngine admission decision: {decision.decision_type.value}",
+            refs=StructuredLogRefs(
+                operation_id=operation.id,
+                plan_id=plan.operation_id,
+                admission_ref=admission_ref,
+                evidence_ref=received_event,
+            ),
+            details={
+                "decision_type": decision.decision_type.value,
+                "summary": decision.summary,
+            },
+        )
         return decision
 
     def _apply_governance_transition(

@@ -152,6 +152,17 @@ failures (`receipt show`, `evidence show`, `chain summary`, unredacted
 `profile lint` conformance. `runtime status` is JSON-only: use `--json` (default)
 or `--no-json` triggers `unsupported_output_format`.
 
+## Observability
+
+| Command | Purpose |
+| --- | --- |
+| `observability logs list [--operation ID] [--correlation-id ID] [--limit N]` | Bounded structured logs with correlation and artifact refs (`rexecop.structured_log_event.v0.1`) |
+| `observability diagnostics` | Runtime diagnostics using the same failure classes as `explain-error` (`rexecop.runtime_diagnostics.v0.1`) |
+
+Structured logs record plan, admission, evidence, receipt and typed-execution
+spec refs under `<root>/observability/events/`. Output is redacted and does not
+expose raw secrets or private connector payloads.
+
 ## Runtime triage and recovery
 
 | Command | Purpose |
@@ -230,6 +241,7 @@ rexecop [--root] [--instance] [--storage]
   runbook show
   runtime status | recover
   ops | explain-error
+  observability logs list | diagnostics
   dead-letter list | show
   locks list
   backup create | restore

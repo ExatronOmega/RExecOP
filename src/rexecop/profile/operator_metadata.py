@@ -9,6 +9,7 @@ import yaml
 
 from rexecop.catalog.digest import canonical_digest
 from rexecop.errors import RExecOpValidationError
+from rexecop.observability.failure_classes import FAILURE_CLASSES
 from rexecop.profile.loader import LoadedProfile
 
 OPERATOR_METADATA_SCHEMA = "rexecop.profile_operator_metadata.v0.1"
@@ -16,19 +17,6 @@ OPERATION_PROFILE_EXPLAIN_SCHEMA = "rexecop.operation_profile_explain.v0.1"
 OPERATOR_METADATA_FILENAME = "operator_metadata.yaml"
 SUPPORTED_SCHEMA_VERSION = "v0.1"
 TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$")
-
-FAILURE_CLASSES = frozenset(
-    {
-        "config",
-        "profile",
-        "policy",
-        "connector",
-        "target",
-        "runtime",
-        "evidence",
-        "mutation-contract",
-    }
-)
 
 INTENT_KEYS = frozenset(
     {

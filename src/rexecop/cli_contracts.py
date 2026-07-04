@@ -178,6 +178,22 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         ),
         authority="profile_contract_projection",
     ),
+    CliContract(
+        command=("observability", "logs", "list"),
+        schema="rexecop.structured_log_list.v0.1",
+        stability="alpha_contract",
+        group="observability",
+        authority="runtime_observability_projection",
+        notes=("Bounded structured logs with correlation and artifact refs.",),
+    ),
+    CliContract(
+        command=("observability", "diagnostics"),
+        schema="rexecop.runtime_diagnostics.v0.1",
+        stability="alpha_contract",
+        group="observability",
+        authority="runtime_observability_projection",
+        notes=("Uses the same failure classes as explain-error.",),
+    ),
 )
 
 _OUTPUT_POLICIES = frozenset({"json_only", "json_only_flag", "format_option"})

@@ -16,6 +16,7 @@ class InMemoryStore:
         self._operations: dict[str, Operation] = {}
         self._plans: dict[str, OperationPlan] = {}
         self._evidence: dict[str, list[dict[str, Any]]] = {}
+        self._structured_logs: list[dict[str, Any]] = []
         self._file_store = FileStore()
 
     def ensure_layout(self) -> None:
@@ -51,6 +52,32 @@ class InMemoryStore:
 
     def list_evidence_events(self, operation_id: str) -> list[dict[str, Any]]:
         return [dict(event) for event in self._evidence.get(operation_id, [])]
+
+    def save_structured_log_event(self, event: dict[str, Any]) -> None:
+        self._structured_logs.append(dict(event))
+
+    def list_structured_log_events(
+        self,
+        *,
+        operation_id: str | None = None,
+        correlation_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(int(limit), 200))
+        items = list(self._structured_logs)
+        if operation_id:
+            items = [
+                item
+                for item in items
+                if str((item.get("refs") or {}).get("operation_id") or "") == operation_id
+            ]
+        if correlation_id:
+            items = [
+                item
+                for item in items
+                if str(item.get("correlation_id") or "") == correlation_id
+            ]
+        return items[-bounded_limit:]
 
     def operation_sclite_dir(self, operation_id: str) -> Any:
         return self._file_store.operation_sclite_dir(operation_id)

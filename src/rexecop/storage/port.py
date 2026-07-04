@@ -24,6 +24,16 @@ class OperationStoragePort(Protocol):
 
     def list_evidence_events(self, operation_id: str) -> list[dict[str, Any]]: ...
 
+    def save_structured_log_event(self, event: dict[str, Any]) -> None: ...
+
+    def list_structured_log_events(
+        self,
+        *,
+        operation_id: str | None = None,
+        correlation_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]: ...
+
 
 class RuntimeStore(OperationStoragePort, Protocol):
     """Operator runtime store: port methods plus on-disk aux layout under `.rexecop/`."""

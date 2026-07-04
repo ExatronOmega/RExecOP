@@ -25,19 +25,6 @@ LOCKS_LIST_SCHEMA = "rexecop.locks_list.v0.1"
 OPS_SCHEMA = "rexecop.ops.v0.1"
 EXPLAIN_ERROR_SCHEMA = "rexecop.explain_error.v0.1"
 
-FAILURE_CLASSES = frozenset(
-    {
-        "config",
-        "profile",
-        "policy",
-        "connector",
-        "target",
-        "runtime",
-        "evidence",
-        "mutation-contract",
-    }
-)
-
 ACTION_REQUIRED_STATES = frozenset(
     {
         OperationState.BLOCKED.value,

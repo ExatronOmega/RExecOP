@@ -18,6 +18,8 @@ from rexecop.evidence.manager import EvidenceManager
 from rexecop.execution.backend import StepExecutionResult
 from rexecop.execution.executor import StepExecutor
 from rexecop.execution.govengine_governance import typed_execution_governance_overlay
+from rexecop.observability.emitter import StructuredLogEmitter
+from rexecop.observability.structured_log import StructuredLogRefs
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 from rexecop.operation.state import OperationState
@@ -96,12 +98,14 @@ class OperationOrchestrator:
         *,
         store: RuntimeStore,
         evidence: EvidenceManager,
+        structured_log: StructuredLogEmitter | None = None,
         transition: Any,
         export_receipt: Any,
         auto_reaction_handler: Callable[[Operation], dict[str, Any] | None] | None = None,
     ) -> None:
         self.store = store
         self.evidence = evidence
+        self.structured_log = structured_log
         self._transition = transition
         self._export_receipt = export_receipt
         self._auto_reaction_handler = auto_reaction_handler
@@ -397,6 +401,11 @@ class OperationOrchestrator:
             operation.metadata["step_results"] = run_result.step_results
             cursor["next_step_index"] = run_result.next_step_index
             operation.metadata["execution_cursor"] = cursor
+            self._record_typed_execution_spec_logs(
+                operation,
+                run_result.step_results,
+                correlation_id=operation.correlation_id,
+            )
             self.store.save_operation(operation)
 
             if not run_result.success:
@@ -637,6 +646,40 @@ class OperationOrchestrator:
             cursor = {"next_step_index": 0, "attempts_by_step": {}}
             operation.metadata["execution_cursor"] = cursor
         return cursor
+
+    def _record_typed_execution_spec_logs(
+        self,
+        operation: Operation,
+        step_results: dict[str, dict[str, Any]],
+        *,
+        correlation_id: str,
+    ) -> None:
+        if self.structured_log is None:
+            return
+        for step_id, result in step_results.items():
+            if not isinstance(result, dict):
+                continue
+            output = result.get("output")
+            if not isinstance(output, dict):
+                continue
+            admission = output.get("typed_execution_admission")
+            if not isinstance(admission, dict):
+                continue
+            spec_ref = str(admission.get("request_digest") or step_id)
+            self.structured_log.emit(
+                event_kind="spec_admission_recorded",
+                correlation_id=correlation_id,
+                message=f"Typed execution admission recorded for {step_id}",
+                refs=StructuredLogRefs(
+                    operation_id=operation.id,
+                    spec_ref=spec_ref,
+                ),
+                details={
+                    "step_id": step_id,
+                    "allowed": admission.get("allowed"),
+                    "reason_code": admission.get("reason_code"),
+                },
+            )
 
     def _emit_step_event(
         self,

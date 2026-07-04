@@ -21,6 +21,8 @@ EXPECTED_COMMAND_SCHEMAS = {
     "evidence show": "rexecop.evidence_show.v0.1",
     "explain-error": "rexecop.explain_error.v0.1",
     "locks list": "rexecop.locks_list.v0.1",
+    "observability diagnostics": "rexecop.runtime_diagnostics.v0.1",
+    "observability logs list": "rexecop.structured_log_list.v0.1",
     "operation diff": "rexecop.operation_plan_diff.v0.1",
     "operation explain": "rexecop.operation_explain.v0.1",
     "operation review": "rexecop.operation_review.v0.1",
@@ -44,6 +46,10 @@ EXPECTED_COMMAND_GROUPS = {
         "operation explain",
         "operation review",
         "status",
+    },
+    "observability": {
+        "observability diagnostics",
+        "observability logs list",
     },
     "profile_developer": {"profile lint"},
     "runtime_triage": {

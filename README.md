@@ -94,6 +94,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
   command groups, `format_matrix` and `exit_code_matrix`
 - CLI error envelope: registry commands emit `rexecop.cli_error.v0.1` on exit
   code `1` with normalized class, reason code, redacted message and safe next actions
+- Observability: bounded structured logs with correlation IDs and artifact refs;
+  `observability diagnostics` uses the same failure classes as `explain-error`
 - M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,
   `action policy-preview`, `action validate`, `action diff --env`,
   `action configure --dry-run`, `action templates list` (scope 1.0: `http.simple-get`,
@@ -206,6 +208,7 @@ The CLI has grown across M1–M5 milestones. **Full command reference:**
 | Catalog | `targets list/show`, `operations list`, `operations explain`, `operations unavailable` |
 | Pre-run inspection | `policy explain`, `operation explain`, `operation review`, `operation diff`, `runbook show` |
 | Runtime triage | `runtime status`, `ops`, `explain-error`, `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record` |
+| Observability | `observability logs list`, `observability diagnostics` |
 | Lifecycle | `plan`, `approve`, `start`, `pause`, `resume`, `cancel`, `retry`, `rollback`, `validate`, `escalate`, `status`, `history` |
 | Scheduling | `queue`, `worker run`, `trigger` |
 | Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction-proposal-validate` |

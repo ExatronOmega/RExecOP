@@ -31,6 +31,10 @@ PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newes
   failure paths now emit the normalized envelope on exit code `1`; added
   anti-drift coverage in `tests/test_cli_errors.py` and documented the
   registry-wide exit-code policy in `docs/cli-reference.md`.
+- Added M8 observability surfaces: `rexecop.structured_log_event.v0.1` with
+  correlation IDs and operation/plan/admission/spec/receipt/evidence refs,
+  `observability logs list`, and `rexecop.runtime_diagnostics.v0.1` via
+  `observability diagnostics` using the same failure classes as `explain-error`.
 
 ## [0.2.14a0] - 2026-07-04
 

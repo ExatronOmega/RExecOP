@@ -182,3 +182,19 @@ class SqliteStore:
                 (operation_id,),
             ).fetchall()
         return [json.loads(str(row[0])) for row in rows]
+
+    def save_structured_log_event(self, event: dict[str, Any]) -> None:
+        self._files.save_structured_log_event(event)
+
+    def list_structured_log_events(
+        self,
+        *,
+        operation_id: str | None = None,
+        correlation_id: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        return self._files.list_structured_log_events(
+            operation_id=operation_id,
+            correlation_id=correlation_id,
+            limit=limit,
+        )

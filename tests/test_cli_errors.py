@@ -235,5 +235,7 @@ def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
         "explain-error",
         "ops",
         "profile lint",
+        "observability logs list",
+        "observability diagnostics",
     }
     assert REGISTRY_COMMANDS == covered
