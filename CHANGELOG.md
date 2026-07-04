@@ -15,7 +15,7 @@ PyPI alpha line is **`0.2.15a0`**. Entries under
 ## [0.2.15a0] - 2026-07-04
 
 - Published `rexecop==0.2.15a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
-  and `tecrax==0.3.9a0` extra pin.
+  and `tecrax==0.3.10a0` extra pin.
 - M8 release closure: public-truth validators, claim-to-code matrix, artifact
   install smoke (`validate_artifact_install_smoke.py`) and clean-install smoke
   (`validate_clean_install_smoke.py`) for M6/M7/M8 public surfaces.
