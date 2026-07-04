@@ -28,9 +28,15 @@ from rexecop.cli_errors import (
 )
 from rexecop.cli_output import (
     DOCTOR_RENDERERS,
+    ENV_LINT_RENDERERS,
     INIT_RENDERERS,
-    active_cli_output,
+    OPERATIONS_EXPLAIN_RENDERERS,
+    POLICY_EXPLAIN_RENDERERS,
+    PROFILE_LINT_RENDERERS,
+    SECRETS_DOCTOR_RENDERERS,
     configure_cli_output,
+    emit_failure,
+    emit_failure_payload,
     emit_payload,
 )
 from rexecop.environment.loader import load_environment
@@ -265,16 +271,11 @@ def init_cmd(
             guided=guided,
         )
     except RExecOpError as exc:
-        if active_cli_output().json_mode:
-            _emit_cli_error(
-                validation_cli_error(
-                    command=('init',),
-                    message=str(exc),
-                    reason_code='runtime_init_failed',
-                )
-            )
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        emit_failure(
+            command=('init',),
+            message=str(exc),
+            reason_code='runtime_init_failed',
+        )
     emit_payload(result, renderers=INIT_RENDERERS)
 
 
@@ -310,12 +311,11 @@ def secrets_doctor_cmd(
 ) -> None:
     """Check secret refs, duplicates, secrets-file policy and redaction self-test."""
     if env is None and catalog is None:
-        typer.secho(
-            "error: provide --env and/or --catalog",
-            fg=typer.colors.RED,
-            err=True,
+        emit_failure(
+            command=('secrets', 'doctor'),
+            message='provide --env and/or --catalog',
+            reason_code='missing_input',
         )
-        raise typer.Exit(code=1)
     try:
         result = run_secrets_doctor(
             env_path=env,
@@ -323,9 +323,8 @@ def secrets_doctor_cmd(
             secrets_file=secrets_file,
         )
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+        emit_failure(command=('secrets', 'doctor'), message=str(exc))
+    emit_payload(result, renderers=SECRETS_DOCTOR_RENDERERS)
     if result["status"] == CHECK_BLOCKER:
         raise typer.Exit(code=1)
 
@@ -339,9 +338,8 @@ def secrets_suggest_ref_cmd(
     try:
         result = suggest_secret_refs(env_path=env, connector=connector)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+        emit_failure(command=('secrets', 'suggest-ref'), message=str(exc))
+    emit_payload(result)
 
 
 @env_app.command("lint")
@@ -375,9 +373,8 @@ def env_lint_cmd(
             },
         }
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+        emit_failure(command=('env', 'lint'), message=str(exc))
+    emit_payload(result, renderers=ENV_LINT_RENDERERS)
 
 
 @profiles_app.command("list")
@@ -685,26 +682,25 @@ def profile_lint_cmd(
             track=track,
         )
     except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("profile", "lint"),
-                reason_code="profile_conformance_unavailable",
-                message=str(exc),
-                safe_next_actions=("Check the profile path or registered profile name.",),
-            )
+        emit_failure(
+            command=('profile', 'lint'),
+            message=str(exc),
+            reason_code='profile_conformance_unavailable',
+            safe_next_actions=('Check the profile path or registered profile name.',),
         )
-    if result.status != "passed":
-        _emit_cli_error(
+    payload = result.as_dict()
+    if result.status != 'passed':
+        emit_failure_payload(
             cli_error_payload(
-                error_class="validation_error",
-                reason_code="profile_conformance_failed",
-                message=f"profile conformance failed for {result.profile}",
-                command=("profile", "lint"),
-                safe_next_actions=("Fix reported profile conformance errors.",),
-                details=result.as_dict(),
+                error_class='validation_error',
+                reason_code='profile_conformance_failed',
+                message=f'profile conformance failed for {result.profile}',
+                command=('profile', 'lint'),
+                safe_next_actions=('Fix reported profile conformance errors.',),
+                details=payload,
             )
         )
-    typer.echo(json.dumps(result.as_dict(), indent=2, sort_keys=True))
+    emit_payload(payload, renderers=PROFILE_LINT_RENDERERS)
 
 
 @policy_app.command("explain")
@@ -739,10 +735,9 @@ def policy_explain_cmd(
             catalog_path=catalog,
         )
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-    if result["status"] == "blocked":
+        emit_failure(command=('policy', 'explain'), message=str(exc))
+    emit_payload(result, renderers=POLICY_EXPLAIN_RENDERERS)
+    if result['status'] == 'blocked':
         raise typer.Exit(code=1)
 
 
@@ -1111,9 +1106,8 @@ def operations_explain_cmd(
         loaded = load_profile(resolve_profile_path(profile))
         result = explain_profile_operation(loaded, intent)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+        emit_failure(command=('operations', 'explain'), message=str(exc))
+    emit_payload(result, renderers=OPERATIONS_EXPLAIN_RENDERERS)
 
 
 @app.command("reaction-plan")

@@ -167,7 +167,15 @@ def test_profile_lint_failed_uses_cli_error_schema() -> None:
     payload = _json_error(
         runner.invoke(
             app,
-            ["profile", "lint", "--profile", str(FAILED_PROFILE), "--track", "readonly"],
+            [
+                "--json",
+                "profile",
+                "lint",
+                "--profile",
+                str(FAILED_PROFILE),
+                "--track",
+                "readonly",
+            ],
         )
     )
     assert payload["error_class"] == "validation_error"

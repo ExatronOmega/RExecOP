@@ -12,6 +12,21 @@ PyPI alpha line is **`0.2.16a0`**. Entries under
 
 ## Unreleased
 
+### Added
+
+- G8 slice 2 (`1d2df2d`): global CLI output context (`cli_output.py`) with root-level
+  `--json`, `--format`, `--quiet`, `--verbose`, and `--no-color`.
+- G8 slice 2 (`1d2df2d`): `init` and `doctor` pilot table/markdown renderers plus
+  `--json` `cli_error.v0.1` on init failures (`tests/test_cli_output.py`).
+- G8 slice 3: extend global format flags and `--json` error envelope to first-run journey
+  commands: `env lint`, `profile lint`, `policy explain`, `operations explain`, and
+  `secrets doctor`.
+
+### Changed
+
+- G8 slice 3: non-registry failure paths respect global `--json` instead of stderr-only
+  errors on the wired first-run commands.
+
 ## [0.2.16a0] - 2026-07-04
 
 - Published `rexecop==0.2.16a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`

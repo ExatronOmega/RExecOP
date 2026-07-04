@@ -14,7 +14,7 @@ lifecycle semantics see [operation-lifecycle.md](operation-lifecycle.md).
 | `--root PATH` | `REXECOP_ROOT` | `./.rexecop` | Runtime root for store, queue, locks, inbox |
 | `--instance NAME` | `REXECOP_INSTANCE` | — | Named instance under `./.rexecop/instances/` |
 | `--storage file\|sqlite` | `REXECOP_STORAGE` | `file` | Operation store backend |
-| `--json` | — | off | Emit machine-readable JSON on supported commands (`init`, `doctor` pilot) |
+| `--json` | — | off | Emit machine-readable JSON on supported commands (`init`, `doctor`, `env lint`, `profile lint`, `policy explain`, `operations explain`, `secrets doctor`) |
 | `--format json\|table\|markdown` | — | `json` | Human or JSON output format where supported; `--json` overrides |
 | `--quiet` | — | off | Suppress non-essential output on supported human formats |
 | `--verbose` | — | off | Include extended diagnostic lines on supported human formats |

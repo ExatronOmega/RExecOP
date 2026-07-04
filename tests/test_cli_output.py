@@ -44,6 +44,59 @@ def test_global_format_markdown_on_init_renders_heading(tmp_path) -> None:
     assert 'next_steps' not in result.stdout
 
 
+def test_global_format_table_on_env_lint(tmp_path) -> None:
+    env_path = tmp_path / 'env.yaml'
+    env_path.write_text(
+        (
+            'environment:\n'
+            '  id: demo-env\n'
+            '  profile: demo\n'
+            '  targets:\n'
+            '    host-1:\n'
+            '      type: fixture\n'
+            '  connectors:\n'
+            '    fixture:\n'
+            '      enabled: true\n'
+            '      backend: static_fixture\n'
+            '      fixture_only: true\n'
+            '      actions:\n'
+            '        read:\n'
+            '          data:\n'
+            '            ok: true\n'
+        ),
+        encoding='utf-8',
+    )
+
+    result = runner.invoke(
+        app,
+        ['--format', 'table', 'env', 'lint', '--env', str(env_path)],
+    )
+
+    assert result.exit_code == 0
+    assert 'env lint status=passed' in result.stdout
+    assert 'environment=demo-env' in result.stdout
+
+
+def test_global_json_on_policy_explain_failure_emits_cli_error(tmp_path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            '--json',
+            'policy',
+            'explain',
+            '--intent',
+            'missing',
+            '--target',
+            'host-1',
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload['schema'] == CLI_ERROR_SCHEMA
+    assert payload['command'] == 'policy explain'
+
+
 def test_global_json_init_failure_emits_cli_error_envelope(tmp_path) -> None:
     root = tmp_path / 'runtime'
 
