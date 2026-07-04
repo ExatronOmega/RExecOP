@@ -58,4 +58,6 @@ else
   echo "==> skip package build (set REXECOP_SIGNOFF_BUILD=1 locally; CI uses package-dry-run job)"
 fi
 
+printf '%s\n' \
+  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
 echo "alpha_signoff_checks_ok"
