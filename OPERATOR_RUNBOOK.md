@@ -159,6 +159,39 @@ rexecop plan \
 
 See [OPERATOR_LAB_RUNBOOK.md](OPERATOR_LAB_RUNBOOK.md) for the full lab checklist.
 
+## Runtime triage and recovery
+
+When queue, worker, or operation state looks wrong:
+
+```bash
+rexecop --root ~/rexecop-runtime ops
+rexecop --root ~/rexecop-runtime runtime status --json
+rexecop explain-error <operation-id-or-dead-letter-or-watchdog-ref>
+```
+
+After host restart or worker crash:
+
+```bash
+rexecop --root ~/rexecop-runtime runtime recover --json
+```
+
+Before invasive maintenance on the runtime root:
+
+```bash
+rexecop --root ~/rexecop-runtime backup create --output ~/backups/rexecop-runtime.tar.gz
+```
+
+Full reference: [docs/runtime-recovery-ops.md](docs/runtime-recovery-ops.md).
+
+M2 decision surfaces before mutating work:
+
+```bash
+rexecop operation explain --operation <id>
+rexecop operation review --operation <id>
+rexecop operation diff --operation <id>
+rexecop policy explain --profile ... --env ... --intent ... --target ...
+```
+
 ## Apply workflow (fixture or non-critical targets only)
 
 1. Confirm GovEngine policy allows the intent on the target.
@@ -268,7 +301,8 @@ Directory is gitignored — back up operator-side if retention is required.
 | `mutating execution blocked` | GovEngine decision, approval state, maintenance window |
 | `capability_undeclared` | Action missing from profile `connectors/*.yaml` |
 | `connector disabled` | `enabled: false` in environment YAML |
-| Queue stuck | `rexecop queue`; `rexecop queue --drain` or `rexecop worker run --once` |
+| Queue stuck | `rexecop ops`; `rexecop queue`; `rexecop queue --drain` or `rexecop worker run --once` |
+| Post-crash duplicate IO / stale lease | `rexecop runtime recover --json`; inspect `explain-error` for watchdog refs |
 | Wrong runtime data path | Run `rexecop doctor`; prefer `--root` / `REXECOP_ROOT` for operator work |
 
 ## Safety checklist (every environment)

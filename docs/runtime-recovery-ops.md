@@ -1,0 +1,104 @@
+# Runtime recovery and triage
+
+RExecOp exposes bounded operator commands for runtime health, failure triage,
+startup recovery, and store backup. These surfaces inspect or reconcile local
+runtime state — they do not replace GovEngine admission or SCLite truth.
+
+## Triage commands
+
+```bash
+rexecop --root /operator/rexecop-runtime runtime status --json
+rexecop --root /operator/rexecop-runtime ops
+rexecop --root /operator/rexecop-runtime dead-letter list
+rexecop --root /operator/rexecop-runtime dead-letter show <name>
+rexecop --root /operator/rexecop-runtime locks list
+rexecop explain-error <operation-id|dead-letter-name|watchdog-record-id>
+```
+
+| Command | Schema / output | Purpose |
+| --- | --- | --- |
+| `runtime status --json` | `rexecop.runtime_status.v0.1` | Queue depth, active operations, locks, dead-letter summary |
+| `ops` | `rexecop.ops.v0.1` | Aggregated blockers, action-required operations, stale locks; exit `1` when blockers present |
+| `dead-letter list` | `rexecop.dead_letter_list.v0.1` | Watchdog-moved inbox payloads |
+| `dead-letter show` | `rexecop.dead_letter_show.v0.1` | One redacted dead-letter item |
+| `locks list` | `rexecop.locks_list.v0.1` | Advisory target locks and stale holders |
+| `explain-error` | `rexecop.explain_error.v0.1` | Failure class, bounded summary, safe next actions |
+
+`explain-error` accepts an operation id, dead-letter file name, or watchdog record
+id under `<root>/watchdog/`. For watchdog records it may include a redacted
+`govengine_supervisor_explanation` from `explain_supervisor_action()` — see
+[govengine-integration.md](govengine-integration.md#supervisor-explanations-g2).
+
+## Startup recovery
+
+After process crash, host restart, or worker interruption:
+
+```bash
+rexecop --root /operator/rexecop-runtime runtime recover --json
+```
+
+`runtime recover` (also invoked automatically when `worker run` starts):
+
+- clears stale worker leases;
+- releases stale advisory target locks;
+- marks interrupted active operations `failed` with a recovery transition;
+- repairs or blocks on terminal operations missing receipt artifacts.
+
+Output schema: `rexecop.runtime_recovery.v0.1`. Recovery blockers are written
+under `<root>/recovery_blockers/` when receipt repair cannot proceed safely.
+
+Recovery does **not** re-run connector IO. Idempotency keys on plan/start/trigger
+paths prevent duplicate backend invocation after partial progress — see
+`rexecop.runtime_ops.idempotency`.
+
+## Runtime store backup
+
+```bash
+rexecop --root /operator/rexecop-runtime backup create --output /operator/backups/rexecop-2026-07-04.tar.gz
+rexecop --root /operator/rexecop-runtime backup restore --archive /operator/backups/rexecop-2026-07-04.tar.gz
+```
+
+- `backup create` tarballs the runtime store after a secret scan; blocked when
+  scan finds candidates.
+- A sidecar manifest (`rexecop.runtime_backup.v0.1`) records archive digest and
+  included paths.
+- `backup restore` requires the manifest and restores into the configured
+  runtime root only when the target layout is empty or explicitly safe to replace.
+
+Backups are operator-owned artifacts outside git. They may contain operation
+metadata and redacted evidence — treat as sensitive (`0600`).
+
+## Manual watchdog records
+
+Governed manual recovery decisions (no automatic repair execution):
+
+```bash
+rexecop watchdog manual-record \
+  --action renew_lease \
+  --reason stale_worker \
+  --actor-ref operator:alice \
+  --scope runtime:local \
+  --operation <operation-id>
+```
+
+See [operator-scheduler-pattern.md](operator-scheduler-pattern.md) for worker,
+watchdog, and inbox interaction.
+
+## Operator flow
+
+```text
+ops / runtime status
+  -> explain-error <ref>
+  -> runtime recover (after restart)
+  -> backup create (before invasive maintenance)
+  -> plan / start only when blockers are understood
+```
+
+## Authority boundaries
+
+| Surface | Owns | Does not own |
+| --- | --- | --- |
+| Triage CLI | Bounded runtime inspection and failure classes | Policy verdicts |
+| `runtime recover` | Store reconciliation, lease/lock cleanup | Connector replay |
+| `backup *` | Operator store snapshots | SCLite truth export |
+| `explain-error` | Mapping refs to next actions | Automatic remediation |

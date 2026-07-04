@@ -48,6 +48,10 @@ Factory: `rexecop.storage.factory.create_store()`.
 files to avoid torn reads on crash. Runtime directories are forced to mode `0700`; JSON,
 receipt, lock, queue and SCLite files are forced to `0600`.
 
+Operator backup and post-crash reconciliation are documented in
+[runtime-recovery-ops.md](runtime-recovery-ops.md) (`backup create/restore`,
+`runtime recover`).
+
 ## SqliteStore (`sqlite` backend)
 
 | Location | Content |

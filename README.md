@@ -189,6 +189,9 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `dead-letter list` / `dead-letter show` | Inspect watchdog dead-letter items (redacted show) |
 | `locks list` | List advisory target locks and stale holders |
 | `explain-error` | Map operation/dead-letter/watchdog ref to failure class and safe next actions |
+| `runtime recover` | Reconcile stale leases, interrupted operations and receipt gaps after restart (`--json`) |
+| `backup create` / `backup restore` | Secret-scanned runtime store tarball + manifest restore |
+| `watchdog manual-record` | Record a governed manual watchdog decision without executing recovery |
 | `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (queues when lock/capacity busy) |
@@ -234,6 +237,7 @@ grep, secret scan, pytest, and a `package-dry-run` job (`build` + `twine check`)
 | Document | Topic |
 | --- | --- |
 | [docs/first-run.md](docs/first-run.md) | No-I/O onboarding: init, doctor, lint, plan |
+| [docs/runtime-recovery-ops.md](docs/runtime-recovery-ops.md) | Triage, explain-error, recovery, backup and watchdog manual-record |
 | [docs/architecture.md](docs/architecture.md) | Layer boundaries and execution path |
 | [docs/stack-contract-compatibility.md](docs/stack-contract-compatibility.md) | Cross-repo contract matrix and readiness labels |
 | [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, CLI orchestration, queue/lock |

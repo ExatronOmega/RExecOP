@@ -66,6 +66,15 @@ The command returns GovEngine `PolicyEvaluationExplanation` JSON under
 does not compute matched rules, invariants, obligations, constraints, or
 projected controls itself.
 
+GovEngine side (G1):
+
+```bash
+govengine-policy explain policy.json request.json --json
+govengine-policy simulate policy.json request.json --json
+```
+
+See GovEngine [POLICY_ENGINE.md](https://github.com/rozmiarD/GovEngine/blob/main/docs/POLICY_ENGINE.md).
+
 Supported operation controls are:
 
 - `receipt` / `receipt_required`: terminal internal receipt is mandatory;
@@ -119,6 +128,29 @@ Admission metadata from `operation.metadata["govengine_admission"]` is bridged i
 pack, and verdict digest references are included in the SCLite execution contract and receipt.
 SCLite computes and validates its own artifact descriptors; RExecOp does not claim SCLite
 canonicalization ownership.
+
+## Supervisor explanations (G2)
+
+Watchdog and recovery triage may bind supervisor admission digests. RExecOp
+`explain-error` includes GovEngine `SupervisorActionExplanation` when the ref
+resolves to a watchdog record:
+
+```bash
+rexecop explain-error <watchdog-record-id>
+```
+
+GovEngine side (side-effect free, no recovery execution):
+
+```bash
+govengine-supervisor explain request.json --json
+```
+
+`explain_supervisor_action()` returns schema `v0.1` with `recovery_class`,
+`gates_checked`, `reason_code`, `blockers`, and `safe_next_actions`. Digest-bound
+`request_digest` and `admission_digest` align with `admit_supervisor_action()`.
+
+See [runtime-recovery-ops.md](runtime-recovery-ops.md) and GovEngine
+[RUNTIME_ADMISSION.md](https://github.com/rozmiarD/GovEngine/blob/main/docs/RUNTIME_ADMISSION.md#supervisor-action-explanation).
 
 ## Boundary
 

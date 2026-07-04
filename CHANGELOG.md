@@ -25,7 +25,13 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 - Added M3 runtime triage commands: `rexecop runtime status --json`, `rexecop ops`,
   `rexecop dead-letter list/show`, `rexecop locks list`, and
   `rexecop explain-error <ref>` with bounded failure classes and safe next actions.
-- Added `rexecop operation diff --operation <id>` with stable JSON plus
+  Documented in [docs/runtime-recovery-ops.md](docs/runtime-recovery-ops.md).
+- Added M3 recovery: `rexecop runtime recover --json`, idempotency keys, crash-safe
+  receipt repair, `backup create/restore`, and worker startup hook. Wired GovEngine
+  G2 `explain_supervisor_action()` into watchdog `explain-error` paths. Documented in
+  [docs/runtime-recovery-ops.md](docs/runtime-recovery-ops.md) and
+  [docs/govengine-integration.md](docs/govengine-integration.md).
+- Added `rexecop operation diff --operation <id>` (M2) with stable JSON plus
   `--format table|markdown` to compare stored catalog/profile/environment
   bindings against the current operator state before start.
 - Added `rexecop operation review --operation <id>` with stable JSON plus

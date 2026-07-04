@@ -42,6 +42,17 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `operations unavailable` | Technical unavailability reasoning for one catalog target |
 | `policy explain` | Show GovEngine policy reasoning for an operation-shaped request without execution |
 | `operation explain` | Explain a stored operation plan, bindings, expected artifacts and safe next actions |
+| `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) |
+| `operation diff` | Compare stored plan bindings vs current profile/env/catalog |
+| `runbook show` | Profile-owned runbook for one intent |
+| `runtime status` | Queue, active operations, locks and dead-letter summary (`--json`) |
+| `ops` | Aggregate blockers and action-required runtime items |
+| `dead-letter list` / `show` | Inspect watchdog dead-letter payloads (redacted show) |
+| `locks list` | Advisory target locks |
+| `explain-error` | Failure class and safe next actions for operation/dead-letter/watchdog refs |
+| `runtime recover` | Startup reconciliation after crash or restart (`--json`) |
+| `backup create` / `restore` | Runtime store tarball backup and restore |
+| `watchdog manual-record` | Governed manual watchdog decision record |
 | `plan` | Create operation + `OperationPlan`; GovEngine gate for mutating modes |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (may queue if lock/capacity busy) |
@@ -55,6 +66,10 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `worker run` | Poll queue and start approved operations |
 | `trigger` | Create operation from JSON stdin or CLI flags |
 | `status` / `history` | Operation state and evidence history |
+
+See [runtime-recovery-ops.md](runtime-recovery-ops.md) for triage, recovery and backup
+workflows. See [profile-developer-surface.md](profile-developer-surface.md) and
+[secrets-operator.md](secrets-operator.md) for M4 developer and secrets surfaces.
 
 ## Runtime policy
 
