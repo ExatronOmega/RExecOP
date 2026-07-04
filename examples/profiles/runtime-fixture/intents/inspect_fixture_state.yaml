@@ -4,3 +4,13 @@ intent:
   risk: low
   modes:
     - dry_run
+  catalog:
+    title: Inspect fixture state
+    summary: Inspect deterministic fixture target state without backend IO.
+    target_kinds:
+      - fixture
+    required_capabilities:
+      - fixture_readonly
+    side_effect_class: none
+    validation_ref: validation_rules/inspect_fixture_state.yaml
+    runbook_ref: workflows/inspect_fixture_state.yaml

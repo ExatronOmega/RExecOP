@@ -21,11 +21,18 @@ PyPI alpha line is **`0.2.16a0`**. Entries under
 - G8 slice 3: extend global format flags and `--json` error envelope to first-run journey
   commands: `env lint`, `profile lint`, `policy explain`, `operations explain`, and
   `secrets doctor`.
+- G8 slice 4: `plan --explain` projects profile and GovEngine policy context before
+  operation creation (`rexecop.plan_explain.v0.1`).
+- G8 slice 4: lifecycle commands (`approve`, `pause`, `resume`, `cancel`, `retry`,
+  `rollback`, `start`, `validate`, `escalate`, `history`) respect global `--json` and
+  `--format table|markdown` on success and failure paths.
 
 ### Changed
 
 - G8 slice 3: non-registry failure paths respect global `--json` instead of stderr-only
   errors on the wired first-run commands.
+- G8 slice 4: `plan` default success output remains plain `operation_id`; `--explain` uses
+  the global output formatters.
 
 ## [0.2.16a0] - 2026-07-04
 

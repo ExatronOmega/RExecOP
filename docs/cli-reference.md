@@ -14,7 +14,7 @@ lifecycle semantics see [operation-lifecycle.md](operation-lifecycle.md).
 | `--root PATH` | `REXECOP_ROOT` | `./.rexecop` | Runtime root for store, queue, locks, inbox |
 | `--instance NAME` | `REXECOP_INSTANCE` | — | Named instance under `./.rexecop/instances/` |
 | `--storage file\|sqlite` | `REXECOP_STORAGE` | `file` | Operation store backend |
-| `--json` | — | off | Emit machine-readable JSON on supported commands (`init`, `doctor`, `env lint`, `profile lint`, `policy explain`, `operations explain`, `secrets doctor`) |
+| `--json` | — | off | Emit machine-readable JSON on supported commands (`init`, `doctor`, `env lint`, `profile lint`, `policy explain`, `operations explain`, `secrets doctor`, `plan --explain`, lifecycle commands) |
 | `--format json\|table\|markdown` | — | `json` | Human or JSON output format where supported; `--json` overrides |
 | `--quiet` | — | off | Suppress non-essential output on supported human formats |
 | `--verbose` | — | off | Include extended diagnostic lines on supported human formats |
@@ -192,6 +192,7 @@ Requires initialized runtime root unless noted.
 | Command | Purpose |
 | --- | --- |
 | `plan --catalog PATH --intent ID --target ID [--mode dry_run\|apply\|...]` | Create operation + `OperationPlan`; GovEngine gate for mutating modes |
+| `plan --explain --profile PATH --env PATH --intent ID --target ID [--mode MODE]` | Profile + policy projection before operation creation (`rexecop.plan_explain.v0.1`); no store write |
 | `approve --operation ID` | Manual approval after `approval_required` |
 | `start --operation ID` | Execute workflow (queues when lock/capacity busy) |
 | `pause --operation ID` | Pause at `pause_safe` workflow steps only |

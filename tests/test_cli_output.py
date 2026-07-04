@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -8,6 +9,11 @@ from typer.testing import CliRunner
 from rexecop.cli import app
 from rexecop.cli_errors import CLI_ERROR_SCHEMA
 from rexecop.errors import RExecOpError
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PROFILE = REPO_ROOT / 'examples/profiles/runtime-fixture/profile.yaml'
+ENVIRONMENT = REPO_ROOT / 'examples/environments/runtime-fixture.example.yaml'
+ENVIRONMENT_POLICY = REPO_ROOT / 'examples/environments/runtime-fixture.policy.example.yaml'
 
 runner = CliRunner()
 
@@ -111,3 +117,96 @@ def test_global_json_init_failure_emits_cli_error_envelope(tmp_path) -> None:
     assert payload['schema'] == CLI_ERROR_SCHEMA
     assert payload['command'] == 'init'
     assert payload['reason_code'] == 'runtime_init_failed'
+
+
+def test_plan_explain_emits_plan_explain_schema(tmp_path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            'plan',
+            '--explain',
+            '--profile',
+            str(PROFILE),
+            '--env',
+            str(ENVIRONMENT_POLICY),
+            '--intent',
+            'inspect_fixture_state',
+            '--target',
+            'fixture-target',
+            '--mode',
+            'dry_run',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload['schema'] == 'rexecop.plan_explain.v0.1'
+    assert payload['status'] == 'ready'
+    assert payload['operation_projection']['operation']['id'] == 'inspect_fixture_state'
+
+
+def test_plan_explain_table_format_renders_summary() -> None:
+    result = runner.invoke(
+        app,
+        [
+            '--format',
+            'table',
+            'plan',
+            '--explain',
+            '--profile',
+            str(PROFILE),
+            '--env',
+            str(ENVIRONMENT_POLICY),
+            '--intent',
+            'inspect_fixture_state',
+            '--target',
+            'fixture-target',
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert 'plan explain status=ready' in result.stdout
+    assert 'intent=inspect_fixture_state' in result.stdout
+
+
+def test_history_table_format_after_plan(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    plan = runner.invoke(
+        app,
+        [
+            'plan',
+            '--profile',
+            str(PROFILE),
+            '--env',
+            str(ENVIRONMENT),
+            '--intent',
+            'inspect_fixture_state',
+            '--target',
+            'fixture-target',
+        ],
+    )
+    assert plan.exit_code == 0, plan.output
+    operation_id = plan.stdout.strip()
+
+    result = runner.invoke(
+        app,
+        ['--format', 'table', 'history', '--operation', operation_id],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert f'history operation_id={operation_id}' in result.stdout
+    assert 'transitions=' in result.stdout
+
+
+def test_global_json_on_approve_failure_emits_cli_error(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(
+        app,
+        ['--json', 'approve', '--operation', 'missing-op'],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload['schema'] == CLI_ERROR_SCHEMA
+    assert payload['command'] == 'approve'
+    assert payload['reason_code'] == 'operation_lookup_failed'

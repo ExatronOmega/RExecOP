@@ -352,3 +352,106 @@ SECRETS_DOCTOR_RENDERERS = {
     'table': render_secrets_doctor_table,
     'markdown': render_secrets_doctor_markdown,
 }
+
+
+def render_lifecycle_state_table(payload: dict[str, Any]) -> str:
+    lines = [
+        f"operation_id={payload.get('operation_id')}",
+        f"state={payload.get('state')}",
+    ]
+    if payload.get('current_step_id'):
+        lines.append(f"current_step_id={payload.get('current_step_id')}")
+    return '\n'.join(lines) + '\n'
+
+
+def render_lifecycle_state_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        '# RExecOp operation state',
+        '',
+        f"- operation_id: `{payload.get('operation_id')}`",
+        f"- state: `{payload.get('state')}`",
+    ]
+    if payload.get('current_step_id'):
+        lines.append(f"- current_step_id: `{payload.get('current_step_id')}`")
+    return '\n'.join(lines) + '\n'
+
+
+def render_history_table(payload: dict[str, Any]) -> str:
+    lines = [
+        f"history operation_id={payload.get('operation_id')}",
+        f"state={payload.get('state')}",
+        f"transitions={len(payload.get('transitions') or [])}",
+        f"evidence_events={len(payload.get('evidence_events') or [])}",
+    ]
+    if active_cli_output().verbose:
+        for transition in payload.get('transitions') or []:
+            if not isinstance(transition, dict):
+                continue
+            lines.append(
+                f"transition {transition.get('from_state')}->{transition.get('to_state')}"
+            )
+    return '\n'.join(lines) + '\n'
+
+
+def render_history_markdown(payload: dict[str, Any]) -> str:
+    lines = [
+        '# RExecOp history',
+        '',
+        f"- operation_id: `{payload.get('operation_id')}`",
+        f"- state: `{payload.get('state')}`",
+        f"- transitions: `{len(payload.get('transitions') or [])}`",
+        f"- evidence_events: `{len(payload.get('evidence_events') or [])}`",
+    ]
+    return '\n'.join(lines) + '\n'
+
+
+def render_plan_explain_table(payload: dict[str, Any]) -> str:
+    operation = payload.get('operation_projection') or {}
+    policy = payload.get('policy_projection') or {}
+    if isinstance(operation, dict):
+        op_fields = _operation_explain_fields(operation)
+    else:
+        op_fields = {}
+    lines = [
+        f"plan explain status={payload.get('status')}",
+        f"intent={payload.get('intent')}",
+        f"target={payload.get('target')}",
+        f"mode={payload.get('mode')}",
+        f"title={op_fields.get('title')}",
+        f"policy_status={policy.get('status')}",
+    ]
+    return '\n'.join(lines) + '\n'
+
+
+def render_plan_explain_markdown(payload: dict[str, Any]) -> str:
+    operation = payload.get('operation_projection') or {}
+    policy = payload.get('policy_projection') or {}
+    if isinstance(operation, dict):
+        op_fields = _operation_explain_fields(operation)
+    else:
+        op_fields = {}
+    return (
+        '# RExecOp plan explain\n\n'
+        f"- status: `{payload.get('status')}`\n"
+        f"- intent: `{payload.get('intent')}`\n"
+        f"- target: `{payload.get('target')}`\n"
+        f"- mode: `{payload.get('mode')}`\n"
+        f"- title: `{op_fields.get('title')}`\n"
+        f"- policy_status: `{policy.get('status')}`\n"
+    )
+
+
+LIFECYCLE_STATE_RENDERERS = {
+    'table': render_lifecycle_state_table,
+    'markdown': render_lifecycle_state_markdown,
+}
+
+HISTORY_RENDERERS = {
+    'table': render_history_table,
+    'markdown': render_history_markdown,
+}
+
+PLAN_EXPLAIN_RENDERERS = {
+    'table': render_plan_explain_table,
+    'markdown': render_plan_explain_markdown,
+}

@@ -29,8 +29,11 @@ from rexecop.cli_errors import (
 from rexecop.cli_output import (
     DOCTOR_RENDERERS,
     ENV_LINT_RENDERERS,
+    HISTORY_RENDERERS,
     INIT_RENDERERS,
+    LIFECYCLE_STATE_RENDERERS,
     OPERATIONS_EXPLAIN_RENDERERS,
+    PLAN_EXPLAIN_RENDERERS,
     POLICY_EXPLAIN_RENDERERS,
     PROFILE_LINT_RENDERERS,
     SECRETS_DOCTOR_RENDERERS,
@@ -56,6 +59,8 @@ from rexecop.operation.diff import (
     render_operation_plan_diff,
 )
 from rexecop.operation.explain import explain_operation
+from rexecop.operation.model import Operation
+from rexecop.operation.plan_explain import explain_operation_plan_request
 from rexecop.operation.review import render_operation_review, review_operation
 from rexecop.policy.explain import explain_operation_policy
 from rexecop.profile.conformance import validate_profile_conformance
@@ -246,6 +251,31 @@ def _reaction_service() -> ReactionService:
 def _emit_cli_error(payload: dict[str, object]) -> None:
     typer.echo(cli_error_json(payload))
     raise typer.Exit(code=1)
+
+
+_LIFECYCLE_LOOKUP_ACTIONS = (
+    'Check the operation id.',
+    'Run rexecop history from the same runtime root.',
+)
+
+
+def _lifecycle_lookup_failure(command: tuple[str, ...], exc: RExecOpError) -> None:
+    emit_failure(
+        command=command,
+        message=str(exc),
+        reason_code='operation_lookup_failed',
+        safe_next_actions=_LIFECYCLE_LOOKUP_ACTIONS,
+    )
+
+
+def _emit_lifecycle_state(item: Operation) -> None:
+    payload: dict[str, object] = {
+        'operation_id': item.id,
+        'state': item.state,
+    }
+    if item.current_step_id:
+        payload['current_step_id'] = item.current_step_id
+    emit_payload(payload, renderers=LIFECYCLE_STATE_RENDERERS)
 
 
 @app.command("version")
@@ -1196,6 +1226,11 @@ def plan_cmd(
     intent: str = typer.Option(..., "--intent", help="Profile intent id."),
     target: str = typer.Option(..., "--target", help="Target id from environment."),
     mode: str = typer.Option("dry_run", "--mode", help="Operation mode."),
+    explain: bool = typer.Option(
+        False,
+        "--explain",
+        help="Project profile and policy context without creating an operation.",
+    ),
     auto_react: str | None = typer.Option(
         None,
         "--auto-react",
@@ -1203,6 +1238,23 @@ def plan_cmd(
     ),
 ) -> None:
     """Create an operation plan without executing connectors."""
+    if explain:
+        try:
+            result = explain_operation_plan_request(
+                profile_path=profile,
+                environment_path=env,
+                intent=intent,
+                target=target,
+                mode=mode,
+                catalog_path=catalog,
+            )
+        except RExecOpError as exc:
+            emit_failure(command=('plan',), message=str(exc))
+        emit_payload(result, renderers=PLAN_EXPLAIN_RENDERERS)
+        if result['status'] == 'blocked':
+            raise typer.Exit(code=1)
+        return
+
     try:
         controller = _controller()
         operation = controller.plan(
@@ -1215,8 +1267,7 @@ def plan_cmd(
             auto_react=auto_react,
         )
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        emit_failure(command=('plan',), message=str(exc))
 
     typer.echo(operation.id)
 
@@ -1268,10 +1319,9 @@ def approve_cmd(
     try:
         item = _controller().approve(operation, approved_by=approved_by)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('approve',), exc)
 
-    typer.echo(json.dumps({"operation_id": item.id, "state": item.state}, indent=2, sort_keys=True))
+    _emit_lifecycle_state(item)
 
 
 @app.command("pause")
@@ -1282,10 +1332,9 @@ def pause_cmd(
     try:
         item = _controller().pause(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('pause',), exc)
 
-    typer.echo(json.dumps({"operation_id": item.id, "state": item.state}, indent=2, sort_keys=True))
+    _emit_lifecycle_state(item)
 
 
 @app.command("resume")
@@ -1296,16 +1345,9 @@ def resume_cmd(
     try:
         item = _controller().resume(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('resume',), exc)
 
-    typer.echo(
-        json.dumps(
-            {"operation_id": item.id, "state": item.state, "current_step_id": item.current_step_id},
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    _emit_lifecycle_state(item)
 
 
 @app.command("cancel")
@@ -1316,10 +1358,9 @@ def cancel_cmd(
     try:
         item = _controller().cancel(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('cancel',), exc)
 
-    typer.echo(json.dumps({"operation_id": item.id, "state": item.state}, indent=2, sort_keys=True))
+    _emit_lifecycle_state(item)
 
 
 @app.command("retry")
@@ -1330,16 +1371,9 @@ def retry_cmd(
     try:
         item = _controller().retry(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('retry',), exc)
 
-    typer.echo(
-        json.dumps(
-            {"operation_id": item.id, "state": item.state, "current_step_id": item.current_step_id},
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    _emit_lifecycle_state(item)
 
 
 @app.command("rollback")
@@ -1350,10 +1384,9 @@ def rollback_cmd(
     try:
         result = _controller().rollback(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('rollback',), exc)
 
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    emit_payload(result, renderers=LIFECYCLE_STATE_RENDERERS)
 
 
 @runtime_app.command("recover")
@@ -1788,16 +1821,9 @@ def start_cmd(
     try:
         item = _controller().start(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('start',), exc)
 
-    typer.echo(
-        json.dumps(
-            {"operation_id": item.id, "state": item.state, "current_step_id": item.current_step_id},
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    _emit_lifecycle_state(item)
 
 
 @app.command("validate")
@@ -1808,10 +1834,9 @@ def validate_cmd(
     try:
         result = _controller().validate(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('validate',), exc)
 
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    emit_payload(result, renderers=LIFECYCLE_STATE_RENDERERS)
 
 
 @app.command("escalate")
@@ -1822,10 +1847,9 @@ def escalate_cmd(
     try:
         package = _controller().escalate(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('escalate',), exc)
 
-    typer.echo(json.dumps(package, indent=2, sort_keys=True))
+    emit_payload(package, renderers=LIFECYCLE_STATE_RENDERERS)
 
 
 @app.command("history")
@@ -1836,10 +1860,9 @@ def history_cmd(
     try:
         history = _controller().get_history(operation)
     except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
+        _lifecycle_lookup_failure(('history',), exc)
 
-    typer.echo(json.dumps(history, indent=2, sort_keys=True))
+    emit_payload(history, renderers=HISTORY_RENDERERS)
 
 
 if __name__ == "__main__":
