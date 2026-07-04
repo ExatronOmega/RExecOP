@@ -17,8 +17,9 @@ profile lint --track readonly
   -> plan / operation review
 ```
 
-`run_profile_developer_check()` (surfaced in `profiles show`) runs conformance and
-plugin compatibility **without** a runtime store.
+`run_profile_developer_check()` (surfaced in `profiles show`) runs conformance,
+plugin compatibility and GovEngine G3 `govengine_governance` compatibility
+**without** a runtime store.
 
 ## Profile discoverability
 
@@ -34,7 +35,7 @@ readonly/mutation compatibility status.
 `profiles show` returns:
 
 - profile summary: version, intents, required capabilities, per-track conformance;
-- `developer_check`: conformance + `plugin_compatibility` report;
+- `developer_check`: conformance + `plugin_compatibility` + `govengine_governance`;
 - bounded `extension_manifest` slice (`required_contracts`, `supported_tracks`).
 
 JSON schema: `rexecop.profile_show.v0.1`.

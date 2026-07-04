@@ -152,6 +152,26 @@ govengine-supervisor explain request.json --json
 See [runtime-recovery-ops.md](runtime-recovery-ops.md) and GovEngine
 [RUNTIME_ADMISSION.md](https://github.com/rozmiarD/GovEngine/blob/main/docs/RUNTIME_ADMISSION.md#supervisor-action-explanation).
 
+## Profile governance (G3)
+
+Profile developer surfaces attach GovEngine compatibility output without
+reimplementing policy reasoning in RExecOp core:
+
+```bash
+rexecop profiles show tecrax --track readonly
+```
+
+`profiles show` and `run_profile_developer_check()` include `govengine_governance`
+with `ProfileGovernanceProjection` and `ProfileConnectorCompatibilityReport`
+digests. GovEngine side:
+
+```bash
+govengine-policy profile-governance projection.json --json
+```
+
+See [profile-developer-surface.md](profile-developer-surface.md) and GovEngine
+[PROFILE_GOVERNANCE.md](https://github.com/rozmiarD/GovEngine/blob/main/docs/PROFILE_GOVERNANCE.md).
+
 ## Boundary
 
 GovEngine validates/contracts admission and runner records. RExecOp remains the runner,

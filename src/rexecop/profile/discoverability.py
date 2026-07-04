@@ -18,6 +18,7 @@ from rexecop.profile.extension_manifest import (
     build_extension_manifest,
     build_plugin_compatibility_report,
 )
+from rexecop.profile.govengine_governance import evaluate_profile_governance
 from rexecop.profile.loader import LoadedProfile, load_profile
 from rexecop.profile.resolver import list_registered_profiles, resolve_profile_path
 
@@ -54,6 +55,7 @@ def show_profile_manifest(profile: str | Path, *, track: str = "readonly") -> di
     readonly = validate_profile_conformance(profile, track="readonly")
     mutation = validate_profile_conformance(profile, track="mutation")
     developer_check = run_profile_developer_check(profile, track=track)
+    govengine_governance = evaluate_profile_governance(profile, track=track)
     manifest = build_extension_manifest()
     return {
         "schema": PROFILE_SHOW_SCHEMA,
@@ -68,6 +70,7 @@ def show_profile_manifest(profile: str | Path, *, track: str = "readonly") -> di
             "plugins": developer_check["plugin_compatibility"]["status"],
         },
         "developer_check": developer_check,
+        "govengine_governance": govengine_governance,
         "extension_manifest": {
             "schema": EXTENSION_MANIFEST_SCHEMA,
             "profile": loaded.name,
@@ -86,8 +89,13 @@ def run_profile_developer_check(
     """Run conformance and plugin compatibility without a runtime store."""
     conformance = validate_profile_conformance(profile, track=track)
     plugins = build_plugin_compatibility_report()
+    govengine_governance = evaluate_profile_governance(profile, track=track)
     status = "passed"
-    if conformance.status != "passed" or plugins["status"] != "passed":
+    if (
+        conformance.status != "passed"
+        or plugins["status"] != "passed"
+        or govengine_governance["status"] != "passed"
+    ):
         status = "failed"
     return {
         "schema": PROFILE_DEVELOPER_CHECK_SCHEMA,
@@ -96,6 +104,7 @@ def run_profile_developer_check(
         "track": conformance.track,
         "conformance": conformance.as_dict(),
         "plugin_compatibility": plugins,
+        "govengine_governance": govengine_governance,
         "requires_runtime_store": False,
     }
 

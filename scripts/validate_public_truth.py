@@ -211,6 +211,8 @@ def collect_errors() -> list[str]:
         _require(errors, "README.md", marker)
     _require(errors, "docs/govengine-integration.md", "govengine-supervisor explain")
     _require(errors, "docs/govengine-integration.md", "explain_supervisor_action()")
+    _require(errors, "docs/profile-developer-surface.md", "govengine_governance")
+    _require(errors, "docs/govengine-integration.md", "profile-governance")
     _require(errors, "OPERATOR_RUNBOOK.md", "secrets doctor")
     _require(errors, "OPERATOR_RUNBOOK.md", "operations unavailable")
     _require(errors, "OPERATOR_RUNBOOK.md", "runtime recover")

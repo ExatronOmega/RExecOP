@@ -11,6 +11,8 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Wired GovEngine G3 `explain_profile_governance()` into `profiles show` and
+  `run_profile_developer_check()` as `govengine_governance` compatibility output.
 - Added M4 profile developer surface: categorized `profile lint` conformance,
   `rexecop profile manifest`, `profiles list/show`, `connectors list/show`,
   `capabilities list`, extension manifest `v0.1`, plugin compatibility report,
