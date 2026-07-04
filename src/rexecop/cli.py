@@ -59,6 +59,7 @@ from rexecop.runtime_ops.worker import (
     trigger_event,
     trigger_operation,
 )
+from rexecop.secrets.doctor import run_secrets_doctor
 from rexecop.storage.factory import create_store, resolve_storage_backend
 
 app = typer.Typer(
@@ -108,7 +109,12 @@ backup_app = typer.Typer(
     help="Backup and restore the operator runtime store.",
     no_args_is_help=True,
 )
+secrets_app = typer.Typer(
+    help="Inspect secret references without resolving or printing values.",
+    no_args_is_help=True,
+)
 app.add_typer(backup_app, name="backup")
+app.add_typer(secrets_app, name="secrets")
 
 _runtime_root: Path | None = None
 _runtime_instance: str | None = None
@@ -193,6 +199,38 @@ def doctor_cmd(
         env_path=env,
         catalog_path=catalog,
     )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == CHECK_BLOCKER:
+        raise typer.Exit(code=1)
+
+
+@secrets_app.command("doctor")
+def secrets_doctor_cmd(
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML to inspect."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Optional catalog YAML."),
+    secrets_file: Path | None = typer.Option(
+        None,
+        "--secrets-file",
+        help="Optional secrets YAML path; defaults to REXECOP_SECRETS_FILE.",
+    ),
+) -> None:
+    """Check secret refs, duplicates, secrets-file policy and redaction self-test."""
+    if env is None and catalog is None:
+        typer.secho(
+            "error: provide --env and/or --catalog",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    try:
+        result = run_secrets_doctor(
+            env_path=env,
+            catalog_path=catalog,
+            secrets_file=secrets_file,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
     if result["status"] == CHECK_BLOCKER:
         raise typer.Exit(code=1)

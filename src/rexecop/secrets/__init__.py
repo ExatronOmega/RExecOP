@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from rexecop.secrets.port import SecretResolver
+from rexecop.secrets.doctor import run_secrets_doctor
 from rexecop.secrets.resolver import (
     ChainedSecretResolver,
     EnvSecretResolver,
@@ -14,4 +15,5 @@ __all__ = [
     "FileSecretResolver",
     "SecretResolver",
     "default_secret_resolver",
+    "run_secrets_doctor",
 ]
