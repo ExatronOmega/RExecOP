@@ -49,6 +49,23 @@ When the environment declares `policy_pack`, RExecOp:
 
 Without `policy_pack`, `GovEngineClient` behavior is unchanged (compose inputs from preview overrides or fail-closed defaults).
 
+Explain the same operation-shaped policy request without creating an operation
+or executing connectors:
+
+```bash
+rexecop policy explain \
+  --profile examples/profiles/runtime-fixture/profile.yaml \
+  --env examples/environments/runtime-fixture.policy.example.yaml \
+  --intent inspect_fixture_state \
+  --target fixture-target \
+  --mode dry_run
+```
+
+The command returns GovEngine `PolicyEvaluationExplanation` JSON under
+`policy.explanation`. RExecOp supplies the bounded operation request shape and
+does not compute matched rules, invariants, obligations, constraints, or
+projected controls itself.
+
 Supported operation controls are:
 
 - `receipt` / `receipt_required`: terminal internal receipt is mandatory;

@@ -174,6 +174,7 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `doctor` | Check runtime root, storage, package compatibility, profile, env, catalog and secret refs |
 | `env lint` | Validate environment YAML and inline secret hygiene |
 | `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
+| `policy explain` | Show GovEngine policy reasoning for one operation-shaped request without execution |
 | `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (queues when lock/capacity busy) |

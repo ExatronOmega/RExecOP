@@ -11,6 +11,9 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added `rexecop policy explain`, which consumes GovEngine
+  `PolicyEvaluationExplanation` for one operation-shaped request and returns
+  redacted JSON without reimplementing policy reasoning in RExecOp.
 - Aligned documentation truth surface: runtime-root path convention (`<root>/`),
   `docs/first-run.md` in README index, expanded alpha sign-off gate list, archived
   the `0.2.9a0` sign-off record, and added `validate_first_run_smoke` to CI.

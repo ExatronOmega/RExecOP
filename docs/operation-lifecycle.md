@@ -37,6 +37,7 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `doctor` | Check runtime root, storage, stack package compatibility and optional profile/env/catalog inputs |
 | `env lint` | Validate an environment file and inline secret hygiene before planning |
 | `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
+| `policy explain` | Show GovEngine policy reasoning for an operation-shaped request without execution |
 | `plan` | Create operation + `OperationPlan`; GovEngine gate for mutating modes |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (may queue if lock/capacity busy) |

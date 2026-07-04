@@ -5,7 +5,9 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from typer.testing import CliRunner
 
+from rexecop.cli import app
 from rexecop.connectors import errors as connector_errors
 from rexecop.connectors.base import ConnectorRequest
 from rexecop.connectors.composite_runtime import build_connector_runtime
@@ -22,6 +24,7 @@ POLICY_ENVIRONMENT = (
     REPO_ROOT / "examples/environments/runtime-fixture.policy.example.yaml"
 )
 POLICY_PACK_PATH = REPO_ROOT / "examples/policy/rexecop-connectors-default.yaml"
+runner = CliRunner()
 
 
 def _policy_pack() -> dict:
@@ -186,6 +189,92 @@ def test_plan_persists_policy_pack_and_verdict(tmp_path: Path) -> None:
     assert operation.metadata["policy_verdict"]["reason_code"] == "fixture_read_allowed"
     plan = controller.store.load_plan(operation.id)
     assert plan.govengine_request_preview["policy_decision"]["decision"] == "allow"
+
+
+def test_cli_policy_explain_uses_govengine_redacted_reasoning() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "policy",
+            "explain",
+            "--profile",
+            str(PROFILE),
+            "--env",
+            str(POLICY_ENVIRONMENT),
+            "--intent",
+            "inspect_fixture_state",
+            "--target",
+            "fixture-target",
+            "--mode",
+            "dry_run",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = yaml.safe_load(result.stdout)
+    explanation = payload["policy"]["explanation"]
+    assert payload["schema"] == "rexecop.policy_explain.v0.1"
+    assert payload["status"] == "explained"
+    assert explanation["decision"] == "allow"
+    assert explanation["matched_rule"]["rule_id"] == "allow-inspect-fixture-state"
+    assert explanation["matched_rule"]["conditions"] == [
+        {"key": "action.category", "matched": True, "redacted": True},
+        {"key": "action.intent", "matched": True, "redacted": True},
+        {"key": "action.mode", "matched": True, "redacted": True},
+    ]
+    assert "expected" not in result.stdout
+    assert "actual" not in result.stdout
+
+
+def test_cli_policy_explain_returns_blocker_for_denied_mutation() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "policy",
+            "explain",
+            "--profile",
+            str(PROFILE),
+            "--env",
+            str(POLICY_ENVIRONMENT),
+            "--intent",
+            "apply_fixture_change",
+            "--target",
+            "fixture-target",
+            "--mode",
+            "apply",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = yaml.safe_load(result.stdout)
+    explanation = payload["policy"]["explanation"]
+    assert payload["status"] == "blocked"
+    assert explanation["decision"] == "deny"
+    assert explanation["reason_code"] == "fixture_mutation_denied"
+    assert explanation["blockers"] == ["fixture_mutation_denied"]
+
+
+def test_cli_policy_explain_requires_environment_policy_pack() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "policy",
+            "explain",
+            "--profile",
+            str(PROFILE),
+            "--env",
+            str(ENVIRONMENT),
+            "--intent",
+            "inspect_fixture_state",
+            "--target",
+            "fixture-target",
+            "--mode",
+            "dry_run",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "environment policy_pack is required for policy explain" in result.output
 
 
 def test_plan_projects_supported_operation_policy_obligations(tmp_path: Path) -> None:

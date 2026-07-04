@@ -17,6 +17,7 @@ from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
 from rexecop.operation.controller import OperationController
+from rexecop.policy.explain import explain_operation_policy
 from rexecop.profile.conformance import validate_profile_conformance
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
@@ -43,6 +44,7 @@ app = typer.Typer(
 targets_app = typer.Typer(help="Query an operator-owned target catalog.", no_args_is_help=True)
 env_app = typer.Typer(help="Validate operator environment files.", no_args_is_help=True)
 profile_app = typer.Typer(help="Validate profile contracts.", no_args_is_help=True)
+policy_app = typer.Typer(help="Inspect GovEngine policy decisions.", no_args_is_help=True)
 operations_app = typer.Typer(
     help="Query profile-defined operations and target applicability.",
     no_args_is_help=True,
@@ -50,6 +52,7 @@ operations_app = typer.Typer(
 app.add_typer(targets_app, name="targets")
 app.add_typer(env_app, name="env")
 app.add_typer(profile_app, name="profile")
+app.add_typer(policy_app, name="policy")
 app.add_typer(operations_app, name="operations")
 
 _runtime_root: Path | None = None
@@ -197,6 +200,45 @@ def profile_lint_cmd(
         raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result.as_dict(), indent=2, sort_keys=True))
     if result.status != "passed":
+        raise typer.Exit(code=1)
+
+
+@policy_app.command("explain")
+def policy_explain_cmd(
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Registered profile or profile path; optional when --catalog is supplied.",
+    ),
+    env: Path | None = typer.Option(
+        None,
+        "--env",
+        help="Environment YAML; optional when --catalog is supplied.",
+    ),
+    catalog: Path | None = typer.Option(
+        None,
+        "--catalog",
+        help="Private target catalog; supplies profile/environment binding.",
+    ),
+    intent: str = typer.Option(..., "--intent", help="Profile intent id."),
+    target: str = typer.Option(..., "--target", help="Target id from environment/catalog."),
+    mode: str = typer.Option("dry_run", "--mode", help="Operation mode."),
+) -> None:
+    """Explain the GovEngine policy path for one operation-shaped request."""
+    try:
+        result = explain_operation_policy(
+            profile_path=profile,
+            environment_path=env,
+            intent=intent,
+            target=target,
+            mode=mode,
+            catalog_path=catalog,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == "blocked":
         raise typer.Exit(code=1)
 
 
