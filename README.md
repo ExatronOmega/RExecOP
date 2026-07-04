@@ -179,6 +179,11 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) before start |
 | `operation diff` | Compare stored plan bindings vs current profile/env/catalog (`--format json\|table\|markdown`) |
 | `runbook show` | Show profile-owned runbook ref and bounded content for one intent |
+| `runtime status` | Runtime queue, active operations, locks and dead-letter summary (`--json`) |
+| `ops` | Aggregate queue, blockers, dead letters, stale locks and action-required items |
+| `dead-letter list` / `dead-letter show` | Inspect watchdog dead-letter items (redacted show) |
+| `locks list` | List advisory target locks and stale holders |
+| `explain-error` | Map operation/dead-letter/watchdog ref to failure class and safe next actions |
 | `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (queues when lock/capacity busy) |

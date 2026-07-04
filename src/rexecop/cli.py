@@ -33,6 +33,14 @@ from rexecop.reaction.service import ReactionService
 from rexecop.runtime.doctor import CHECK_BLOCKER, count_secret_refs, run_runtime_doctor
 from rexecop.runtime.init import initialize_runtime_root
 from rexecop.runtime.root import resolve_runtime_instance, resolve_runtime_root
+from rexecop.runtime_ops.triage import (
+    collect_ops_snapshot,
+    collect_runtime_status,
+    explain_error,
+    list_dead_letter_manifest,
+    list_locks_manifest,
+    show_dead_letter_item,
+)
 from rexecop.runtime_ops.watchdog import WatchdogService
 from rexecop.runtime_ops.worker import (
     drain_queue,
@@ -58,6 +66,9 @@ operations_app = typer.Typer(
     help="Query profile-defined operations and target applicability.",
     no_args_is_help=True,
 )
+runtime_app = typer.Typer(help="Runtime triage and status.", no_args_is_help=True)
+dead_letter_app = typer.Typer(help="Inspect dead-letter items.", no_args_is_help=True)
+locks_app = typer.Typer(help="Inspect advisory target locks.", no_args_is_help=True)
 app.add_typer(targets_app, name="targets")
 app.add_typer(env_app, name="env")
 app.add_typer(profile_app, name="profile")
@@ -65,6 +76,9 @@ app.add_typer(policy_app, name="policy")
 app.add_typer(operation_app, name="operation")
 app.add_typer(runbook_app, name="runbook")
 app.add_typer(operations_app, name="operations")
+app.add_typer(runtime_app, name="runtime")
+app.add_typer(dead_letter_app, name="dead-letter")
+app.add_typer(locks_app, name="locks")
 
 _runtime_root: Path | None = None
 _runtime_instance: str | None = None
@@ -659,6 +673,83 @@ def rollback_cmd(
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
 
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@runtime_app.command("status")
+def runtime_status_cmd(
+    as_json: bool = typer.Option(True, "--json", help="Emit JSON status."),
+) -> None:
+    """Show runtime queue, active operations, locks and dead-letter summary."""
+    if not as_json:
+        typer.secho("error: only --json output is supported", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    try:
+        result = collect_runtime_status(_controller().store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@dead_letter_app.command("list")
+def dead_letter_list_cmd() -> None:
+    """List dead-letter inbox payloads moved by watchdog."""
+    try:
+        result = list_dead_letter_manifest(_controller().store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@dead_letter_app.command("show")
+def dead_letter_show_cmd(
+    name: str = typer.Argument(..., help="Dead-letter file name."),
+) -> None:
+    """Show one redacted dead-letter payload."""
+    try:
+        result = show_dead_letter_item(_controller().store, name)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@locks_app.command("list")
+def locks_list_cmd() -> None:
+    """List advisory target locks and stale holders."""
+    try:
+        result = list_locks_manifest(_controller().store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("ops")
+def ops_cmd() -> None:
+    """Aggregate queue, active operations, blockers and action-required items."""
+    try:
+        result = collect_ops_snapshot(_controller().store)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result.get("blockers"):
+        raise typer.Exit(code=1)
+
+
+@app.command("explain-error")
+def explain_error_cmd(
+    ref: str = typer.Argument(..., help="Operation id, dead-letter name or watchdog record id."),
+) -> None:
+    """Map a runtime failure reference to a bounded failure class and next actions."""
+    try:
+        result = explain_error(_controller().store, ref)
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 

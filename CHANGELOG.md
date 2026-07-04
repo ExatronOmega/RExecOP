@@ -11,6 +11,9 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added M3 runtime triage commands: `rexecop runtime status --json`, `rexecop ops`,
+  `rexecop dead-letter list/show`, `rexecop locks list`, and
+  `rexecop explain-error <ref>` with bounded failure classes and safe next actions.
 - Added `rexecop operation diff --operation <id>` with stable JSON plus
   `--format table|markdown` to compare stored catalog/profile/environment
   bindings against the current operator state before start.
