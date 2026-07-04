@@ -14,7 +14,7 @@ profile lint --track readonly
   -> profiles show (intents, tracks, developer_check)
   -> profile harness --profile <profile>   # when a fixture environment is available
   -> secrets doctor --env <environment.yaml>
-  -> action list/show/preview/diff/configure/validate --profile <profile> --env <environment.yaml>
+  -> action list/show/preview/policy-preview/diff/configure/validate --profile <profile> --env <environment.yaml>
   -> operations unavailable --catalog <targets.yaml> --target <id>   # when using a catalog
   -> plan / operation review
 ```
@@ -155,14 +155,14 @@ rexecop action validate --all --catalog examples/first-run-demo/catalog.yaml \
   --target fixture-target
 ```
 
-`action list`, `action show`, `action preview`, `action diff`, `action configure`, and
-`action validate` are read-only metadata commands for profile authors and
+`action list`, `action show`, `action preview`, `action policy-preview`, `action diff`,
+`action configure`, and `action validate` are read-only metadata commands for profile authors and
 operators. They compile profile-owned action descriptors, connector workflow
 steps, backend classes, shape digests when available, required secret refs and
 catalog applicability. Output uses stable schemas (`rexecop.action_list.v0.1`,
 `rexecop.action_show.v0.1`, `rexecop.action_preview.v0.1`,
 `rexecop.action_configure.v0.1`, `rexecop.action_diff.v0.1`,
-`rexecop.action_validate.v0.1`) and reports
+`rexecop.action_policy_impact.v0.1`, `rexecop.action_validate.v0.1`) and reports
 source digests instead of local operator file paths.
 
 `action preview` renders redacted effective-call previews for `http_api`,
@@ -176,6 +176,12 @@ identity paths. Static fixture previews expose only fixture data digests.
 These commands do not execute connector backends, create execution requests,
 request or imply GovEngine admission, emit SCLite truth artifacts, or print
 resolved secrets / connector configuration.
+
+`action policy-preview` requires `--target` and optionally `--mode`. When the
+environment declares `policy_pack`, it runs GovEngine `explain_policy_evaluation`
+and returns digest-bound source contracts plus redacted policy reasoning. Without
+`policy_pack` the command reports `status=skipped`. Policy simulation is not
+runtime admission and does not approve operators or verify host enforcement.
 
 Built-in template scope **1.0** ships `http.simple-get`, `shell.readonly-allowlist`
 and `ssh.readonly-allowlist`. List them with `rexecop action templates list`.
@@ -202,6 +208,6 @@ bounded JSON errors without backend IO.
 | `profiles *` | Profile metadata, conformance, plugin registration | Domain semantics, policy verdicts |
 | `connectors *` | Backend descriptors and certification tier | Connector execution |
 | `capabilities list` | Neutral capability registry | Target catalog capabilities |
-| `action list/show/preview/diff/configure/validate` | Action metadata, shape digests, profile-vs-env diff, redacted call preview, patch ops and env binding checks | Backend execution, GovEngine admission, SCLite truth |
+| `action list/show/preview/policy-preview/diff/configure/validate` | Action metadata, shape digests, profile-vs-env diff, redacted call preview, optional policy simulation, patch ops and env binding checks | Backend execution, GovEngine admission, SCLite truth |
 | `profile manifest` | Host extension contract | Profile content |
 | `operations unavailable` | Technical applicability reasoning | GovEngine admission |

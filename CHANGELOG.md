@@ -11,6 +11,11 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added `rexecop action policy-preview <intent> --target ID` to simulate
+  GovEngine policy impact for one profile-owned action using digest-bound
+  source contracts and redacted `PolicyEvaluationExplanation` output
+  (`rexecop.action_policy_impact.v0.1`). Skips when `policy_pack` is absent;
+  does not create execution requests, runtime admission or SCLite truth claims.
 - Added M5 action template scope 1.0: built-in `http.simple-get`,
   `shell.readonly-allowlist` and `ssh.readonly-allowlist` skeletons exposed via
   `rexecop action templates list`, `action show` template provenance and

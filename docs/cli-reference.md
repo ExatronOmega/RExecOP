@@ -60,6 +60,7 @@ See [profile-developer-surface.md](profile-developer-surface.md).
 | `action list [--profile] [--env] [--catalog] [--target]` | List profile actions and redacted metadata |
 | `action show INTENT [...]` | One action contract, required refs and backend constraints |
 | `action preview INTENT [...]` | Redacted HTTP/shell/SSH effective-call previews and bounded-output policy |
+| `action policy-preview INTENT --target ID [--mode MODE] [...]` | Optional GovEngine policy-impact simulation (digest-bound, redacted); not admission |
 | `action validate --all\|--intent INTENT [...]` | Profile/env bindings, secret hygiene, duplicate refs, workflow contract |
 | `action templates list` | Built-in readonly templates: `http.simple-get`, `shell.readonly-allowlist`, `ssh.readonly-allowlist` |
 | `action configure INTENT --env PATH [--template ID] [--dry-run] [--write-patch PATH]` | Bounded dry-run patch operations; never mutates `--env` |

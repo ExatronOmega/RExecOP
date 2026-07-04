@@ -10,6 +10,7 @@ import typer
 from rexecop import __version__
 from rexecop.action.configure import configure_action
 from rexecop.action.diff import diff_action
+from rexecop.action.policy_impact import preview_action_policy_impact
 from rexecop.action.surface import (
     list_actions,
     preview_action,
@@ -439,6 +440,33 @@ def action_preview_cmd(
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@action_app.command("policy-preview")
+def action_policy_preview_cmd(
+    intent: str = typer.Argument(..., help="Profile intent/action id."),
+    profile: str | None = typer.Option(None, "--profile", help="Registered profile or path."),
+    env: Path | None = typer.Option(None, "--env", help="Environment YAML for backend bindings."),
+    catalog: Path | None = typer.Option(None, "--catalog", help="Private target catalog YAML."),
+    target: str = typer.Option(..., "--target", help="Target id from environment/catalog."),
+    mode: str = typer.Option("dry_run", "--mode", help="Operation mode for policy simulation."),
+) -> None:
+    """Simulate GovEngine policy impact for one action without admission authority."""
+    try:
+        result = preview_action_policy_impact(
+            intent,
+            profile=profile,
+            env=env,
+            catalog=catalog,
+            target=target,
+            mode=mode,
+        )
+    except RExecOpError as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+    if result["status"] == "blocked":
+        raise typer.Exit(code=1)
 
 
 @action_templates_app.command("list")

@@ -63,6 +63,7 @@ M3_M4_CLI_MARKERS = (
     "action configure",
     "action diff",
     "action templates",
+    "action policy-preview",
     "http.simple-get",
     "action validate",
     "secrets suggest-ref",

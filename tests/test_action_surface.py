@@ -10,6 +10,10 @@ from typer.testing import CliRunner
 
 from rexecop.action.configure import ACTION_CONFIGURE_SCHEMA, configure_action
 from rexecop.action.diff import ACTION_DIFF_SCHEMA, diff_action
+from rexecop.action.policy_impact import (
+    ACTION_POLICY_IMPACT_SCHEMA,
+    preview_action_policy_impact,
+)
 from rexecop.action.surface import (
     ACTION_LIST_SCHEMA,
     ACTION_PREVIEW_SCHEMA,
@@ -28,6 +32,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "examples/first-run-demo/profile/profile.yaml"
 ENVIRONMENT = ROOT / "examples/first-run-demo/environment.yaml"
 CATALOG = ROOT / "examples/first-run-demo/catalog.yaml"
+POLICY_PROFILE = ROOT / "examples/profiles/runtime-fixture/profile.yaml"
+POLICY_ENVIRONMENT = ROOT / "examples/environments/runtime-fixture.policy.example.yaml"
 runner = CliRunner()
 
 
@@ -538,6 +544,92 @@ def test_cli_action_templates_list_emits_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["scope"] == "1.0"
     assert any(item["id"] == "http.simple-get" for item in payload["templates"])
+
+
+def test_action_policy_preview_skips_without_policy_pack() -> None:
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = preview_action_policy_impact(
+            "inspect",
+            profile=PROFILE,
+            env=ENVIRONMENT,
+            target="fixture-target",
+        )
+
+    backend.assert_not_called()
+    assert payload["schema"] == ACTION_POLICY_IMPACT_SCHEMA
+    assert payload["status"] == "skipped"
+    assert payload["policy_simulation"]["available"] is False
+    assert "policy_pack is not configured" in payload["policy_simulation"]["reason"]
+
+
+def test_action_policy_preview_simulates_redacted_govengine_explanation() -> None:
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = preview_action_policy_impact(
+            "inspect_fixture_state",
+            profile=POLICY_PROFILE,
+            env=POLICY_ENVIRONMENT,
+            target="fixture-target",
+            mode="dry_run",
+        )
+
+    backend.assert_not_called()
+    assert payload["schema"] == ACTION_POLICY_IMPACT_SCHEMA
+    assert payload["status"] == "simulated"
+    assert payload["source_contracts"]["policy_request_digest"].startswith("sha256:")
+    simulation = payload["policy_simulation"]
+    assert simulation["available"] is True
+    assert simulation["decision"] == "allow"
+    assert simulation["explanation"]["matched_rule"]["rule_id"] == "allow-inspect-fixture-state"
+    assert simulation["explanation"]["matched_rule"]["conditions"] == [
+        {"key": "action.category", "matched": True, "redacted": True},
+        {"key": "action.intent", "matched": True, "redacted": True},
+        {"key": "action.mode", "matched": True, "redacted": True},
+    ]
+    rendered = json.dumps(payload, sort_keys=True)
+    assert "expected" not in rendered
+    assert "actual" not in rendered
+    assert "Does not request or imply GovEngine admission." in payload["non_claims"]
+    assert "not runtime admission" in rendered
+
+
+def test_action_policy_preview_reports_blocked_mutation_without_backend_io() -> None:
+    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+        payload = preview_action_policy_impact(
+            "apply_fixture_change",
+            profile=POLICY_PROFILE,
+            env=POLICY_ENVIRONMENT,
+            target="fixture-target",
+            mode="apply",
+        )
+
+    backend.assert_not_called()
+    assert payload["status"] == "blocked"
+    assert payload["policy_simulation"]["decision"] == "deny"
+    assert payload["policy_simulation"]["reason_code"] == "fixture_mutation_denied"
+
+
+def test_cli_action_policy_preview_exits_on_blocked_simulation() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "action",
+            "policy-preview",
+            "apply_fixture_change",
+            "--profile",
+            str(POLICY_PROFILE),
+            "--env",
+            str(POLICY_ENVIRONMENT),
+            "--target",
+            "fixture-target",
+            "--mode",
+            "apply",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["schema"] == ACTION_POLICY_IMPACT_SCHEMA
+    assert payload["status"] == "blocked"
 
 
 def test_action_diff_reports_aligned_static_fixture_without_backend_io() -> None:

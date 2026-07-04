@@ -90,8 +90,9 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Profile developer surface: `profiles list/show`, `connectors list/show`, `capabilities list`,
   `profile manifest`, `profile harness`, operator metadata projection
 - M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,
-  `action validate`, `action diff --env`, `action configure --dry-run`,
-  `action templates list` (scope 1.0: `http.simple-get`, shell/SSH allowlist skeletons)
+  `action policy-preview`, `action validate`, `action diff --env`,
+  `action configure --dry-run`, `action templates list` (scope 1.0: `http.simple-get`,
+  shell/SSH allowlist skeletons)
 - Pre-run inspection: `policy explain`, `operations explain`, `operation explain`,
   `operation review`, `operation diff`, `runbook show`, `operations unavailable`
 - Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
@@ -194,7 +195,7 @@ The CLI has grown across M1–M5 milestones. **Full command reference:**
 | Runtime readiness | `init`, `doctor`, `env lint`, `version` |
 | Secrets | `secrets doctor`, `secrets suggest-ref` |
 | Profile developer | `profile lint`, `profile manifest`, `profile harness`, `profiles list/show`, `connectors list/show`, `capabilities list` |
-| Action metadata | `action list`, `action show`, `action preview`, `action validate`, `action diff`, `action configure` |
+| Action metadata | `action list`, `action show`, `action preview`, `action policy-preview`, `action validate`, `action diff`, `action configure` |
 | Catalog | `targets list/show`, `operations list`, `operations explain`, `operations unavailable` |
 | Pre-run inspection | `policy explain`, `operation explain`, `operation review`, `operation diff`, `runbook show` |
 | Runtime triage | `runtime status`, `ops`, `explain-error`, `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record` |
