@@ -36,9 +36,25 @@ readonly/mutation compatibility status.
 
 - profile summary: version, intents, required capabilities, per-track conformance;
 - `developer_check`: conformance + `plugin_compatibility` + `govengine_governance`;
+- `operator_metadata`: coverage status for profile-owned `operator_metadata.yaml`;
 - bounded `extension_manifest` slice (`required_contracts`, `supported_tracks`).
 
 JSON schema: `rexecop.profile_show.v0.1`.
+
+## Profile-owned operator metadata
+
+Profiles may ship `operator_metadata.yaml` beside `profile.yaml`. Tecrax owns
+user-facing labels, runbook hints, safe next options and failure mapping; RExecOp
+loads and projects the document without interpreting domain semantics.
+
+```bash
+rexecop operations explain diagnose_monitoring_host --profile tecrax
+```
+
+`operations explain` returns `rexecop.operation_profile_explain.v0.1` with the
+catalog descriptor plus optional `operator_metadata` projection. The same
+metadata enriches `operations unavailable`, `operation review`, and
+`explain-error` when a profile root is available.
 
 ## Conformance categories
 
