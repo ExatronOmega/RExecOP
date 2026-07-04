@@ -26,6 +26,24 @@ Module: `rexecop.execution.model`.
 
 `source` on the request is always `approved_workflow_plan`.
 
+## Typed execution projections (M6)
+
+Connector steps may compile digest-bound runtime projections before backend IO
+via `rexecop.execution.typed_spec`:
+
+| Schema | Purpose |
+| --- | --- |
+| `rexecop.step_execution_spec.v0.1` | Per-step envelope with backend class and payload digest |
+| `rexecop.command_execution_spec.v0.1` | Allowlisted argv projection for shell/SSH readonly backends |
+| `rexecop.http_action_execution_spec.v0.1` | Canonical HTTP action shape digest before `http_api` IO |
+| `rexecop.static_fixture_execution_spec.v0.1` | Fixture action digest for neutral test backends |
+
+When an operation seeds `shared_state.execution_context` with `profile_root` and
+`environment.connectors`, `StepExecutor` compiles the typed spec, stores
+`shared_state.typed_execution_specs[step_id].digest` before connector invoke,
+and fail-closes on schema major-version mismatch or digest drift. These records
+are runtime projections only — not SCLite truth artifacts.
+
 ## ExecutionRequest fields
 
 - `request_id`, `operation_id`, `target_ref`, `mode`

@@ -365,6 +365,13 @@ class OperationOrchestrator:
                 return operation
 
             shared_state = dict(operation.metadata.get("shared_state") or {})
+            connectors = operation.metadata.get("environment_connectors")
+            profile_root = str(operation.metadata.get("profile_root") or "").strip()
+            if profile_root and isinstance(connectors, dict):
+                shared_state["execution_context"] = {
+                    "profile_root": profile_root,
+                    "connectors": dict(connectors),
+                }
             sink = _WorkflowEvidenceSink(self, operation)
             policy_enforcement = self._policy_enforcement_for_operation(
                 operation,

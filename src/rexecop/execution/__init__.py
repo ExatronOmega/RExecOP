@@ -12,8 +12,14 @@ from rexecop.execution.model import (
     execution_receipt_digest,
     execution_request_digest,
 )
+from rexecop.execution.typed_spec import (
+    STEP_EXECUTION_SPEC_SCHEMA,
+    compile_step_execution_spec,
+    step_execution_spec_digest,
+)
 
 __all__ = [
+    "STEP_EXECUTION_SPEC_SCHEMA",
     "ExecutionPolicyBinding",
     "ExecutionReceipt",
     "ExecutionRequest",
@@ -23,6 +29,8 @@ __all__ = [
     "StepExecutionContext",
     "StepExecutionResult",
     "StepExecutor",
+    "compile_step_execution_spec",
     "execution_receipt_digest",
+    "step_execution_spec_digest",
     "execution_request_digest",
 ]

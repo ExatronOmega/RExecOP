@@ -4,14 +4,18 @@ import hashlib
 import json
 from collections.abc import Callable, Mapping
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 
 from rexecop.connectors import errors as connector_errors
 from rexecop.connectors.base import ConnectorRequest
 from rexecop.connectors.runtime import ConnectorDispatcher
+from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload, redact_text
 from rexecop.execution.backend import StepExecutionContext, StepExecutionResult
 from rexecop.execution.internal_registry import InternalHandler, load_internal_handlers
+from rexecop.execution.typed_spec import bind_step_execution_spec, compile_step_execution_spec
+from rexecop.profile.loader import load_profile
 
 EvidenceHandler = Callable[[StepExecutionContext], dict[str, Any]]
 
@@ -64,6 +68,17 @@ class StepExecutor:
         action: str,
     ) -> StepExecutionResult:
         connector = str(context.step.get("connector") or "")
+        try:
+            self._bind_typed_execution_spec(context, step_id=step_id)
+        except RExecOpValidationError as exc:
+            return StepExecutionResult(
+                step_id=step_id,
+                success=False,
+                output={
+                    "error_class": connector_errors.VALIDATION_FAILED,
+                },
+                error=redact_text(str(exc)),
+            )
         response = self.connector_dispatcher.invoke(
             ConnectorRequest(
                 connector=connector,
@@ -177,6 +192,35 @@ class StepExecutor:
             success=result.success,
             output=output,
             error=result.error,
+        )
+
+    def _bind_typed_execution_spec(
+        self,
+        context: StepExecutionContext,
+        *,
+        step_id: str,
+    ) -> None:
+        execution_context = context.shared_state.get("execution_context")
+        if not isinstance(execution_context, dict):
+            return
+        profile_root = str(execution_context.get("profile_root") or "").strip()
+        connectors = execution_context.get("connectors")
+        connector = str(context.step.get("connector") or "").strip()
+        if not profile_root or not isinstance(connectors, dict):
+            return
+        connector_config = connectors.get(connector)
+        if not isinstance(connector_config, dict):
+            raise RExecOpValidationError(f"connector not configured: {connector}")
+        spec = compile_step_execution_spec(
+            step=context.step,
+            profile=load_profile(Path(profile_root)),
+            connector_config=connector_config,
+            mode=context.mode,
+        )
+        bind_step_execution_spec(
+            step_id=step_id,
+            spec=spec,
+            shared_state=context.shared_state,
         )
 
     def _store_bounded_result(

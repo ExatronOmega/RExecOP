@@ -11,6 +11,11 @@ PyPI alpha line is **`0.2.12a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Started M6 typed execution contracts in RExecOp: digest-bound
+  `StepExecutionSpec` with `CommandExecutionSpec`, `HttpActionExecutionSpec`
+  and `static_fixture` projections (`rexecop.execution.typed_spec`). Connector
+  steps compile and bind per-step digests in `shared_state` before backend IO
+  when `execution_context` is present; unknown major schema versions fail closed.
 - Added `rexecop action policy-preview <intent> --target ID` to simulate
   GovEngine policy impact for one profile-owned action using digest-bound
   source contracts and redacted `PolicyEvaluationExplanation` output
