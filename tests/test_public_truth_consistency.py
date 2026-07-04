@@ -83,6 +83,28 @@ def test_policy_import_is_independent_of_connector_import_order() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_public_truth_tracks_m3_m4_cli_markers() -> None:
+    validator = _load_validator()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    for marker in validator.M3_M4_CLI_MARKERS:
+        assert marker in readme, marker
+
+
+def test_public_truth_rejects_missing_m3_m4_cli_marker(monkeypatch: pytest.MonkeyPatch) -> None:
+    validator = _load_validator()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    stale_readme = readme.replace("secrets doctor", "secrets check")
+
+    def fake_read(path: str) -> str:
+        if path == "README.md":
+            return stale_readme
+        return (ROOT / path).read_text(encoding="utf-8")
+
+    monkeypatch.setattr(validator, "_read", fake_read)
+    errors = validator.collect_errors()
+    assert any("README.md:missing:secrets doctor" in item for item in errors)
+
+
 def test_public_truth_rejects_missing_changelog_section(monkeypatch: pytest.MonkeyPatch) -> None:
     validator = _load_validator()
 

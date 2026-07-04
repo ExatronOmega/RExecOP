@@ -50,6 +50,24 @@ FORBIDDEN_CLAIMS = (
     "production-ready",
 )
 
+M3_M4_CLI_MARKERS = (
+    "secrets doctor",
+    "profiles list",
+    "profile manifest",
+    "connectors list",
+    "capabilities list",
+    "operations unavailable",
+    "runtime recover",
+    "backup create",
+    "watchdog manual-record",
+)
+
+M3_M4_DOC_INDEX_MARKERS = (
+    "docs/profile-developer-surface.md",
+    "docs/secrets-operator.md",
+    "docs/runtime-recovery-ops.md",
+)
+
 PYPI_DOC_MARKERS = (
     "img.shields.io/badge/package-rexecop%20",
     "https://pypi.org/project/rexecop/",
@@ -187,6 +205,20 @@ def collect_errors() -> list[str]:
     _require(errors, "README.md", "dead-letter list")
     _require(errors, "README.md", "locks list")
     _require(errors, "README.md", "runbook show")
+    for marker in M3_M4_CLI_MARKERS:
+        _require(errors, "README.md", marker)
+    for marker in M3_M4_DOC_INDEX_MARKERS:
+        _require(errors, "README.md", marker)
+    _require(errors, "docs/govengine-integration.md", "govengine-supervisor explain")
+    _require(errors, "docs/govengine-integration.md", "explain_supervisor_action()")
+    _require(errors, "OPERATOR_RUNBOOK.md", "secrets doctor")
+    _require(errors, "OPERATOR_RUNBOOK.md", "operations unavailable")
+    _require(errors, "OPERATOR_RUNBOOK.md", "runtime recover")
+    for marker in M3_M4_DOC_INDEX_MARKERS:
+        _require(errors, "OPERATOR_RUNBOOK.md", marker)
+    _require(errors, "CHANGELOG.md", "secrets doctor")
+    _require(errors, "CHANGELOG.md", "runtime recover")
+    _require(errors, "CHANGELOG.md", "operations unavailable")
     _require(errors, "docs/alpha-sign-off.md", "validate_first_run_smoke.py")
     _require(errors, "docs/alpha-sign-off.md", "validate_stack_contracts.py")
     _require(errors, ".github/workflows/ci.yml", "validate_first_run_smoke.py")
