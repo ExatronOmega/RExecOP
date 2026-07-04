@@ -39,15 +39,15 @@ python scripts/validate_first_run_smoke.py
 
 - [ ] No plaintext tokens in git or committed `.rexecop/`
 - [ ] Environment YAML uses `secret_ref` / `base_url_secret_ref` only
-- [ ] After a run: `rg -i 'api_key|token|password' "$REXECOP_ROOT"/` shows only `[REDACTED]` or no hits
+- [ ] After a run: `rg -i 'api_key|token|password' "${REXECOP_ROOT:-.rexecop}"/` shows only `[REDACTED]` or no hits
 
 ### 2b. First-run readiness
 
 Uses `examples/first-run-demo`; no domain package, endpoint, or secret is required.
 
 ```bash
-rexecop init --guided
-rexecop doctor \
+rexecop --root "$REXECOP_ROOT" init --guided
+rexecop --root "$REXECOP_ROOT" doctor \
   --profile examples/first-run-demo/profile/profile.yaml \
   --env examples/first-run-demo/environment.yaml \
   --catalog examples/first-run-demo/catalog.yaml
@@ -81,19 +81,19 @@ Manual path: copy a staging env with `backend: http_api` pointing at your `/heal
 Uses `examples/profiles/runtime-fixture`; no domain package or real endpoint is required.
 
 ```bash
-rexecop plan \
+rexecop --root "$REXECOP_ROOT" plan \
   --profile examples/profiles/runtime-fixture/profile.yaml \
   --env examples/environments/runtime-fixture.example.yaml \
   --intent inspect_fixture_state \
   --target fixture-target \
   --mode dry_run
 
-rexecop start --operation <id>
-rexecop validate --operation <id>
+rexecop --root "$REXECOP_ROOT" start --operation <id>
+rexecop --root "$REXECOP_ROOT" validate --operation <id>
 ```
 
 - [ ] Final state `completed`
-- [ ] `.rexecop/sclite/<id>/` contains bundle artifacts
+- [ ] `"$REXECOP_ROOT"/sclite/<id>/` contains bundle artifacts
 - [ ] `metadata.policy_verdict.decision` is `allow` for dry_run readonly (default lab env ships `policy_pack`)
 - [ ] No secrets in evidence JSON
 
@@ -110,11 +110,11 @@ pytest tests/test_readonly_vertical_slice_e2e.py tests/test_connector_policy_eng
 Manual lab:
 
 ```bash
-rexecop plan \
+rexecop --root "$REXECOP_ROOT" plan \
   --profile examples/profiles/runtime-fixture/profile.yaml \
   --env examples/environments/runtime-fixture.policy.example.yaml \
   --intent inspect_fixture_state --target fixture-target --mode dry_run
-rexecop start --operation <id>
+rexecop --root "$REXECOP_ROOT" start --operation <id>
 ```
 
 - [ ] Readonly `inspect_fixture_state` completes with `policy_verdict.decision: allow`
@@ -159,7 +159,7 @@ pytest tests/test_staging_connectors_e2e.py -q
 
 - [ ] `staging_http_lab_ok` printed with operation id
 - [ ] `validate` → `passed: true`, rule `runtime_fixture.state_observed`
-- [ ] No secret material in `.rexecop/evidence/` (script checks; `rg` for manual audit)
+- [ ] No secret material in `"$REXECOP_ROOT"/evidence/` (script checks; `rg` for manual audit)
 
 ### 7. Worker and queue smoke
 
@@ -199,9 +199,10 @@ connector action (see `examples/environments/` patterns).
 ### Step 2 — Plan
 
 ```bash
-mkdir -p ~/lab/rexecop-runtime && cd ~/lab/rexecop-runtime
+export REXECOP_ROOT=~/lab/rexecop-runtime
+mkdir -p "$REXECOP_ROOT"
 
-rexecop plan \
+rexecop --root "$REXECOP_ROOT" plan \
   --profile /path/to/RExecOP/examples/profiles/http-health-fixture/profile.yaml \
   --env ~/lab/http-health.env.yaml \
   --intent http_health_check \
@@ -214,15 +215,14 @@ Record `<operation-id>` from output.
 For mutating `apply` plans, verify GovEngine decision events in evidence:
 
 ```bash
-rg 'govengine_decision' .rexecop/evidence/<operation-id>/ || true
+rg 'govengine_decision' "$REXECOP_ROOT"/evidence/<operation-id>/ || true
 ```
 
 ### Step 3 — Start workflow
 
 ```bash
-cd ~/lab/rexecop-runtime
-rexecop start --operation <operation-id>
-rexecop status --operation <operation-id>
+rexecop --root "$REXECOP_ROOT" start --operation <operation-id>
+rexecop --root "$REXECOP_ROOT" status --operation <operation-id>
 ```
 
 Expect terminal state `completed` for the golden path.
@@ -230,7 +230,7 @@ Expect terminal state `completed` for the golden path.
 ### Step 4 — Validate profile rules
 
 ```bash
-rexecop validate --operation <operation-id>
+rexecop --root "$REXECOP_ROOT" validate --operation <operation-id>
 ```
 
 Expect `passed: true` and rule `http_health_check.probe_ok`.
@@ -238,7 +238,7 @@ Expect `passed: true` and rule `http_health_check.probe_ok`.
 ### Step 5 — Inspect SCLite bundle (truth authority)
 
 ```bash
-ls -la .rexecop/sclite/<operation-id>/
+ls -la "$REXECOP_ROOT"/sclite/<operation-id>/
 ```
 
 Expect contract artifacts, scoped ticket, receipt, and evidence sidecars. Receipt
@@ -247,15 +247,15 @@ Expect contract artifacts, scoped ticket, receipt, and evidence sidecars. Receip
 Compare with non-authoritative export:
 
 ```bash
-test -f .rexecop/receipts/<operation-id>.json && \
+test -f "$REXECOP_ROOT"/receipts/<operation-id>.json && \
   echo "receipt export is summary only — sclite/ is authoritative"
 ```
 
 ### Step 6 — History and redaction
 
 ```bash
-rexecop history --operation <operation-id>
-rg -i 'api_key|token|password' .rexecop/evidence/<operation-id>/ || echo "no secret leaks"
+rexecop --root "$REXECOP_ROOT" history --operation <operation-id>
+rg -i 'api_key|token|password' "$REXECOP_ROOT"/evidence/<operation-id>/ || echo "no secret leaks"
 ```
 
 ## GovEngine adapter posture (production vs tests)
@@ -285,11 +285,11 @@ Production CLI paths use `default_govengine_adapter()` unless tests inject a sub
 
 | Location | Role | Authority |
 | --- | --- | --- |
-| `.rexecop/evidence/<op>/` | Append-only redacted runtime events (`EvidenceManager`) | Operator telemetry / debugging |
-| `.rexecop/sclite/<op>/` | Full GovEngine-integration bundle (`SCLiteArtifactEmitter`) | **Auditable truth** (SCLite) |
-| `.rexecop/receipts/<op>.json` | Export summary pointing at sclite descriptors | **Not** parallel truth |
-| `.rexecop/operations/`, `plans/` or `rexecop.db` | Runtime operation state (`file` or `sqlite` backend) | RExecOp operator store |
-| `.rexecop/queue/`, `locks/` | Concurrency and run-now backlog | Ephemeral operator mechanics |
+| `<root>/evidence/<op>/` | Append-only redacted runtime events (`EvidenceManager`) | Operator telemetry / debugging |
+| `<root>/sclite/<op>/` | Full GovEngine-integration bundle (`SCLiteArtifactEmitter`) | **Auditable truth** (SCLite) |
+| `<root>/receipts/<op>.json` | Export summary pointing at sclite descriptors | **Not** parallel truth |
+| `<root>/operations/`, `plans/` or `rexecop.db` | Runtime operation state (`file` or `sqlite` backend) | RExecOp operator store |
+| `<root>/queue/`, `locks/` | Concurrency and run-now backlog | Ephemeral operator mechanics |
 
 Evidence events include `govengine_decision_requested`, `step_completed`, `receipt_generated`.
 SCLite owns review semantics (`verify_ticket_use`, review bundles). When both exist, treat

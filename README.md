@@ -208,8 +208,8 @@ pytest
 ```
 
 GitHub Actions runs on every push and pull request: install `tecrax`, public truth validation,
-ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job (`build` +
-`twine check`).
+stack contract validation, profile conformance, first-run smoke, ruff, mypy, core boundary
+grep, secret scan, pytest, and a `package-dry-run` job (`build` + `twine check`).
 
 ## Documentation
 
@@ -217,6 +217,7 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 
 | Document | Topic |
 | --- | --- |
+| [docs/first-run.md](docs/first-run.md) | No-I/O onboarding: init, doctor, lint, plan |
 | [docs/architecture.md](docs/architecture.md) | Layer boundaries and execution path |
 | [docs/stack-contract-compatibility.md](docs/stack-contract-compatibility.md) | Cross-repo contract matrix and readiness labels |
 | [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, CLI orchestration, queue/lock |
@@ -233,6 +234,8 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 | [docs/safety-model.md](docs/safety-model.md) | Hard safety rules and operator posture |
 | [docs/known-limitations.md](docs/known-limitations.md) | Alpha scope and explicit non-claims |
 | [docs/distribution.md](docs/distribution.md) | Wheels, Git install, private index |
+| [docs/alpha-sign-off.md](docs/alpha-sign-off.md) | Automated and human sign-off gates |
+| [docs/adr-001-http-action-identity.md](docs/adr-001-http-action-identity.md) | HTTP action identity ADR |
 | [OPERATOR_LAB_RUNBOOK.md](OPERATOR_LAB_RUNBOOK.md) | Lab checklist and E2E walkthrough |
 | [OPERATOR_RUNBOOK.md](OPERATOR_RUNBOOK.md) | Installation, secrets, workflows, troubleshooting |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |

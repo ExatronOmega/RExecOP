@@ -45,8 +45,9 @@ The static adapter is documented as non-production in code, tests, and
 
 ## Runtime storage
 
-`.rexecop/` is gitignored. Operators must verify exports and evidence do not contain resolved
-secrets before sharing artifacts outside the host.
+Runtime roots (`--root`, named `--instance`, or fallback `./.rexecop`) are gitignored.
+Operators must verify exports and evidence do not contain resolved secrets before sharing
+artifacts outside the host.
 
 ## Pre-alpha limits
 

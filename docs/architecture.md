@@ -6,7 +6,7 @@ GovEngine admission with auditable outcomes projected into SCLite.
 ## Layer boundaries
 
 ```text
-Profiles (tecrax, examples/runtime-fixture)
+Profiles (tecrax, examples/first-run-demo, examples/runtime-fixture)
   intents, workflows, connector contracts, validation_rules/
 
 RExecOp (this package)
@@ -54,8 +54,9 @@ metadata into SCLite fields (`policy_decision`, tickets, receipts).
 4. **Profiles** own domain semantics — zero domain imports in `src/rexecop`.
 5. **Domain plugins** register via `rexecop.internal_actions` and `rexecop.connector_backends` entry points (e.g. `tecrax`).
 
-RExecOp must not become a second policy engine. Receipt exports under `.rexecop/receipts/` are
-operator summaries; authoritative bundles live under `.rexecop/sclite/<operation_id>/`.
+RExecOp must not become a second policy engine. Receipt exports under `<root>/receipts/`
+(default `./.rexecop/receipts/` when no explicit root is set) are operator summaries;
+authoritative bundles live under `<root>/sclite/<operation_id>/`.
 
 ## Plugin boundaries
 
@@ -103,7 +104,8 @@ src/rexecop/
   secrets/            secret_ref resolver port
   evidence/           internal events, redaction
   storage/            file store, sqlite store, factory, storage port protocol
-  runtime_ops/        queue, target lock, maintenance, rollback, coordinator
+  runtime/            runtime root resolution, init, doctor
+  runtime_ops/        queue, target lock, maintenance, rollback, coordinator, worker, watchdog
   validation/         declarative rule evaluator
   escalation/         failure package assembly
   cli.py              operator commands
@@ -111,9 +113,11 @@ src/rexecop/
 
 ## GovEngine relationship
 
+Current source pin: `govengine==0.16.5` (see `pyproject.toml`).
+
 GovEngine composes and validates `RuntimeAdmissionResult` and runner request/receipt shapes.
 RExecOp calls the GovEngine adapter before mutating execution and maps admission metadata into
-SCLite lifecycle artifacts. GovEngine `0.16.1` PolicyEngine evaluates
+SCLite lifecycle artifacts. GovEngine `0.16.5` PolicyEngine evaluates
 `environment.policy_pack` at plan and on every
 connector invoke. At operation level, RExecOp consumes a digest-bound GovEngine
 `PolicyEnforcementPlan` plus its existing `GovAdmissionDecision` and mechanically
@@ -128,7 +132,7 @@ Workflow execution additionally records `ExecutionRequest` / `ExecutionReceipt` 
 
 RExecOp emits a full GovEngine-integration lifecycle bundle on the completion path (scoped
 ticket v0.3, trust/carrier sidecars, kernel guard manifest, `review_bundle` pass). Internal
-evidence events under `.rexecop/evidence/` are runtime telemetry, not long-term truth.
+evidence events under `<root>/evidence/` are runtime telemetry, not long-term truth.
 
 ## Storage layout
 

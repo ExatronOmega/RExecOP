@@ -8,7 +8,7 @@ This document states what the current published alpha line does **not** provide 
 | Limitation | Detail |
 | --- | --- |
 | GovEngine is authority | RExecOp does not interpret organizational policy; `StaticGovEngineAdapter` is test-only |
-| SCLite is truth | Receipt exports under `.rexecop/receipts/` are summaries; bundles under `.rexecop/sclite/` are authoritative |
+| SCLite is truth | Receipt exports under `<root>/receipts/` are summaries; bundles under `<root>/sclite/` are authoritative |
 | No second policy engine | Configured policy packs and all mutating admission go through GovEngine — no bypass API |
 
 ## Operations and runtime
@@ -80,6 +80,8 @@ an untrusted proposal shape only, and mutation/apply readiness is explicitly fal
 - Workflow execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` in `shared_state` (schema `v0.2`)
 - GovEngine `PolicyEngine` when `environment.policy_pack` is configured (operation admission/control projection + connector invoke)
 - Host-owned worker, queue drain, and JSON `trigger` ingress
+- Runtime readiness CLI: explicit `--root`, named `--instance`, `init`, `doctor`, `env lint`, `profile lint`
+- Public-safe `examples/first-run-demo/` onboarding path with `scripts/validate_first_run_smoke.py`
 - Optional SQLite storage backend for operations, plans, and evidence
 - Wheel build + `twine check` validated in CI
 
@@ -99,5 +101,5 @@ Before treating alpha as fit for your environment:
 - [ ] Complete [OPERATOR_LAB_RUNBOOK.md](../OPERATOR_LAB_RUNBOOK.md) checklist
 - [ ] Confirm GovEngine and SCLite versions match `pyproject.toml` pins
 - [ ] Run a bounded read-only profile intent appropriate for the selected target
-- [ ] Verify `.rexecop/` exports contain no plaintext secrets
+- [ ] Verify runtime root exports contain no plaintext secrets
 - [ ] Accept alpha limits above for production-adjacent use

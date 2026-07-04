@@ -5,11 +5,14 @@ operation lifecycles into SCLite-compatible artifact bundles without forking a p
 
 ## Authority model
 
+Paths use `<root>/` for the selected runtime root (`--root`, `REXECOP_ROOT`, named
+`--instance`, or fallback `./.rexecop`).
+
 | Layer | Location | Role |
 | --- | --- | --- |
-| **SCLite artifacts** | `.rexecop/sclite/<operation_id>/` | Authoritative contracts, tickets, receipts, evidence |
-| **RExecOp internal events** | `.rexecop/evidence/<operation_id>/` | Runtime telemetry (redacted) |
-| **RExecOp receipt export** | `.rexecop/receipts/<operation_id>.json` | Summary pointer (`authority: sclite_artifact` or export marker) |
+| **SCLite artifacts** | `<root>/sclite/<operation_id>/` | Authoritative contracts, tickets, receipts, evidence |
+| **RExecOp internal events** | `<root>/evidence/<operation_id>/` | Runtime telemetry (redacted) |
+| **RExecOp receipt export** | `<root>/receipts/<operation_id>.json` | Summary pointer (`authority: sclite_artifact` or export marker) |
 
 `Operation.sclite_refs` stores descriptor links per artifact role after emission.
 
@@ -74,5 +77,5 @@ Aligned with GovEngine pin strategy in `pyproject.toml`.
 ## Boundary
 
 SCLite records auditable truth. RExecOp projects operation lifecycle outcomes into SCLite
-artifact shapes. RExecOp must not treat `.rexecop/receipts/` exports as authoritative when
-`.rexecop/sclite/` bundles exist for the same operation.
+artifact shapes. RExecOp must not treat `<root>/receipts/` exports as authoritative when
+`<root>/sclite/` bundles exist for the same operation.

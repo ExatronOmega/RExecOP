@@ -11,6 +11,9 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Aligned documentation truth surface: runtime-root path convention (`<root>/`),
+  `docs/first-run.md` in README index, expanded alpha sign-off gate list, archived
+  the `0.2.9a0` sign-off record, and added `validate_first_run_smoke` to CI.
 - Added first-run runtime readiness commands for source-line evaluation:
   global `--root`, `REXECOP_ROOT`, named `--instance` / `REXECOP_INSTANCE`,
   `rexecop init`, `rexecop init --guided`, and `rexecop doctor`.

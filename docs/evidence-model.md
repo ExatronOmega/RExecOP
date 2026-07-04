@@ -2,9 +2,12 @@
 
 RExecOp maintains two related but distinct evidence concepts.
 
+Paths below use `<root>/` for the selected runtime root (`--root`, `REXECOP_ROOT`,
+named `--instance`, or fallback `./.rexecop`).
+
 ## Internal evidence events
 
-**Location:** `.rexecop/evidence/<operation_id>/`
+**Location:** `<root>/evidence/<operation_id>/`
 
 - Append-only JSON events emitted by `EvidenceManager`
 - Used for operational history, debugging, and correlation
@@ -29,7 +32,7 @@ Representative events:
 
 ## SCLite artifacts (authoritative)
 
-**Location:** `.rexecop/sclite/<operation_id>/`
+**Location:** `<root>/sclite/<operation_id>/`
 
 Defined and validated by **SCLite** (`sclite-core`). Emitted by `SCLiteArtifactEmitter` on the
 completion path with full GovEngine-integration bundle parity (see [sclite-integration.md](sclite-integration.md)).
@@ -42,11 +45,11 @@ completion path with full GovEngine-integration bundle parity (see [sclite-integ
 
 ## Receipt export (non-authoritative)
 
-**Location:** `.rexecop/receipts/<operation_id>.json`
+**Location:** `<root>/receipts/<operation_id>.json`
 
 Written as an operator summary export after bundle emission.
 
-- Points at SCLite descriptors under `.rexecop/sclite/`
+- Points at SCLite descriptors under `<root>/sclite/`
 - Includes GovEngine decision summary and validation outcome
 - Must not be treated as a parallel truth schema when SCLite bundles exist
 

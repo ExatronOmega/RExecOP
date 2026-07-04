@@ -6,6 +6,10 @@ use systemd timers, cron, or an external orchestrator to invoke RExecOp CLI comm
 GovEngine `GovSchedulerTick` is a **metadata contract** for governance projections — not a
 scheduler implementation. See GovEngine `runtime_shell` docs.
 
+Runtime coordination paths below use `<root>/` for the selected runtime root (`--root`,
+`REXECOP_ROOT`, named `--instance`, or fallback `./.rexecop`). Prefer an explicit root in
+production units via `REXECOP_ROOT` or per-command `--root`.
+
 ## Patterns
 
 ### One-shot plan + start
@@ -45,7 +49,7 @@ echo '{"profile":"examples/profiles/runtime-fixture/profile.yaml","env":"example
 rexecop worker run --watch-inbox --poll-interval 60
 ```
 
-Drop JSON files into `.rexecop/inbox/*.json` using the same shape as `trigger` stdin.
+Drop JSON files into `<root>/inbox/*.json` using the same shape as `trigger` stdin.
 Inbox files may also carry a neutral trigger event. RExecOp evaluates only the
 mechanics; event meaning and operation mapping come from the selected profile's
 `triggers/trigger_rules.yaml`.
@@ -102,9 +106,9 @@ rexecop worker run --watch-inbox --watchdog \
 
 The watchdog is not infrastructure monitoring and does not interpret profile
 domain health. It records bounded worker heartbeats, queue depth, and inbox
-dead-letter decisions under `.rexecop/watchdog/`. When enabled with
+dead-letter decisions under `<root>/watchdog/`. When enabled with
 `--watch-inbox`, inbox files older than `--stale-inbox-seconds` are moved to
-`.rexecop/dead_letter/` before execution. Failed inbox files consume a bounded
+`<root>/dead_letter/` before execution. Failed inbox files consume a bounded
 retry budget and then move to dead-letter. Stale active operations produce a
 `block_autostart` watchdog record; watchdog does not mutate the operation FSM to
 hide the stuck state. Watchdog records include file names, operation ids, reasons
@@ -112,7 +116,7 @@ and bounded timing metadata; they do not copy trigger payloads.
 
 Watchdog records are operational runtime records. For each record RExecOp asks
 GovEngine for bounded supervisor-action admission and writes a SCLite
-`watchdog_decision.v0.1` artifact under `.rexecop/watchdog/sclite/`. RExecOp
+`watchdog_decision.v0.1` artifact under `<root>/watchdog/sclite/`. RExecOp
 still owns only runtime mechanics; GovEngine owns admission and SCLite owns the
 truth artifact.
 
@@ -174,11 +178,11 @@ ExecStart=/bin/bash -c 'OPERATION=$(/home/rexecop/.venv/bin/rexecop plan ...); /
 
 ## Lock and queue notes
 
-- Target lock files live under `.rexecop/locks/` (advisory, single-host).
-- Queue file: `.rexecop/queue/run_now.json`.
-- Watchdog records live under `.rexecop/watchdog/`; SCLite watchdog decision
-  artifacts live under `.rexecop/watchdog/sclite/`; dead-lettered trigger files
-  live under `.rexecop/dead_letter/`.
+- Target lock files live under `<root>/locks/` (advisory, single-host).
+- Queue file: `<root>/queue/run_now.json`.
+- Watchdog records live under `<root>/watchdog/`; SCLite watchdog decision
+  artifacts live under `<root>/watchdog/sclite/`; dead-lettered trigger files
+  live under `<root>/dead_letter/`.
 - Worker only starts operations in `approved` state on the queue; read-only plans still need `start` unless `trigger --auto-start`.
 - Trigger payloads may opt into `auto_react: "plan_only"`. After the source
   operation completes, RExecOp may create a reaction chain and child operation

@@ -53,6 +53,9 @@ jobs:
       - name: Validate profile conformance
         run: python scripts/validate_profile_conformance.py
 
+      - name: Validate first-run smoke
+        run: python scripts/validate_first_run_smoke.py
+
       - name: Ruff
         run: ruff check . --exclude ci-deps
 
