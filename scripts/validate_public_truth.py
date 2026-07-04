@@ -15,7 +15,7 @@ import rexecop  # noqa: E402
 EXPECTED_GOVENGINE = "govengine==0.16.8"
 EXPECTED_SCLITE = "sclite-core==1.0.8"
 EXPECTED_TECRAX_EXTRA = "tecrax==0.3.9a0"
-PUBLISHED_PYPI_VERSION = "0.2.14a0"
+PUBLISHED_PYPI_VERSION = "0.2.15a0"
 
 VERSION_DOCS = (
     "README.md",
@@ -40,6 +40,16 @@ STALE_OPERATOR_VERSIONS = (
     "0.2.3a0",
     "0.2.12a0",
     "0.2.13a0",
+    "0.2.14a0",
+)
+
+M8_CLAIM_MARKERS = (
+    "rexecop.cli_contract_registry.v0.1",
+    "rexecop.cli_error.v0.1",
+    "rexecop.structured_log_event.v0.1",
+    "rexecop.runtime_diagnostics.v0.1",
+    "observability logs list",
+    "contracts cli",
 )
 
 CLAIM_DOCS = (
@@ -216,6 +226,12 @@ def collect_errors() -> list[str]:
     _require(errors, "docs/cli-reference.md", "rexecop.structured_log_event.v0.1")
     _require(errors, "docs/cli-reference.md", "rexecop.runtime_diagnostics.v0.1")
     _require(errors, "docs/cli-reference.md", "observability logs list")
+    for marker in M8_CLAIM_MARKERS:
+        _require(errors, "CHANGELOG.md", marker)
+    _require(errors, "docs/stack-contract-compatibility.md", "M8 claim-to-code matrix")
+    _require(errors, "docs/alpha-sign-off.md", "validate_artifact_install_smoke.py")
+    _require(errors, "docs/alpha-sign-off.md", "validate_clean_install_smoke.py")
+    _require(errors, ".github/workflows/ci.yml", "validate_artifact_install_smoke.py")
     _require(errors, "docs/stack-contract-compatibility.md", EXPECTED_SCLITE)
     _require(errors, "docs/stack-contract-compatibility.md", EXPECTED_GOVENGINE)
     _require(errors, "docs/stack-contract-compatibility.md", EXPECTED_TECRAX_EXTRA)

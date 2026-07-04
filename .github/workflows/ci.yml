@@ -123,13 +123,5 @@ jobs:
       - name: Check package secret and path hygiene
         run: python scripts/validate_distribution.py dist
 
-      - name: Wheel install smoke
-        run: |
-          python -m venv /tmp/rexecop-wheel-smoke
-          /tmp/rexecop-wheel-smoke/bin/python -m pip install --upgrade pip
-          /tmp/rexecop-wheel-smoke/bin/python -m pip install -e ./ci-deps/sclite
-          /tmp/rexecop-wheel-smoke/bin/python -m pip install -e ./ci-deps/govengine
-          /tmp/rexecop-wheel-smoke/bin/python -m pip install dist/*.whl
-          /tmp/rexecop-wheel-smoke/bin/python -m pip check
-          /tmp/rexecop-wheel-smoke/bin/rexecop version
-          /tmp/rexecop-wheel-smoke/bin/python -c "import importlib.metadata as md, rexecop; assert md.version('rexecop') == rexecop.__version__"
+      - name: Artifact install smoke
+        run: python scripts/validate_artifact_install_smoke.py --dist dist

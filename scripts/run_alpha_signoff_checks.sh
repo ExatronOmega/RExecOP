@@ -54,6 +54,9 @@ if [[ "${REXECOP_SIGNOFF_BUILD:-0}" == "1" ]] && "$PYTHON" -c "import build" >/d
   rm -rf dist build *.egg-info
   "$PYTHON" -m build
   "$PYTHON" -m twine check dist/*
+  "$PYTHON" scripts/validate_distribution.py dist
+  echo "==> artifact install smoke"
+  "$PYTHON" scripts/validate_artifact_install_smoke.py --dist dist
 else
   echo "==> skip package build (set REXECOP_SIGNOFF_BUILD=1 locally; CI uses package-dry-run job)"
 fi

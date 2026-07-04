@@ -7,10 +7,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newest first.
+PyPI alpha line is **`0.2.15a0`**. Entries under
+[Releases](#releases) are newest first.
 
 ## Unreleased
 
+## [0.2.15a0] - 2026-07-04
+
+- Published `rexecop==0.2.15a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
+  and `tecrax==0.3.9a0` extra pin.
+- M8 release closure: public-truth validators, claim-to-code matrix, artifact
+  install smoke (`validate_artifact_install_smoke.py`) and clean-install smoke
+  (`validate_clean_install_smoke.py`) for M6/M7/M8 public surfaces.
 - Added M7 audit CLI projections: `receipt show`, `evidence show`,
   `chain summary`, and required-redaction `support bundle --redacted` with
   stable JSON schemas, digest checks, bounded evidence previews, SCLite-ref

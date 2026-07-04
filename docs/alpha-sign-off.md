@@ -1,6 +1,6 @@
 # Alpha sign-off
 
-RExecOp `0.2.14a0` source line — formal operator acceptance before production-adjacent use.
+RExecOp `0.2.15a0` source line — formal operator acceptance before production-adjacent use.
 
 This document separates **automated checks** (CI / script) from **human acceptance** (operator).
 
@@ -21,7 +21,9 @@ The script runs:
 5. Core boundary greps (`tecrax` / domain strings forbidden in core)
 6. `scripts/secret_scan.sh`
 7. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
-8. Optional `python -m build` + `twine check` when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
+8. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
+   when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
+9. Post-publish: `python scripts/validate_clean_install_smoke.py` against the PyPI line
 
 CI on `main` runs the same validators (except the optional build step), the full pytest
 suite, and the `package-dry-run` job. PyPI publication uses `.github/workflows/publish.yml`

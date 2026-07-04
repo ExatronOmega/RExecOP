@@ -1,6 +1,6 @@
 # Stack contract compatibility
 
-This matrix records the source contract baseline that RExecOp `0.2.14a0`
+This matrix records the source contract baseline that RExecOp `0.2.15a0`
 consumes. It is a compatibility guard, not a new source of truth.
 Document id: `stack-contract-compatibility`.
 
@@ -19,7 +19,7 @@ Document id: `stack-contract-compatibility`.
 | --- | --- | --- | --- |
 | `sclite-core` | `1.0.8` | `sclite-core==1.0.8` | SCLite truth, reaction, trigger-decision and watchdog-decision artifact schemas. |
 | `govengine` | `0.16.8` | `govengine==0.16.8` | PolicyEngine MVP, B2 enforcement-plan contracts, trigger-planning admission, supervisor-action admission and supervisor explanations. |
-| `rexecop` | `0.2.14a0` | current package | Neutral runner, connectors, catalog and reaction mechanics. |
+| `rexecop` | `0.2.15a0` | current package | Neutral runner, connectors, catalog and reaction mechanics. |
 | `tecrax` | `0.3.9a0` | `tecrax==0.3.9a0` via optional extra | Domain infrastructure profile. |
 
 ## Contract matrix
@@ -79,12 +79,23 @@ runtime behavior change. Compatibility policy id: `unknown_major_fail_closed`.
 Golden fixture `tests/fixtures/stack_contract_compatibility_golden.json` guards
 required GovEngine surfaces, runtime projections and SCLite artifact versions.
 
+## M8 claim-to-code matrix
+
+| Public claim | Code / schema anchor | Validator / test |
+| --- | --- | --- |
+| `contracts cli` registry | `rexecop.cli_contract_registry.v0.1` | `tests/test_cli_contracts.py`, `validate_public_truth.py` |
+| CLI error envelope | `rexecop.cli_error.v0.1` | `tests/test_cli_errors.py`, registry `error_schema` |
+| Structured logs | `rexecop.structured_log_event.v0.1` | `tests/test_observability.py`, `observability/logs list` |
+| Runtime diagnostics | `rexecop.runtime_diagnostics.v0.1` | `tests/test_observability.py`, `observability diagnostics` |
+| M6/M7 typed execution + truth-path | `project_truth_path()`, `admit_typed_execution()` | `validate_artifact_install_smoke.py`, `validate_clean_install_smoke.py` |
+
 ## Required gates
 
 The stack must keep these gates green before implementing later automation:
 
 - RExecOp: `scripts/validate_public_truth.py`, `scripts/validate_stack_contracts.py`,
   `scripts/validate_profile_conformance.py`, `scripts/validate_first_run_smoke.py`,
+  `scripts/validate_artifact_install_smoke.py`, `scripts/validate_clean_install_smoke.py`,
   `scripts/secret_scan.sh`, core-domain-token guard, `ruff`, `mypy src/rexecop`, and pytest.
 - Tecrax: public truth, active profile validation, secret topology validation, `ruff`, `mypy src/tecrax`, and pytest.
 - GovEngine: public truth, alpha readiness, `ruff`, `mypy govengine`, and pytest.
