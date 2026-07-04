@@ -39,6 +39,7 @@ def run_runtime_doctor(
         _check_storage_backend(storage_backend),
         _check_runtime_layout(root),
         _check_stack_packages(),
+        _check_typed_execution_stack_compatibility(),
         profile_check,
         _check_environment(env_path, expected_profile=expected_profile),
         _check_catalog(catalog_path),
@@ -131,6 +132,46 @@ def _check_runtime_layout(root: Path) -> dict[str, Any]:
             next_action=f"rexecop --root {root} init",
         )
     return _check("runtime_layout", CHECK_PASSED, "runtime layout is initialized")
+
+
+def _check_typed_execution_stack_compatibility() -> dict[str, Any]:
+    try:
+        from rexecop.execution.govengine_governance import (
+            evaluate_typed_execution_stack_compatibility,
+        )
+
+        result = evaluate_typed_execution_stack_compatibility()
+    except Exception as exc:  # noqa: BLE001 - doctor boundary
+        return _check(
+            "typed_execution_stack_compatibility",
+            CHECK_BLOCKER,
+            "typed execution stack compatibility check failed",
+            details={"error": str(exc)},
+            next_action="install compatible govengine and rerun rexecop doctor",
+        )
+    if result["status"] != "passed":
+        return _check(
+            "typed_execution_stack_compatibility",
+            CHECK_BLOCKER,
+            "GovEngine typed execution controls do not cover RExecOp backends",
+            details={
+                "unsupported_backends": result["unsupported_backends"],
+                "missing_controls": result["missing_controls"],
+                "blockers": result["blockers"],
+            },
+            next_action="align rexecop backend descriptors with govengine typed execution controls",
+        )
+    return _check(
+        "typed_execution_stack_compatibility",
+        CHECK_PASSED,
+        "GovEngine typed execution controls cover RExecOp backend descriptors",
+        details={
+            "supported_backends": result["supported_backends"],
+            "control_count": len(
+                result["govengine_control_catalog"].get("controls") or []
+            ),
+        },
+    )
 
 
 def _check_stack_packages() -> dict[str, Any]:

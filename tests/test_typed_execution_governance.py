@@ -14,12 +14,16 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.execution.executor import StepExecutor
 from rexecop.execution.govengine_governance import (
     TYPED_EXECUTION_GOVERNANCE_BUNDLE_SCHEMA,
+    TYPED_EXECUTION_STACK_COMPATIBILITY_SCHEMA,
     build_typed_execution_governance_request,
+    build_typed_execution_stack_compatibility_request,
     enforce_typed_execution_governance,
     evaluate_typed_execution_governance,
+    evaluate_typed_execution_stack_compatibility,
 )
 from rexecop.execution.typed_spec import compile_step_execution_spec
 from rexecop.profile.loader import load_profile
+from rexecop.runtime.doctor import run_runtime_doctor
 from rexecop.workflow.runner import WorkflowRunner
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -277,6 +281,43 @@ def test_workflow_runner_allows_readonly_fixture_with_matching_governance() -> N
     admission = result.shared_state["typed_execution_admissions"]["inspect_state"]
     assert admission["allowed"] is True
     assert admission["reason_code"] == "typed_execution_admission_allowed"
+
+
+def test_typed_execution_stack_compatibility_passes_for_builtin_backends() -> None:
+    result = evaluate_typed_execution_stack_compatibility()
+
+    assert result["status"] == "passed"
+    assert result["schema"] == TYPED_EXECUTION_STACK_COMPATIBILITY_SCHEMA
+    assert "http_api" in result["supported_backends"]
+    assert "static_fixture" in result["supported_backends"]
+    request = build_typed_execution_stack_compatibility_request()
+    assert request["backend_descriptors"]
+
+
+def test_runtime_doctor_includes_typed_execution_stack_compatibility(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    root.mkdir()
+    (root / "runtime_manifest.json").write_text("{}\n", encoding="utf-8")
+    for relative in (
+        "operations",
+        "plans",
+        "evidence",
+        "receipts",
+        "sclite",
+        "approvals",
+        "queue",
+    ):
+        (root / relative).mkdir(parents=True)
+    (root / "queue" / "run_now.json").write_text("[]\n", encoding="utf-8")
+
+    report = run_runtime_doctor(root)
+
+    check = next(
+        item
+        for item in report["checks"]
+        if item["id"] == "typed_execution_stack_compatibility"
+    )
+    assert check["status"] == "passed"
 
 
 def test_enforce_typed_execution_governance_stores_admission_record() -> None:

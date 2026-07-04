@@ -3,7 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from govengine import admit_typed_execution, explain_typed_execution_governance
+from govengine import (
+    admit_typed_execution,
+    explain_typed_execution_governance,
+    typed_execution_control_catalog,
+)
+from govengine.typed_execution_governance import (
+    evaluate_typed_execution_stack_compatibility as govengine_stack_compatibility,
+)
 
 from rexecop.catalog.digest import canonical_digest
 from rexecop.connectors.errors import READ_ONLY_MODES
@@ -15,6 +22,60 @@ from rexecop.execution.typed_spec import (
 )
 
 TYPED_EXECUTION_GOVERNANCE_BUNDLE_SCHEMA = "rexecop.typed_execution_governance_bundle.v0.1"
+TYPED_EXECUTION_STACK_COMPATIBILITY_SCHEMA = "rexecop.typed_execution_stack_compatibility.v0.1"
+
+EXPECTED_TYPED_EXECUTION_CONTROLS = (
+    "backend_class_supported",
+    "no_raw_shell",
+    "read_only_posture",
+    "capability_descriptor_digest_present",
+    "step_execution_spec_digest_present",
+    "payload_digest_present",
+    "receipt_required",
+    "output_digest_required",
+    "network_boundary_match",
+    "secret_ref_requirements_met",
+    "mutation_requires_approval",
+)
+
+
+def build_typed_execution_stack_compatibility_request(
+    *,
+    request_id: str = "rexecop-typed-execution-stack",
+) -> dict[str, Any]:
+    from rexecop.connectors.registry import list_connector_backend_descriptors
+
+    return {
+        "schema_version": "v0.1",
+        "request_id": request_id,
+        "backend_descriptors": [
+            item.as_dict() for item in list_connector_backend_descriptors()
+        ],
+        "required_controls": list(EXPECTED_TYPED_EXECUTION_CONTROLS),
+    }
+
+
+def evaluate_typed_execution_stack_compatibility(
+    *,
+    request_id: str = "rexecop-typed-execution-stack",
+) -> dict[str, Any]:
+    request = build_typed_execution_stack_compatibility_request(request_id=request_id)
+    report = govengine_stack_compatibility(request)
+    catalog = typed_execution_control_catalog()
+    payload = report.as_dict()
+    return {
+        "schema": TYPED_EXECUTION_STACK_COMPATIBILITY_SCHEMA,
+        "status": payload["status"],
+        "request_id": payload["request_id"],
+        "report_digest": payload["report_digest"],
+        "supported_backends": payload["supported_backends"],
+        "unsupported_backends": payload["unsupported_backends"],
+        "missing_controls": payload["missing_controls"],
+        "blockers": payload["blockers"],
+        "govengine_control_catalog": catalog,
+        "compatibility": payload,
+        "non_claims": list(payload["non_claims"]),
+    }
 
 
 def typed_execution_governance_overlay(operation: Mapping[str, Any]) -> dict[str, Any]:
