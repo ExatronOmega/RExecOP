@@ -176,6 +176,8 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
 | `policy explain` | Show GovEngine policy reasoning for one operation-shaped request without execution |
 | `operation explain` | Explain a stored operation plan, expected artifacts, bindings and safe next actions |
+| `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) before start |
+| `runbook show` | Show profile-owned runbook ref and bounded content for one intent |
 | `plan` | Create operation + plan; evaluate configured PolicyEngine and mutating admission gates |
 | `approve` | Manual approval after `approval_required` |
 | `start` | Execute workflow (queues when lock/capacity busy) |

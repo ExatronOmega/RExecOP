@@ -55,6 +55,39 @@ def main() -> int:
         ).strip()
         if not operation_id.startswith("op-"):
             raise SystemExit(f"unexpected operation id: {operation_id}")
+        operation_explain = _json(
+            "--root",
+            str(runtime_root),
+            "operation",
+            "explain",
+            "--operation",
+            operation_id,
+        )
+        if operation_explain.get("schema") != "rexecop.operation_explain.v0.1":
+            raise SystemExit(f"unexpected operation explain schema: {operation_explain}")
+        operation_review = _json(
+            "--root",
+            str(runtime_root),
+            "operation",
+            "review",
+            "--operation",
+            operation_id,
+        )
+        if operation_review.get("schema") != "rexecop.operation_review.v0.1":
+            raise SystemExit(f"unexpected operation review schema: {operation_review}")
+        if operation_review.get("status") != "proceed":
+            raise SystemExit(f"operation review did not proceed: {operation_review}")
+        runbook = _json(
+            "runbook",
+            "show",
+            "inspect",
+            "--profile",
+            str(PROFILE),
+        )
+        if runbook.get("schema") != "rexecop.runbook_show.v0.1":
+            raise SystemExit(f"unexpected runbook schema: {runbook}")
+        if runbook.get("runbook_ref") != "docs/inspect.md":
+            raise SystemExit(f"unexpected runbook ref: {runbook}")
         print(f"first_run_smoke_ok:root={runtime_root}")
     return 0
 

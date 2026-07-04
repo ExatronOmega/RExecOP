@@ -28,6 +28,10 @@ def yaml_document_digest(path: Path) -> str:
     return canonical_digest(value)
 
 
+def text_digest(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
 def profile_snapshot_digest(root: Path) -> str:
     snapshot: list[dict[str, str]] = []
     for path in sorted(item for item in root.rglob("*") if item.is_file()):

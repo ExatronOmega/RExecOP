@@ -11,6 +11,14 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added `rexecop operation review --operation <id>` with stable JSON plus
+  `--format table|markdown` decision screens for stored plans: digests,
+  backends, runbook refs, stop conditions, expected evidence, governance
+  blockers and safe next actions.
+- Added `rexecop runbook show <intent> --profile <profile>` for profile-owned
+  runbook metadata and bounded content bound to the profile digest.
+- Extended `scripts/validate_first_run_smoke.py` to gate
+  `operation explain`, `operation review` and `runbook show` after `plan`.
 - Added `rexecop policy explain`, which consumes GovEngine
   `PolicyEvaluationExplanation` for one operation-shaped request and returns
   redacted JSON without reimplementing policy reasoning in RExecOp.

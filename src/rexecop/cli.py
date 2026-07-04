@@ -18,7 +18,9 @@ from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
 from rexecop.operation.controller import OperationController
 from rexecop.operation.explain import explain_operation
+from rexecop.operation.review import render_operation_review, review_operation
 from rexecop.policy.explain import explain_operation_policy
+from rexecop.profile.runbook import render_runbook_show, show_profile_runbook
 from rexecop.profile.conformance import validate_profile_conformance
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
@@ -47,6 +49,7 @@ env_app = typer.Typer(help="Validate operator environment files.", no_args_is_he
 profile_app = typer.Typer(help="Validate profile contracts.", no_args_is_help=True)
 policy_app = typer.Typer(help="Inspect GovEngine policy decisions.", no_args_is_help=True)
 operation_app = typer.Typer(help="Inspect stored operation plans.", no_args_is_help=True)
+runbook_app = typer.Typer(help="Show profile-owned runbooks.", no_args_is_help=True)
 operations_app = typer.Typer(
     help="Query profile-defined operations and target applicability.",
     no_args_is_help=True,
@@ -56,6 +59,7 @@ app.add_typer(env_app, name="env")
 app.add_typer(profile_app, name="profile")
 app.add_typer(policy_app, name="policy")
 app.add_typer(operation_app, name="operation")
+app.add_typer(runbook_app, name="runbook")
 app.add_typer(operations_app, name="operations")
 
 _runtime_root: Path | None = None
@@ -259,6 +263,50 @@ def operation_explain_cmd(
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@operation_app.command("review")
+def operation_review_cmd(
+    operation: str = typer.Option(..., "--operation", help="Operation id."),
+    fmt: str = typer.Option(
+        "json",
+        "--format",
+        help="Output format: json, table or markdown.",
+    ),
+) -> None:
+    """Render a decision screen for a stored plan without executing it."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        plan = controller.store.load_plan(operation)
+        result = review_operation(item, plan)
+        output = render_operation_review(result, fmt)
+    except (RExecOpError, ValueError) as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(output, nl=not output.endswith("\n"))
+    if result["status"] == "blocked":
+        raise typer.Exit(code=1)
+
+
+@runbook_app.command("show")
+def runbook_show_cmd(
+    intent: str = typer.Argument(..., help="Profile intent id."),
+    profile: str = typer.Option(..., "--profile", help="Registered profile or path."),
+    fmt: str = typer.Option(
+        "json",
+        "--format",
+        help="Output format: json, table or markdown.",
+    ),
+) -> None:
+    """Show the profile-owned runbook bound to one intent."""
+    try:
+        result = show_profile_runbook(profile, intent)
+        output = render_runbook_show(result, fmt)
+    except (RExecOpError, ValueError) as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(output, nl=not output.endswith("\n"))
 
 
 @targets_app.command("list")
