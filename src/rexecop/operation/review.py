@@ -10,6 +10,7 @@ from rexecop.operation.explain import explain_operation
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 from rexecop.profile.loader import load_profile
+from rexecop.profile.operator_metadata import intent_operator_metadata
 
 OPERATION_REVIEW_SCHEMA = "rexecop.operation_review.v0.1"
 
@@ -18,9 +19,22 @@ def review_operation(operation: Operation, plan: OperationPlan) -> dict[str, Any
     """Build a stable operator decision screen for a stored plan."""
     explain = explain_operation(operation, plan)
     descriptor = _operation_descriptor(operation)
+    operator = _operator_metadata(operation)
     backends = _connector_backends(operation, plan)
     blockers = _governance_blockers(explain["governance"])
     status = _review_status(operation, blockers)
+    operator_label = (
+        str(operator.get("label") or "")
+        if operator is not None
+        else (descriptor.title if descriptor is not None else "")
+    )
+    operator_hints = {}
+    if operator is not None:
+        operator_hints = {
+            key: operator[key]
+            for key in ("runbook_hint", "safe_next_options")
+            if operator.get(key)
+        }
     return {
         "schema": OPERATION_REVIEW_SCHEMA,
         "status": status,
@@ -32,7 +46,7 @@ def review_operation(operation: Operation, plan: OperationPlan) -> dict[str, Any
             "intent": operation.intent,
             "target": operation.target,
             "mode": operation.mode,
-            "title": descriptor.title if descriptor is not None else "",
+            "title": operator_label or (descriptor.title if descriptor is not None else ""),
             "risk": plan.risk,
             "backends": backends,
             "side_effect_class": (
@@ -49,6 +63,7 @@ def review_operation(operation: Operation, plan: OperationPlan) -> dict[str, Any
                 ),
             },
             "runbook_ref": descriptor.runbook_ref if descriptor is not None else "",
+            "operator_hints": operator_hints,
             "stop_conditions": _stop_conditions(operation, plan, blockers),
             "expected_evidence": list(plan.expected_evidence),
             "expected_sclite_artifacts": [
@@ -83,6 +98,20 @@ def _operation_descriptor(operation: Operation):
     try:
         profile = load_profile(profile_root)
         return compile_operation_descriptor(profile, operation.intent)
+    except RExecOpValidationError:
+        return None
+
+
+def _operator_metadata(operation: Operation) -> dict[str, Any] | None:
+    profile_root_raw = str(operation.metadata.get("profile_root") or "").strip()
+    if not profile_root_raw:
+        return None
+    profile_root = Path(profile_root_raw)
+    if not profile_root.exists():
+        return None
+    try:
+        profile = load_profile(profile_root)
+        return intent_operator_metadata(profile, operation.intent)
     except RExecOpValidationError:
         return None
 

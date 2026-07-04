@@ -11,6 +11,8 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload
 from rexecop.operation.model import Operation
 from rexecop.operation.state import OperationState
+from rexecop.profile.loader import load_profile
+from rexecop.profile.operator_metadata import resolve_failure_operator_hints
 from rexecop.runtime_ops.coordinator import ACTIVE_RUNTIME_STATES, RuntimeCoordinator
 from rexecop.runtime_ops.target_lock import TargetLockManager
 from rexecop.runtime_ops.watchdog import supervisor_request_from_record
@@ -237,13 +239,23 @@ def _explain_operation_error(store: RuntimeStore, operation_id: str) -> dict[str
         plan = None
     failure_class, reason_code, summary = _classify_operation(operation)
     runbook_ref = ""
+    operator_hints: dict[str, Any] = {}
     if plan is not None:
         from rexecop.operation.review import review_operation
 
-        runbook_ref = str(
-            review_operation(operation, plan)["decision_screen"].get("runbook_ref") or ""
-        )
-    return {
+        review = review_operation(operation, plan)
+        runbook_ref = str(review["decision_screen"].get("runbook_ref") or "")
+        operator_hints = dict(review["decision_screen"].get("operator_hints") or {})
+    safe_next_actions = _operation_safe_next_actions(operation, failure_class)
+    profile_hints = _profile_failure_hints(operation, failure_class)
+    if profile_hints.get("operator_summary"):
+        summary = str(profile_hints["operator_summary"])
+    if profile_hints.get("runbook_hint") and not operator_hints.get("runbook_hint"):
+        operator_hints["runbook_hint"] = profile_hints["runbook_hint"]
+    hint_actions = list(profile_hints.get("safe_next_options") or [])
+    if hint_actions:
+        safe_next_actions = _merge_safe_next_actions(hint_actions, safe_next_actions)
+    payload = {
         "schema": EXPLAIN_ERROR_SCHEMA,
         "ref": operation_id,
         "ref_kind": "operation",
@@ -252,12 +264,15 @@ def _explain_operation_error(store: RuntimeStore, operation_id: str) -> dict[str
         "summary": summary,
         "operation": _operation_summary(operation),
         "runbook_ref": runbook_ref,
-        "safe_next_actions": _operation_safe_next_actions(operation, failure_class),
+        "safe_next_actions": safe_next_actions,
         "non_claims": [
             "Classification is operator guidance only.",
             "Does not execute recovery or mutate runtime state.",
         ],
     }
+    if operator_hints:
+        payload["operator_hints"] = operator_hints
+    return payload
 
 
 def _explain_dead_letter_error(store: RuntimeStore, name: str) -> dict[str, Any]:
@@ -419,6 +434,35 @@ def _classify_operation(
                 "Mutating operation is missing a complete governance contract.",
             )
     return "runtime", operation.state, f"Operation is in state {operation.state}."
+
+
+def _profile_failure_hints(operation: Operation, failure_class: str) -> dict[str, Any]:
+    profile_root_raw = str(operation.metadata.get("profile_root") or "").strip()
+    if not profile_root_raw:
+        return {}
+    profile_root = Path(profile_root_raw)
+    if not profile_root.exists():
+        return {}
+    try:
+        profile = load_profile(profile_root)
+        return resolve_failure_operator_hints(profile, operation.intent, failure_class)
+    except RExecOpValidationError:
+        return {}
+
+
+def _merge_safe_next_actions(
+    preferred: list[str],
+    base_actions: list[str],
+) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for action in [*preferred, *base_actions]:
+        text = str(action or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        merged.append(text)
+    return merged
 
 
 def _operation_safe_next_actions(operation: Operation, failure_class: str) -> list[str]:

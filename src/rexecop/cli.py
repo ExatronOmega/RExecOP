@@ -8,11 +8,7 @@ from pathlib import Path
 import typer
 
 from rexecop import __version__
-from rexecop.catalog.service import (
-    CatalogService,
-    compile_operation_descriptor,
-    compile_profile_operations,
-)
+from rexecop.catalog.service import CatalogService, compile_profile_operations
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
@@ -578,12 +574,14 @@ def operations_explain_cmd(
 ) -> None:
     """Show the profile-owned operation descriptor; this is not admission."""
     try:
+        from rexecop.profile.operator_metadata import explain_profile_operation
+
         loaded = load_profile(resolve_profile_path(profile))
-        operation = compile_operation_descriptor(loaded, intent)
+        result = explain_profile_operation(loaded, intent)
     except RExecOpError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(operation.as_dict(), indent=2, sort_keys=True))
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @app.command("reaction-plan")

@@ -20,6 +20,7 @@ from rexecop.profile.extension_manifest import (
 )
 from rexecop.profile.govengine_governance import evaluate_profile_governance
 from rexecop.profile.loader import LoadedProfile, load_profile
+from rexecop.profile.operator_metadata import evaluate_operator_metadata_coverage
 from rexecop.profile.resolver import list_registered_profiles, resolve_profile_path
 
 PROFILE_LIST_SCHEMA = "rexecop.profile_list.v0.1"
@@ -56,6 +57,7 @@ def show_profile_manifest(profile: str | Path, *, track: str = "readonly") -> di
     mutation = validate_profile_conformance(profile, track="mutation")
     developer_check = run_profile_developer_check(profile, track=track)
     govengine_governance = evaluate_profile_governance(profile, track=track)
+    operator_metadata = evaluate_operator_metadata_coverage(loaded)
     manifest = build_extension_manifest()
     return {
         "schema": PROFILE_SHOW_SCHEMA,
@@ -71,6 +73,7 @@ def show_profile_manifest(profile: str | Path, *, track: str = "readonly") -> di
         },
         "developer_check": developer_check,
         "govengine_governance": govengine_governance,
+        "operator_metadata": operator_metadata.as_dict(),
         "extension_manifest": {
             "schema": EXTENSION_MANIFEST_SCHEMA,
             "profile": loaded.name,
@@ -90,11 +93,14 @@ def run_profile_developer_check(
     conformance = validate_profile_conformance(profile, track=track)
     plugins = build_plugin_compatibility_report()
     govengine_governance = evaluate_profile_governance(profile, track=track)
+    loaded = load_profile(resolve_profile_path(profile))
+    operator_metadata = evaluate_operator_metadata_coverage(loaded)
     status = "passed"
     if (
         conformance.status != "passed"
         or plugins["status"] != "passed"
         or govengine_governance["status"] != "passed"
+        or operator_metadata.status == "failed"
     ):
         status = "failed"
     return {
@@ -105,6 +111,7 @@ def run_profile_developer_check(
         "conformance": conformance.as_dict(),
         "plugin_compatibility": plugins,
         "govengine_governance": govengine_governance,
+        "operator_metadata": operator_metadata.as_dict(),
         "requires_runtime_store": False,
     }
 

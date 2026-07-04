@@ -7,6 +7,7 @@ from typing import Any, Literal
 from rexecop.catalog.service import compile_profile_operations
 from rexecop.errors import RExecOpValidationError
 from rexecop.profile.loader import LoadedProfile, load_profile
+from rexecop.profile.operator_metadata import collect_operator_metadata_errors
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.compiler import compile_reaction_pack
 from rexecop.workflow.loader import load_workflow
@@ -233,6 +234,9 @@ def validate_profile_conformance(
         buckets.error("reaction", "reaction_observation:not_declared")
     if checked_track == "mutation" and not checked_intents:
         buckets.error("mutation", "mutation_track:no_mutation_candidates")
+
+    for error in collect_operator_metadata_errors(profile):
+        buckets.error("catalog", error)
 
     errors = buckets.flat_errors()
     return ProfileConformanceResult(

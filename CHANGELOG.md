@@ -11,6 +11,10 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added profile-owned `operator_metadata.yaml` projection with user-facing labels,
+  runbook hints, safe next options and failure mapping. RExecOp loads and validates
+  the document, surfaces it in `operations explain`, `profiles show`,
+  `operations unavailable`, `operation review` and `explain-error`.
 - Wired GovEngine G3 `explain_profile_governance()` into `profiles show` and
   `run_profile_developer_check()` as `govengine_governance` compatibility output.
 - Added M4 profile developer surface: categorized `profile lint` conformance,

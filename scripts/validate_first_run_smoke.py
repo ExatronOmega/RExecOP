@@ -38,7 +38,8 @@ def main() -> int:
             "--profile",
             str(PROFILE),
         )
-        if explain["id"] != "inspect" or explain["side_effect_class"] != "none":
+        descriptor = _operation_descriptor_payload(explain)
+        if descriptor["id"] != "inspect" or descriptor["side_effect_class"] != "none":
             raise SystemExit(f"unexpected explain payload: {explain}")
         operation_id = _run(
             "--root",
@@ -90,6 +91,13 @@ def main() -> int:
             raise SystemExit(f"unexpected runbook ref: {runbook}")
         print(f"first_run_smoke_ok:root={runtime_root}")
     return 0
+
+
+def _operation_descriptor_payload(payload: dict[str, object]) -> dict[str, object]:
+    operation = payload.get("operation")
+    if isinstance(operation, dict):
+        return operation
+    return payload
 
 
 def _json(*args: str) -> dict[str, object]:

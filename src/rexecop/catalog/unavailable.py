@@ -4,6 +4,9 @@ from typing import Any
 
 from rexecop.catalog.model import TargetDescriptor
 from rexecop.errors import RExecOpValidationError
+from rexecop.profile.loader import load_profile
+from rexecop.profile.operator_metadata import merge_profile_safe_next_options
+from rexecop.profile.resolver import resolve_profile_path
 
 OPERATIONS_UNAVAILABLE_SCHEMA = "rexecop.operations_unavailable.v0.1"
 
@@ -65,6 +68,21 @@ def _unavailable_entry(
     operation: dict[str, Any],
     applicability: dict[str, Any],
 ) -> dict[str, Any]:
+    base_options = _safe_next_options(
+        target_id=target.id,
+        operation=operation,
+        applicability=applicability,
+    )
+    profile_options = base_options
+    try:
+        profile = load_profile(resolve_profile_path(operation["profile_ref"]))
+        profile_options = merge_profile_safe_next_options(
+            profile,
+            str(operation["id"]),
+            base_options,
+        )
+    except RExecOpValidationError:
+        profile_options = base_options
     return {
         "operation_id": operation["id"],
         "title": operation["title"],
@@ -74,11 +92,7 @@ def _unavailable_entry(
         "missing_capabilities": list(applicability.get("missing_capabilities") or []),
         "missing_connectors": list(applicability.get("missing_connectors") or []),
         "why_unavailable": _why_unavailable(applicability),
-        "safe_next_options": _safe_next_options(
-            target_id=target.id,
-            operation=operation,
-            applicability=applicability,
-        ),
+        "safe_next_options": profile_options,
     }
 
 
