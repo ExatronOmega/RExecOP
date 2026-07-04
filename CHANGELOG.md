@@ -23,6 +23,9 @@ PyPI alpha line is **`0.2.14a0`**. Entries under [Releases](#releases) are newes
   operator-facing failure paths: missing operation explain, failed profile
   conformance, runtime blockers in `ops`, broken receipt digest, and
   unredacted support-bundle requests.
+- Extended `rexecop.cli_contract_registry.v0.1` with command groups,
+  `format_matrix`, and `exit_code_matrix` so M8 can audit JSON-only,
+  `--json` and `--format` command surfaces before broader CLI normalization.
 
 ## [0.2.14a0] - 2026-07-04
 

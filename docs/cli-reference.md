@@ -110,6 +110,14 @@ registry for operator-facing JSON surfaces and records command argv, stable
 schema id, supported output formats, exit-code meanings, redaction and
 bounded-output claims, and the authority boundary for each output.
 
+The registry also includes:
+
+- `command_groups`: current operator-facing groups such as audit inspection,
+  operation inspection, runtime triage and profile developer surfaces;
+- `format_matrix`: whether a command is JSON-only, JSON-only behind a `--json`
+  flag, or has a `--format` option;
+- `exit_code_matrix`: exit code meanings and the error schema for each command.
+
 The registry does not execute commands and does not replace command-specific
 tests. It is the M8 anti-drift surface for release-closure checks.
 

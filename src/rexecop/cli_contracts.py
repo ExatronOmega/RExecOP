@@ -22,8 +22,10 @@ class CliContract:
     command: tuple[str, ...]
     schema: str
     stability: str
+    group: str
     formats: tuple[str, ...] = ("json",)
     default_format: str = "json"
+    output_policy: str = "json_only"
     exit_codes: tuple[CliExitCode, ...] = (
         CliExitCode(0, "success"),
         CliExitCode(1, "validation_error_or_blocker"),
@@ -40,8 +42,10 @@ class CliContract:
             "argv": list(self.command),
             "schema": self.schema,
             "stability": self.stability,
+            "group": self.group,
             "formats": list(self.formats),
             "default_format": self.default_format,
+            "output_policy": self.output_policy,
             "exit_codes": [item.as_dict() for item in self.exit_codes],
             "redacted": self.redacted,
             "bounded_output": self.bounded_output,
@@ -56,24 +60,29 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         command=("status",),
         schema="rexecop.operation_status.v0.1",
         stability="alpha_contract",
-        notes=("Current command emits this shape without an explicit schema field.",),
+        group="operation_inspection",
     ),
     CliContract(
         command=("operation", "explain"),
         schema="rexecop.operation_explain.v0.1",
         stability="alpha_contract",
+        group="operation_inspection",
     ),
     CliContract(
         command=("operation", "review"),
         schema="rexecop.operation_review.v0.1",
         stability="alpha_contract",
+        group="operation_inspection",
         formats=("json", "table", "markdown"),
+        output_policy="format_option",
     ),
     CliContract(
         command=("operation", "diff"),
         schema="rexecop.operation_plan_diff.v0.1",
         stability="alpha_contract",
+        group="operation_inspection",
         formats=("json", "table", "markdown"),
+        output_policy="format_option",
         exit_codes=(
             CliExitCode(0, "unchanged"),
             CliExitCode(1, "drifted_unavailable_or_validation_error"),
@@ -83,6 +92,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         command=("receipt", "show"),
         schema="rexecop.receipt_show.v0.1",
         stability="alpha_contract",
+        group="audit_inspection",
         exit_codes=(
             CliExitCode(0, "present_missing_or_partial"),
             CliExitCode(1, "broken_digest_or_validation_error"),
@@ -94,18 +104,21 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         command=("evidence", "show"),
         schema="rexecop.evidence_show.v0.1",
         stability="alpha_contract",
+        group="audit_inspection",
         authority="runtime_evidence_projection",
     ),
     CliContract(
         command=("chain", "summary"),
         schema="rexecop.chain_summary.v0.1",
         stability="alpha_contract",
+        group="audit_inspection",
         authority="digest_link_projection",
     ),
     CliContract(
         command=("support", "bundle"),
         schema="rexecop.support_bundle.v0.1",
         stability="alpha_contract",
+        group="audit_inspection",
         exit_codes=(
             CliExitCode(0, "ready_or_partial"),
             CliExitCode(1, "action_required_or_unredacted_request"),
@@ -117,11 +130,14 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         command=("runtime", "status"),
         schema="rexecop.runtime_status.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
+        output_policy="json_only_flag",
     ),
     CliContract(
         command=("ops",),
         schema="rexecop.ops.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
         exit_codes=(
             CliExitCode(0, "no_blockers"),
             CliExitCode(1, "blockers_present_or_validation_error"),
@@ -131,26 +147,31 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         command=("dead-letter", "list"),
         schema="rexecop.dead_letter_list.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
     ),
     CliContract(
         command=("dead-letter", "show"),
         schema="rexecop.dead_letter_show.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
     ),
     CliContract(
         command=("locks", "list"),
         schema="rexecop.locks_list.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
     ),
     CliContract(
         command=("explain-error",),
         schema="rexecop.explain_error.v0.1",
         stability="alpha_contract",
+        group="runtime_triage",
     ),
     CliContract(
         command=("profile", "lint"),
         schema="rexecop.profile_conformance.v0.1",
         stability="alpha_contract",
+        group="profile_developer",
         exit_codes=(
             CliExitCode(0, "passed"),
             CliExitCode(1, "failed_or_validation_error"),
@@ -159,15 +180,21 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     ),
 )
 
+_OUTPUT_POLICIES = frozenset({"json_only", "json_only_flag", "format_option"})
+
 
 def cli_contract_registry() -> dict[str, Any]:
-    contracts = [item.as_dict() for item in sorted(CLI_CONTRACTS, key=lambda item: item.command)]
+    sorted_contracts = tuple(sorted(CLI_CONTRACTS, key=lambda item: item.command))
+    contracts = [item.as_dict() for item in sorted_contracts]
     return {
         "schema": CLI_CONTRACT_REGISTRY_SCHEMA,
         "status": "present",
         "scope": "rexecop_operator_facing_cli",
         "contract_count": len(contracts),
         "contracts": contracts,
+        "command_groups": _command_groups(sorted_contracts),
+        "format_matrix": _format_matrix(sorted_contracts),
+        "exit_code_matrix": _exit_code_matrix(sorted_contracts),
         "non_claims": [
             "Does not execute commands.",
             "Does not validate private runtime state.",
@@ -175,6 +202,41 @@ def cli_contract_registry() -> dict[str, Any]:
             "Does not replace command-specific tests.",
         ],
     }
+
+
+def _command_groups(contracts: tuple[CliContract, ...]) -> list[dict[str, Any]]:
+    groups: dict[str, list[str]] = {}
+    for item in contracts:
+        groups.setdefault(item.group, []).append(" ".join(item.command))
+    return [
+        {"group": group, "command_count": len(commands), "commands": commands}
+        for group, commands in sorted(groups.items())
+    ]
+
+
+def _format_matrix(contracts: tuple[CliContract, ...]) -> list[dict[str, Any]]:
+    return [
+        {
+            "command": " ".join(item.command),
+            "group": item.group,
+            "output_policy": item.output_policy,
+            "formats": list(item.formats),
+            "default_format": item.default_format,
+        }
+        for item in contracts
+    ]
+
+
+def _exit_code_matrix(contracts: tuple[CliContract, ...]) -> list[dict[str, Any]]:
+    return [
+        {
+            "command": " ".join(item.command),
+            "group": item.group,
+            "exit_codes": [code.as_dict() for code in item.exit_codes],
+            "error_schema": item.error_schema,
+        }
+        for item in contracts
+    ]
 
 
 def validate_cli_contract_registry(payload: dict[str, Any] | None = None) -> list[str]:
@@ -195,6 +257,15 @@ def validate_cli_contract_registry(payload: dict[str, Any] | None = None) -> lis
         seen.add(command)
         if not str(item.get("schema") or "").startswith("rexecop."):
             errors.append(f"{command}:schema")
+        if not str(item.get("group") or ""):
+            errors.append(f"{command}:group")
+        if item.get("output_policy") not in _OUTPUT_POLICIES:
+            errors.append(f"{command}:output_policy")
+        formats = item.get("formats")
+        if not isinstance(formats, list) or not formats:
+            errors.append(f"{command}:formats")
+        elif item.get("default_format") not in formats:
+            errors.append(f"{command}:default_format")
         if item.get("error_schema") != CLI_ERROR_SCHEMA:
             errors.append(f"{command}:error_schema")
         exit_codes = item.get("exit_codes")
@@ -206,4 +277,10 @@ def validate_cli_contract_registry(payload: dict[str, Any] | None = None) -> lis
             errors.append(f"{command}:redacted")
         if item.get("bounded_output") is not True:
             errors.append(f"{command}:bounded_output")
+    if not registry.get("command_groups"):
+        errors.append("command_groups")
+    if not registry.get("format_matrix"):
+        errors.append("format_matrix")
+    if not registry.get("exit_code_matrix"):
+        errors.append("exit_code_matrix")
     return errors

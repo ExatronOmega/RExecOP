@@ -90,7 +90,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Profile developer surface: `profiles list/show`, `connectors list/show`, `capabilities list`,
   `profile manifest`, `profile harness`, operator metadata projection
 - CLI contract registry: `contracts cli` emits command schemas, formats, exit-code policy
-  and redaction/authority claims for operator-facing surfaces
+  and redaction/authority claims for operator-facing surfaces, including
+  command groups, `format_matrix` and `exit_code_matrix`
 - CLI error envelope: selected M8 failure paths emit `rexecop.cli_error.v0.1`
   with normalized class, reason code, redacted message and safe next actions
 - M5 action metadata (no backend IO): `action list`, `action show`, `action preview`,

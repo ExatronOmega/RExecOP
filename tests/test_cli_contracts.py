@@ -32,6 +32,36 @@ EXPECTED_COMMAND_SCHEMAS = {
     "support bundle": "rexecop.support_bundle.v0.1",
 }
 
+EXPECTED_COMMAND_GROUPS = {
+    "audit_inspection": {
+        "chain summary",
+        "evidence show",
+        "receipt show",
+        "support bundle",
+    },
+    "operation_inspection": {
+        "operation diff",
+        "operation explain",
+        "operation review",
+        "status",
+    },
+    "profile_developer": {"profile lint"},
+    "runtime_triage": {
+        "dead-letter list",
+        "dead-letter show",
+        "explain-error",
+        "locks list",
+        "ops",
+        "runtime status",
+    },
+}
+
+EXPECTED_OUTPUT_POLICIES = {
+    "operation diff": "format_option",
+    "operation review": "format_option",
+    "runtime status": "json_only_flag",
+}
+
 
 def test_cli_contract_registry_is_valid_and_snapshot_stable() -> None:
     registry = cli_contract_registry()
@@ -41,14 +71,29 @@ def test_cli_contract_registry_is_valid_and_snapshot_stable() -> None:
     assert {
         item["command"]: item["schema"] for item in registry["contracts"]
     } == EXPECTED_COMMAND_SCHEMAS
+    assert {
+        item["group"]: set(item["commands"]) for item in registry["command_groups"]
+    } == EXPECTED_COMMAND_GROUPS
     assert registry["contract_count"] == len(EXPECTED_COMMAND_SCHEMAS)
     for item in registry["contracts"]:
         assert item["default_format"] in item["formats"]
+        assert item["output_policy"] == EXPECTED_OUTPUT_POLICIES.get(
+            item["command"], "json_only"
+        )
         assert item["authority"]
         assert item["redacted"] is True
         assert item["bounded_output"] is True
         assert item["error_schema"] == CLI_ERROR_SCHEMA
         assert any(code["code"] == 0 for code in item["exit_codes"])
+    assert {
+        item["command"]: item["output_policy"] for item in registry["format_matrix"]
+    } == {
+        command: EXPECTED_OUTPUT_POLICIES.get(command, "json_only")
+        for command in EXPECTED_COMMAND_SCHEMAS
+    }
+    assert {
+        item["command"]: item["error_schema"] for item in registry["exit_code_matrix"]
+    } == {command: CLI_ERROR_SCHEMA for command in EXPECTED_COMMAND_SCHEMAS}
 
 
 def test_contracts_cli_outputs_registry() -> None:
