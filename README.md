@@ -173,7 +173,12 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `init` | Create the runtime root layout without secrets or backend IO |
 | `doctor` | Check runtime root, storage, package compatibility, profile, env, catalog and secret refs |
 | `env lint` | Validate environment YAML and inline secret hygiene |
+| `secrets doctor` | Check secret refs, file permissions, duplicates and redaction (no values printed) |
 | `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
+| `profile manifest` | Emit extension manifest `v0.1` for profiles, plugins and resolvers |
+| `profiles list` / `profiles show` | Discover registered profiles, intents, tracks and developer-check metadata |
+| `connectors list` / `connectors show` | Discover connector backends, modes and certification tier |
+| `capabilities list` | List neutral runtime capabilities and their source |
 | `policy explain` | Show GovEngine policy reasoning for one operation-shaped request without execution |
 | `operation explain` | Explain a stored operation plan, expected artifacts, bindings and safe next actions |
 | `operation review` | Decision screen for a stored plan (`--format json\|table\|markdown`) before start |
@@ -198,6 +203,7 @@ SCLite bundles, receipt exports, queue, locks and trigger inbox.
 | `trigger` | Create operation from JSON stdin or CLI flags (webhook-friendly) |
 | `targets list` / `targets show` | Query bounded descriptors from a private target catalog |
 | `operations list` / `operations explain` | Query profile-owned operations and target applicability |
+| `operations unavailable` | List operations not technically applicable to one catalog target |
 | `status` / `history` | Operation state and evidence history |
 | `version` | Package version |
 
@@ -236,6 +242,8 @@ grep, secret scan, pytest, and a `package-dry-run` job (`build` + `twine check`)
 | [docs/sclite-integration.md](docs/sclite-integration.md) | Artifact emission and authority model |
 | [docs/evidence-model.md](docs/evidence-model.md) | Internal events vs SCLite truth |
 | [docs/profile-contract.md](docs/profile-contract.md) | Profile layout and entry points |
+| [docs/profile-developer-surface.md](docs/profile-developer-surface.md) | Profiles/connectors/capabilities discoverability and extension manifest |
+| [docs/secrets-operator.md](docs/secrets-operator.md) | `secrets doctor`, ref resolution and file policy |
 | [docs/connector-contract.md](docs/connector-contract.md) | `http_api`, secrets, error taxonomy |
 | [docs/execution-contract.md](docs/execution-contract.md) | ExecutionRequest/Receipt, bounded output |
 | [docs/environment-contract.md](docs/environment-contract.md) | Target, group, and connector semantics |

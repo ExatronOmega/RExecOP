@@ -11,6 +11,17 @@ PyPI alpha line is **`0.2.11a0`**. Entries under [Releases](#releases) are newes
 
 ## Unreleased
 
+- Added M4 profile developer surface: categorized `profile lint` conformance,
+  `rexecop profile manifest`, `profiles list/show`, `connectors list/show`,
+  `capabilities list`, extension manifest `v0.1`, plugin compatibility report,
+  and `run_profile_developer_check()` without a runtime store. Documented in
+  [docs/profile-developer-surface.md](docs/profile-developer-surface.md).
+- Added `rexecop secrets doctor` for missing refs, duplicate ref reuse, secrets
+  file permissions, orphan file keys and redaction self-test without printing
+  secret values. Documented in [docs/secrets-operator.md](docs/secrets-operator.md).
+- Added `rexecop operations unavailable` for catalog target technical
+  applicability reasoning with `why_unavailable` and `safe_next_options`.
+  Documented in [docs/operator-catalog.md](docs/operator-catalog.md).
 - Added M3 runtime triage commands: `rexecop runtime status --json`, `rexecop ops`,
   `rexecop dead-letter list/show`, `rexecop locks list`, and
   `rexecop explain-error <ref>` with bounded failure classes and safe next actions.

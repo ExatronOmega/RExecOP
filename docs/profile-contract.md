@@ -33,6 +33,25 @@ requiring mutation candidates to pass. `mutation` validates bounded mutating
 candidates as candidates only; it is not an authorization or `mutation_ready`
 claim. `all` checks all profile operations.
 
+Lint output includes conformance **categories**: `readonly`, `mutation`,
+`reaction`, `catalog`, `connector`, and `validation`. Each category reports
+`status`, `errors`, and `warnings` independently of the overall track result.
+
+## Developer surface
+
+Profile authors can inspect registered profiles, extension contracts and plugin
+compatibility without a runtime store:
+
+```bash
+rexecop profiles list
+rexecop profiles show tecrax --track readonly
+rexecop profile manifest
+```
+
+See [profile-developer-surface.md](profile-developer-surface.md) for
+`connectors list/show`, `capabilities list`, extension manifest fields, and the
+recommended developer journey.
+
 ## External Tecrax package
 
 Production Tecrax semantics ship in [`tecrax`](https://github.com/rozmiarD/tecrax):

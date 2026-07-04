@@ -89,6 +89,15 @@ Environment YAML must use `secret_ref` / `base_url_secret_ref` — inline secret
 Use `rexecop env lint --env <environment.yaml> --profile <profile.yaml>` before
 planning a new operator environment.
 
+When the environment declares secret refs, also run:
+
+```bash
+rexecop secrets doctor --env <environment.yaml> [--secrets-file ~/.rexecop/secrets.yaml]
+```
+
+See [docs/secrets-operator.md](docs/secrets-operator.md). The command checks ref
+resolution and file policy without printing secret values.
+
 ## Environment files
 
 Copy a template out of git:
@@ -266,7 +275,8 @@ Directory is gitignored — back up operator-side if retention is required.
 
 - [ ] No secrets in git or committed `.rexecop/`
 - [ ] Environment uses `secret_ref` only
-- [ ] `rexecop doctor`, `rexecop env lint`, and `rexecop profile lint` pass
+- [ ] `rexecop doctor`, `rexecop env lint`, `rexecop profile lint`, and `rexecop secrets doctor` pass (when using secret refs)
+- [ ] Catalog targets checked with `rexecop operations unavailable` when applicability is unclear ([docs/operator-catalog.md](docs/operator-catalog.md))
 - [ ] Read-only path validated before apply
 - [ ] Apply tested on non-critical target first
 - [ ] Target lock enabled for mutating workloads
@@ -276,6 +286,8 @@ Directory is gitignored — back up operator-side if retention is required.
 ## Related documents
 
 - [OPERATOR_LAB_RUNBOOK.md](OPERATOR_LAB_RUNBOOK.md)
+- [docs/profile-developer-surface.md](docs/profile-developer-surface.md)
+- [docs/secrets-operator.md](docs/secrets-operator.md)
 - [docs/architecture.md](docs/architecture.md)
 - [docs/safety-model.md](docs/safety-model.md)
 - [docs/govengine-integration.md](docs/govengine-integration.md)

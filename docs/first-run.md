@@ -37,6 +37,21 @@ rexecop env lint \
 
 Expected result: both commands return `status: passed`.
 
+Optional developer-surface checks (no credentials required for the demo fixture):
+
+```bash
+rexecop profiles show examples/first-run-demo/profile/profile.yaml --track readonly
+rexecop operations unavailable \
+  --catalog examples/first-run-demo/catalog.yaml \
+  --target fixture-target
+rexecop connectors list
+rexecop capabilities list
+```
+
+Expected result: `profiles show` reports readonly conformance passed;
+`operations unavailable` returns an empty `unavailable` list when the target
+matches the demo profile technically.
+
 ## 4. Explain and plan the demo operation
 
 ```bash

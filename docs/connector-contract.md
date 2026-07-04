@@ -160,6 +160,20 @@ Connector-level evaluation remains plain-allow-only; connector-specific obligati
 | Secrets | `identity_file_secret_ref` resolves via `REXECOP_SECRETS_FILE`; never commit key material. |
 | Policy ownership | `environment.policy_pack` → `PolicyEngine` at invoke; allowlist + mode checks remain for shell backends |
 
+## Discoverability CLI
+
+Neutral connector backend metadata is exposed without backend IO:
+
+```bash
+rexecop connectors list
+rexecop connectors show http_api
+rexecop capabilities list
+```
+
+Built-in backends report `certification_tier: core` (or `bootstrap` for `mock`).
+Plugin entry points report `certification_tier: plugin`. See
+[profile-developer-surface.md](profile-developer-surface.md).
+
 ## Boundary
 
 Infrastructure products are **profile/operator configuration targets** of generic connectors,

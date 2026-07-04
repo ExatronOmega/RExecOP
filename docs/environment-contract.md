@@ -17,6 +17,20 @@ sanitization rules used by runtime paths, optionally checks that the environment
 profile matches the supplied profile, and reports target, connector and
 `secret_ref` counts as JSON.
 
+## Secrets doctor
+
+Use `secrets doctor` when the environment declares `secret_ref` fields and you
+need to verify resolution and file policy **without printing secret values**:
+
+```bash
+rexecop secrets doctor --env /operator/private/environment.yaml
+rexecop secrets doctor --env ./environment.yaml --secrets-file ~/.rexecop/secrets.yaml
+```
+
+`env lint` checks YAML hygiene; `secrets doctor` checks missing refs, duplicate
+ref reuse, `REXECOP_SECRETS_FILE` permissions, orphan file keys, and a redaction
+self-test. See [secrets-operator.md](secrets-operator.md).
+
 ## Target semantics
 
 Targets live under `environment.targets` as a map of names to specifications.

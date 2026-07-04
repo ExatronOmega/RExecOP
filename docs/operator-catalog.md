@@ -72,7 +72,36 @@ rexecop targets show node-01 --catalog /operator/private/targets.yaml
 rexecop operations list --profile profile_name
 rexecop operations explain observe_status --profile profile_name
 rexecop operations list --catalog /operator/private/targets.yaml --target node-01
+rexecop operations unavailable --catalog /operator/private/targets.yaml --target node-01
+rexecop operations unavailable --catalog /operator/private/targets.yaml --target node-01 --intent observe_status
 ```
+
+## Unavailable operations
+
+When a target does not satisfy the technical contract for one or more profile
+operations, use `operations unavailable` instead of reading raw applicability
+from `operations list`:
+
+```bash
+rexecop operations unavailable \
+  --catalog /operator/private/targets.yaml \
+  --target node-01
+```
+
+The command returns JSON (`rexecop.operations_unavailable.v0.1`) listing only
+operations where `applicable: false`. Each entry includes:
+
+- `status` — `unsupported_profile`, `unsupported_target_kind`,
+  `missing_capability`, or `missing_connector`;
+- `reason_codes`, `missing_capabilities`, `missing_connectors`;
+- `why_unavailable` — bounded explanation without policy claims;
+- `safe_next_options` — catalog/profile/runbook commands to fix technical gaps.
+
+Operations that are technically satisfied (`admission_required`) are **not**
+listed. GovEngine admission is still required before execution.
+
+This surface is not authorization. It explains why a target cannot plan/start
+an operation for technical reasons only.
 
 Plan directly from the catalog:
 

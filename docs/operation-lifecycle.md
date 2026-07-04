@@ -36,7 +36,10 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `init` | Create the runtime root layout without secrets or backend IO |
 | `doctor` | Check runtime root, storage, stack package compatibility and optional profile/env/catalog inputs |
 | `env lint` | Validate an environment file and inline secret hygiene before planning |
+| `secrets doctor` | Check secret ref resolution, file policy and redaction without printing values |
 | `profile lint` | Validate profile conformance for `readonly`, `mutation` or `all` tracks |
+| `profiles list` / `profiles show` | Profile discoverability, tracks and developer-check metadata |
+| `operations unavailable` | Technical unavailability reasoning for one catalog target |
 | `policy explain` | Show GovEngine policy reasoning for an operation-shaped request without execution |
 | `operation explain` | Explain a stored operation plan, bindings, expected artifacts and safe next actions |
 | `plan` | Create operation + `OperationPlan`; GovEngine gate for mutating modes |
