@@ -7,10 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.19a0`**. Entries under
+PyPI alpha line is **`0.2.20a0`**. Entries under
 [Releases](#releases) are newest first.
 
 ## Unreleased
+
+## [0.2.20a0] - 2026-07-05
+
+- Published `rexecop==0.2.20a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
+  and `tecrax==0.3.14a0` extra pin; clean-install smoke green on repaired line.
 
 ## [0.2.19a0] - 2026-07-05
 
