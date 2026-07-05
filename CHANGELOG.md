@@ -7,26 +7,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.22a0`**. Entries under
+PyPI alpha line is **`0.2.23a0`**. Entries under
 [Releases](#releases) are newest first.
 
 ## Unreleased
 
+## [0.2.23a0] - 2026-07-05
+
+- Published `rexecop==0.2.23a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
+  and `tecrax==0.3.18a0` extra pin; clean-install smoke green on coordinated line.
 - `3a3838c`: align `doctor` `stack_packages` pin with `govengine==0.16.9`; fixes
-  `validate_first_run_smoke` blocker after GovEngine bump (source fix, no PyPI yet).
+  `validate_first_run_smoke` / `rexecop doctor` blocker after GovEngine bump.
+- `9cf42b9`: internal CLI modularization (`cli_context.py`, `cli_groups/*`) without
+  changing public command names (shipped in source since `0.2.17a0`, included in this
+  published line).
+- **Current supported line:** `rexecop==0.2.23a0` or `rexecop[tecrax]==0.2.23a0`.
+  Supersedes `0.2.22a0`.
 
 ## [0.2.22a0] - 2026-07-05
 
 - Published `rexecop==0.2.22a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
-  and `tecrax==0.3.17a0` extra pin (`e15cd1f`); clean-install smoke green on coordinated
-  line.
-- **Feature delta:** none since `0.2.17a0`. G8 CLI output, `plan --explain` and lifecycle
-  formatters shipped in `0.2.17a0`; `0.2.18a0`–`0.2.22a0` are coordinated stack repair
-  artifacts only.
-- **Why republished:** each wheel ships an exact `tecrax==…` extra pin. Stale extra pins
-  broke `pip install "rexecop[tecrax]==…"` until a matching Tecrax wheel existed on PyPI.
-- **Current supported line:** `rexecop==0.2.22a0` or `rexecop[tecrax]==0.2.22a0`.
-  Older repair wheels below are archived only.
+  and `tecrax==0.3.17a0` extra pin (`e15cd1f`); superseded by `0.2.23a0`.
+- **Feature delta:** none since `0.2.17a0`. `0.2.18a0`–`0.2.22a0` were coordinated stack
+  repair artifacts only (stale `tecrax` extra pins).
 
 ### Publish follow-up repair line (superseded, pin-only)
 
