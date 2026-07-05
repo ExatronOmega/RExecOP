@@ -12,32 +12,30 @@ PyPI alpha line is **`0.2.22a0`**. Entries under
 
 ## Unreleased
 
+- `3a3838c`: align `doctor` `stack_packages` pin with `govengine==0.16.9`; fixes
+  `validate_first_run_smoke` blocker after GovEngine bump (source fix, no PyPI yet).
+
 ## [0.2.22a0] - 2026-07-05
 
 - Published `rexecop==0.2.22a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
-  and `tecrax==0.3.17a0` extra pin; clean-install smoke green on coordinated line.
+  and `tecrax==0.3.17a0` extra pin (`e15cd1f`); clean-install smoke green on coordinated
+  line.
+- **Feature delta:** none since `0.2.17a0`. G8 CLI output, `plan --explain` and lifecycle
+  formatters shipped in `0.2.17a0`; `0.2.18a0`–`0.2.22a0` are coordinated stack repair
+  artifacts only.
+- **Why republished:** each wheel ships an exact `tecrax==…` extra pin. Stale extra pins
+  broke `pip install "rexecop[tecrax]==…"` until a matching Tecrax wheel existed on PyPI.
+- **Current supported line:** `rexecop==0.2.22a0` or `rexecop[tecrax]==0.2.22a0`.
+  Older repair wheels below are archived only.
 
-## [0.2.21a0] - 2026-07-05
+### Publish follow-up repair line (superseded, pin-only)
 
-- Published `rexecop==0.2.21a0` on PyPI with `tecrax==0.3.15a0` extra pin (superseded).
-
-## [0.2.20a0] - 2026-07-05
-
-- Published `rexecop==0.2.20a0` on PyPI with `tecrax==0.3.14a0` extra pin (superseded by `0.2.21a0`).
-
-## [0.2.19a0] - 2026-07-05
-
-- Published `rexecop==0.2.19a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
-  and `tecrax==0.3.13a0` extra pin.
-- Repaired coordinated `rexecop[tecrax]` PyPI resolution after `0.2.18a0` shipped with a
-  stale `tecrax==0.3.12a0` extra.
-
-## [0.2.18a0] - 2026-07-05
-
-- Published `rexecop==0.2.18a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
-  and `tecrax==0.3.12a0` extra pin.
-- Repaired coordinated `rexecop[tecrax]` PyPI resolution after `0.2.17a0` shipped with a
-  stale `tecrax==0.3.12a0` extra.
+| RExecOp | Tecrax extra pin | Commit |
+| --- | --- | --- |
+| `0.2.21a0` | `0.3.15a0` | `3730d1f` |
+| `0.2.20a0` | `0.3.14a0` | `ed17f0f` |
+| `0.2.19a0` | `0.3.13a0` | `1ba582f` |
+| `0.2.18a0` | `0.3.12a0` | `7271bda` |
 
 ## [0.2.17a0] - 2026-07-05
 
