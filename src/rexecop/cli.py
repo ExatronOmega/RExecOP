@@ -19,13 +19,28 @@ from rexecop.action.surface import (
 )
 from rexecop.action.templates import list_action_templates
 from rexecop.catalog.service import CatalogService, compile_profile_operations
+from rexecop.cli_context import (
+    configure_runtime,
+    emit_cli_error,
+    runtime_instance,
+    runtime_root,
+)
+from rexecop.cli_context import (
+    controller as get_controller,
+)
+from rexecop.cli_context import (
+    reaction_service as get_reaction_service,
+)
 from rexecop.cli_contracts import cli_contract_registry
 from rexecop.cli_errors import (
-    cli_error_json,
     cli_error_payload,
     lookup_cli_error,
     validation_cli_error,
 )
+from rexecop.cli_groups import backup as backup_commands
+from rexecop.cli_groups import observability as observability_commands
+from rexecop.cli_groups import runtime_inspection
+from rexecop.cli_groups import secrets as secrets_commands
 from rexecop.cli_output import (
     DOCTOR_RENDERERS,
     ENV_LINT_RENDERERS,
@@ -36,7 +51,6 @@ from rexecop.cli_output import (
     PLAN_EXPLAIN_RENDERERS,
     POLICY_EXPLAIN_RENDERERS,
     PROFILE_LINT_RENDERERS,
-    SECRETS_DOCTOR_RENDERERS,
     configure_cli_output,
     emit_failure,
     emit_failure_payload,
@@ -45,15 +59,12 @@ from rexecop.cli_output import (
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
-from rexecop.observability.diagnostics import collect_runtime_diagnostics
-from rexecop.observability.structured_log import list_structured_logs
 from rexecop.operation.audit import (
     build_support_bundle,
     show_evidence,
     show_receipt,
     summarize_chain,
 )
-from rexecop.operation.controller import OperationController
 from rexecop.operation.diff import (
     diff_operation_plan,
     render_operation_plan_diff,
@@ -77,20 +88,8 @@ from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.profile.runbook import render_runbook_show, show_profile_runbook
 from rexecop.reaction.model import ReactionContext
-from rexecop.reaction.service import ReactionService
 from rexecop.runtime.doctor import CHECK_BLOCKER, count_secret_refs, run_runtime_doctor
 from rexecop.runtime.init import initialize_runtime_root
-from rexecop.runtime.root import resolve_runtime_instance, resolve_runtime_root
-from rexecop.runtime_ops.backup import create_runtime_backup, restore_runtime_backup
-from rexecop.runtime_ops.recovery import run_startup_recovery
-from rexecop.runtime_ops.triage import (
-    collect_ops_snapshot,
-    collect_runtime_status,
-    explain_error,
-    list_dead_letter_manifest,
-    list_locks_manifest,
-    show_dead_letter_item,
-)
 from rexecop.runtime_ops.watchdog import WatchdogService
 from rexecop.runtime_ops.worker import (
     drain_queue,
@@ -99,9 +98,6 @@ from rexecop.runtime_ops.worker import (
     trigger_event,
     trigger_operation,
 )
-from rexecop.secrets.doctor import run_secrets_doctor
-from rexecop.secrets.suggest import suggest_secret_refs
-from rexecop.storage.factory import create_store, resolve_storage_backend
 from rexecop.truth_path import project_truth_path
 
 app = typer.Typer(
@@ -145,17 +141,6 @@ operations_app = typer.Typer(
     help="Query profile-defined operations and target applicability.",
     no_args_is_help=True,
 )
-runtime_app = typer.Typer(help="Runtime triage and status.", no_args_is_help=True)
-dead_letter_app = typer.Typer(help="Inspect dead-letter items.", no_args_is_help=True)
-locks_app = typer.Typer(help="Inspect advisory target locks.", no_args_is_help=True)
-observability_app = typer.Typer(
-    help="Bounded structured logs and runtime diagnostics.",
-    no_args_is_help=True,
-)
-observability_logs_app = typer.Typer(
-    help="List structured observability logs.",
-    no_args_is_help=True,
-)
 app.add_typer(targets_app, name="targets")
 app.add_typer(env_app, name="env")
 app.add_typer(profile_app, name="profile")
@@ -172,24 +157,13 @@ app.add_typer(chain_app, name="chain")
 app.add_typer(support_app, name="support")
 app.add_typer(runbook_app, name="runbook")
 app.add_typer(operations_app, name="operations")
-app.add_typer(runtime_app, name="runtime")
-app.add_typer(dead_letter_app, name="dead-letter")
-app.add_typer(locks_app, name="locks")
-observability_app.add_typer(observability_logs_app, name="logs")
-app.add_typer(observability_app, name="observability")
-backup_app = typer.Typer(
-    help="Backup and restore the operator runtime store.",
-    no_args_is_help=True,
-)
-secrets_app = typer.Typer(
-    help="Inspect secret references without resolving or printing values.",
-    no_args_is_help=True,
-)
-app.add_typer(backup_app, name="backup")
-app.add_typer(secrets_app, name="secrets")
-
-_runtime_root: Path | None = None
-_runtime_instance: str | None = None
+app.add_typer(runtime_inspection.runtime_app, name="runtime")
+app.add_typer(runtime_inspection.dead_letter_app, name="dead-letter")
+app.add_typer(runtime_inspection.locks_app, name="locks")
+app.add_typer(observability_commands.app, name="observability")
+app.add_typer(backup_commands.app, name="backup")
+app.add_typer(secrets_commands.app, name="secrets")
+runtime_inspection.register_root_commands(app)
 
 
 @app.callback()
@@ -227,10 +201,7 @@ def main(
     no_color: bool = typer.Option(False, "--no-color", help="Disable colorized stderr output."),
 ) -> None:
     """RExecOp operations control-plane."""
-    global _runtime_instance, _runtime_root
-    _runtime_instance = resolve_runtime_instance(instance)
-    _runtime_root = resolve_runtime_root(root, instance=_runtime_instance)
-    os.environ["REXECOP_STORAGE"] = resolve_storage_backend(storage)
+    configure_runtime(root=root, instance=instance, storage=storage)
     configure_cli_output(
         json_mode=json_output,
         output_format=output_format,
@@ -240,22 +211,21 @@ def main(
     )
 
 
-def _controller() -> OperationController:
-    return OperationController(store=create_store(_runtime_root))
+def _controller():
+    return get_controller()
 
 
-def _reaction_service() -> ReactionService:
-    return ReactionService(_controller())
+def _reaction_service():
+    return get_reaction_service()
 
 
 def _emit_cli_error(payload: dict[str, object]) -> None:
-    typer.echo(cli_error_json(payload))
-    raise typer.Exit(code=1)
+    emit_cli_error(payload)
 
 
 _LIFECYCLE_LOOKUP_ACTIONS = (
-    'Check the operation id.',
-    'Run rexecop history from the same runtime root.',
+    "Check the operation id.",
+    "Run rexecop history from the same runtime root.",
 )
 
 
@@ -263,18 +233,18 @@ def _lifecycle_lookup_failure(command: tuple[str, ...], exc: RExecOpError) -> No
     emit_failure(
         command=command,
         message=str(exc),
-        reason_code='operation_lookup_failed',
+        reason_code="operation_lookup_failed",
         safe_next_actions=_LIFECYCLE_LOOKUP_ACTIONS,
     )
 
 
 def _emit_lifecycle_state(item: Operation) -> None:
     payload: dict[str, object] = {
-        'operation_id': item.id,
-        'state': item.state,
+        "operation_id": item.id,
+        "state": item.state,
     }
     if item.current_step_id:
-        payload['current_step_id'] = item.current_step_id
+        payload["current_step_id"] = item.current_step_id
     emit_payload(payload, renderers=LIFECYCLE_STATE_RENDERERS)
 
 
@@ -295,16 +265,16 @@ def init_cmd(
     """Create the runtime root layout without secrets or backend IO."""
     try:
         result = initialize_runtime_root(
-            _runtime_root or resolve_runtime_root(),
+            runtime_root(),
             backend=os.environ.get("REXECOP_STORAGE"),
-            instance=_runtime_instance,
+            instance=runtime_instance(),
             guided=guided,
         )
     except RExecOpError as exc:
         emit_failure(
-            command=('init',),
+            command=("init",),
             message=str(exc),
-            reason_code='runtime_init_failed',
+            reason_code="runtime_init_failed",
         )
     emit_payload(result, renderers=INIT_RENDERERS)
 
@@ -317,9 +287,9 @@ def doctor_cmd(
 ) -> None:
     """Check runtime root, stack compatibility and optional operator inputs."""
     result = run_runtime_doctor(
-        _runtime_root or resolve_runtime_root(),
+        runtime_root(),
         storage_backend=os.environ.get("REXECOP_STORAGE"),
-        instance=_runtime_instance,
+        instance=runtime_instance(),
         profile=profile,
         env_path=env,
         catalog_path=catalog,
@@ -327,49 +297,6 @@ def doctor_cmd(
     emit_payload(result, renderers=DOCTOR_RENDERERS)
     if result["status"] == CHECK_BLOCKER:
         raise typer.Exit(code=1)
-
-
-@secrets_app.command("doctor")
-def secrets_doctor_cmd(
-    env: Path | None = typer.Option(None, "--env", help="Environment YAML to inspect."),
-    catalog: Path | None = typer.Option(None, "--catalog", help="Optional catalog YAML."),
-    secrets_file: Path | None = typer.Option(
-        None,
-        "--secrets-file",
-        help="Optional secrets YAML path; defaults to REXECOP_SECRETS_FILE.",
-    ),
-) -> None:
-    """Check secret refs, duplicates, secrets-file policy and redaction self-test."""
-    if env is None and catalog is None:
-        emit_failure(
-            command=('secrets', 'doctor'),
-            message='provide --env and/or --catalog',
-            reason_code='missing_input',
-        )
-    try:
-        result = run_secrets_doctor(
-            env_path=env,
-            catalog_path=catalog,
-            secrets_file=secrets_file,
-        )
-    except RExecOpError as exc:
-        emit_failure(command=('secrets', 'doctor'), message=str(exc))
-    emit_payload(result, renderers=SECRETS_DOCTOR_RENDERERS)
-    if result["status"] == CHECK_BLOCKER:
-        raise typer.Exit(code=1)
-
-
-@secrets_app.command("suggest-ref")
-def secrets_suggest_ref_cmd(
-    env: Path = typer.Option(..., "--env", help="Environment YAML to inspect."),
-    connector: str | None = typer.Option(None, "--connector", help="Optional connector name."),
-) -> None:
-    """Suggest secret reference names without reading secret stores."""
-    try:
-        result = suggest_secret_refs(env_path=env, connector=connector)
-    except RExecOpError as exc:
-        emit_failure(command=('secrets', 'suggest-ref'), message=str(exc))
-    emit_payload(result)
 
 
 @env_app.command("lint")
@@ -403,7 +330,7 @@ def env_lint_cmd(
             },
         }
     except RExecOpError as exc:
-        emit_failure(command=('env', 'lint'), message=str(exc))
+        emit_failure(command=("env", "lint"), message=str(exc))
     emit_payload(result, renderers=ENV_LINT_RENDERERS)
 
 
@@ -713,20 +640,20 @@ def profile_lint_cmd(
         )
     except RExecOpError as exc:
         emit_failure(
-            command=('profile', 'lint'),
+            command=("profile", "lint"),
             message=str(exc),
-            reason_code='profile_conformance_unavailable',
-            safe_next_actions=('Check the profile path or registered profile name.',),
+            reason_code="profile_conformance_unavailable",
+            safe_next_actions=("Check the profile path or registered profile name.",),
         )
     payload = result.as_dict()
-    if result.status != 'passed':
+    if result.status != "passed":
         emit_failure_payload(
             cli_error_payload(
-                error_class='validation_error',
-                reason_code='profile_conformance_failed',
-                message=f'profile conformance failed for {result.profile}',
-                command=('profile', 'lint'),
-                safe_next_actions=('Fix reported profile conformance errors.',),
+                error_class="validation_error",
+                reason_code="profile_conformance_failed",
+                message=f"profile conformance failed for {result.profile}",
+                command=("profile", "lint"),
+                safe_next_actions=("Fix reported profile conformance errors.",),
                 details=payload,
             )
         )
@@ -765,9 +692,9 @@ def policy_explain_cmd(
             catalog_path=catalog,
         )
     except RExecOpError as exc:
-        emit_failure(command=('policy', 'explain'), message=str(exc))
+        emit_failure(command=("policy", "explain"), message=str(exc))
     emit_payload(result, renderers=POLICY_EXPLAIN_RENDERERS)
-    if result['status'] == 'blocked':
+    if result["status"] == "blocked":
         raise typer.Exit(code=1)
 
 
@@ -1136,7 +1063,7 @@ def operations_explain_cmd(
         loaded = load_profile(resolve_profile_path(profile))
         result = explain_profile_operation(loaded, intent)
     except RExecOpError as exc:
-        emit_failure(command=('operations', 'explain'), message=str(exc))
+        emit_failure(command=("operations", "explain"), message=str(exc))
     emit_payload(result, renderers=OPERATIONS_EXPLAIN_RENDERERS)
 
 
@@ -1249,9 +1176,9 @@ def plan_cmd(
                 catalog_path=catalog,
             )
         except RExecOpError as exc:
-            emit_failure(command=('plan',), message=str(exc))
+            emit_failure(command=("plan",), message=str(exc))
         emit_payload(result, renderers=PLAN_EXPLAIN_RENDERERS)
-        if result['status'] == 'blocked':
+        if result["status"] == "blocked":
             raise typer.Exit(code=1)
         return
 
@@ -1267,7 +1194,7 @@ def plan_cmd(
             auto_react=auto_react,
         )
     except RExecOpError as exc:
-        emit_failure(command=('plan',), message=str(exc))
+        emit_failure(command=("plan",), message=str(exc))
 
     typer.echo(operation.id)
 
@@ -1319,7 +1246,7 @@ def approve_cmd(
     try:
         item = _controller().approve(operation, approved_by=approved_by)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('approve',), exc)
+        _lifecycle_lookup_failure(("approve",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1332,7 +1259,7 @@ def pause_cmd(
     try:
         item = _controller().pause(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('pause',), exc)
+        _lifecycle_lookup_failure(("pause",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1345,7 +1272,7 @@ def resume_cmd(
     try:
         item = _controller().resume(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('resume',), exc)
+        _lifecycle_lookup_failure(("resume",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1358,7 +1285,7 @@ def cancel_cmd(
     try:
         item = _controller().cancel(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('cancel',), exc)
+        _lifecycle_lookup_failure(("cancel",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1371,7 +1298,7 @@ def retry_cmd(
     try:
         item = _controller().retry(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('retry',), exc)
+        _lifecycle_lookup_failure(("retry",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1384,205 +1311,9 @@ def rollback_cmd(
     try:
         result = _controller().rollback(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('rollback',), exc)
+        _lifecycle_lookup_failure(("rollback",), exc)
 
     emit_payload(result, renderers=LIFECYCLE_STATE_RENDERERS)
-
-
-@runtime_app.command("recover")
-def runtime_recover_cmd(
-    as_json: bool = typer.Option(True, "--json", help="Emit JSON recovery report."),
-) -> None:
-    """Reconcile stale leases, interrupted operations and receipt gaps after restart."""
-    if not as_json:
-        typer.secho("error: only --json output is supported", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1)
-    try:
-        controller = _controller()
-        result = run_startup_recovery(controller.store, controller=controller)
-    except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@runtime_app.command("status")
-def runtime_status_cmd(
-    as_json: bool = typer.Option(True, "--json/--no-json", help="Emit JSON status."),
-) -> None:
-    """Show runtime queue, active operations, locks and dead-letter summary."""
-    if not as_json:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("runtime", "status"),
-                reason_code="unsupported_output_format",
-                message="only --json output is supported",
-                safe_next_actions=("Re-run with --json.",),
-            )
-        )
-    try:
-        result = collect_runtime_status(_controller().store)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("runtime", "status"),
-                reason_code="runtime_status_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop init in the runtime root first.",),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@dead_letter_app.command("list")
-def dead_letter_list_cmd() -> None:
-    """List dead-letter inbox payloads moved by watchdog."""
-    try:
-        result = list_dead_letter_manifest(_controller().store)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("dead-letter", "list"),
-                reason_code="dead_letter_list_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop init in the runtime root first.",),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@dead_letter_app.command("show")
-def dead_letter_show_cmd(
-    name: str = typer.Argument(..., help="Dead-letter file name."),
-) -> None:
-    """Show one redacted dead-letter payload."""
-    try:
-        result = show_dead_letter_item(_controller().store, name)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("dead-letter", "show"),
-                reason_code="dead_letter_lookup_failed",
-                message=str(exc),
-                safe_next_actions=(
-                    "Run rexecop dead-letter list.",
-                    "Use the exact dead-letter file name from the manifest.",
-                ),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@locks_app.command("list")
-def locks_list_cmd() -> None:
-    """List advisory target locks and stale holders."""
-    try:
-        result = list_locks_manifest(_controller().store)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("locks", "list"),
-                reason_code="locks_list_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop init in the runtime root first.",),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@app.command("ops")
-def ops_cmd() -> None:
-    """Aggregate queue, active operations, blockers and action-required items."""
-    try:
-        result = collect_ops_snapshot(_controller().store)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("ops",),
-                reason_code="ops_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop runtime status --json.",),
-            )
-        )
-    if result.get("blockers"):
-        _emit_cli_error(
-            cli_error_payload(
-                error_class="runtime_failure",
-                reason_code="runtime_blockers_present",
-                message="runtime blockers require operator action",
-                command=("ops",),
-                safe_next_actions=("Inspect details.blockers and action_required.",),
-                details=result,
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@app.command("explain-error")
-def explain_error_cmd(
-    ref: str = typer.Argument(..., help="Operation id, dead-letter name or watchdog record id."),
-) -> None:
-    """Map a runtime failure reference to a bounded failure class and next actions."""
-    try:
-        result = explain_error(_controller().store, ref)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("explain-error",),
-                reason_code="explain_error_unavailable",
-                message=str(exc),
-                safe_next_actions=(
-                    "Use an operation id, dead-letter file name, or watchdog record id.",
-                    "Run rexecop ops --json for action-required items.",
-                ),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@observability_logs_app.command("list")
-def observability_logs_list_cmd(
-    operation_id: str = typer.Option("", "--operation", help="Filter by operation id."),
-    correlation_id: str = typer.Option(
-        "", "--correlation-id", help="Filter by correlation id."
-    ),
-    limit: int = typer.Option(50, "--limit", min=1, max=200, help="Maximum events."),
-) -> None:
-    """List bounded structured logs with correlation and artifact refs."""
-    try:
-        result = list_structured_logs(
-            _controller().store,
-            operation_id=operation_id,
-            correlation_id=correlation_id,
-            limit=limit,
-        )
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("observability", "logs", "list"),
-                reason_code="structured_logs_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop init in the runtime root first.",),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@observability_app.command("diagnostics")
-def observability_diagnostics_cmd() -> None:
-    """Show runtime diagnostics using explain-error failure classes."""
-    try:
-        result = collect_runtime_diagnostics(_controller().store)
-    except RExecOpError as exc:
-        _emit_cli_error(
-            validation_cli_error(
-                command=("observability", "diagnostics"),
-                reason_code="runtime_diagnostics_unavailable",
-                message=str(exc),
-                safe_next_actions=("Run rexecop init in the runtime root first.",),
-            )
-        )
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 @app.command("queue")
@@ -1601,39 +1332,6 @@ def queue_cmd(
         return
     pending = controller.runtime.queue.list_pending()
     typer.echo(json.dumps({"pending": pending}, indent=2, sort_keys=True))
-
-
-@backup_app.command("create")
-def backup_create_cmd(
-    output: Path = typer.Option(..., "--output", help="Archive path or output directory."),
-) -> None:
-    """Create a secret-scanned tarball backup of the runtime store."""
-    try:
-        result = create_runtime_backup(_controller().store.root, output=output)
-    except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-@backup_app.command("restore")
-def backup_restore_cmd(
-    archive: Path = typer.Option(..., "--archive", help="Backup tarball path."),
-    manifest: Path | None = typer.Option(
-        None, "--manifest", help="Optional manifest path when not adjacent to the archive."
-    ),
-) -> None:
-    """Restore a runtime backup into the configured runtime root."""
-    try:
-        result = restore_runtime_backup(
-            archive=archive,
-            target_root=_controller().store.root,
-            manifest=manifest,
-        )
-    except RExecOpError as exc:
-        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(code=1) from exc
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 
 worker_app = typer.Typer(help="Background worker commands.")
@@ -1660,8 +1358,7 @@ def worker_run_cmd(
         3600.0,
         "--stale-inbox-seconds",
         help=(
-            "Move inbox JSON older than this many seconds to dead-letter "
-            "when watchdog is enabled."
+            "Move inbox JSON older than this many seconds to dead-letter when watchdog is enabled."
         ),
     ),
     stale_operation_seconds: float = typer.Option(
@@ -1795,9 +1492,7 @@ def trigger_cmd(
                 source=str(parsed.get("source") or "cli"),
                 auto_start=bool(parsed.get("auto_start", auto_start)),
                 auto_react=(
-                    str(parsed["auto_react"])
-                    if parsed.get("auto_react") is not None
-                    else None
+                    str(parsed["auto_react"]) if parsed.get("auto_react") is not None else None
                 ),
             )
     except RExecOpError as exc:
@@ -1821,7 +1516,7 @@ def start_cmd(
     try:
         item = _controller().start(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('start',), exc)
+        _lifecycle_lookup_failure(("start",), exc)
 
     _emit_lifecycle_state(item)
 
@@ -1834,7 +1529,7 @@ def validate_cmd(
     try:
         result = _controller().validate(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('validate',), exc)
+        _lifecycle_lookup_failure(("validate",), exc)
 
     emit_payload(result, renderers=LIFECYCLE_STATE_RENDERERS)
 
@@ -1847,7 +1542,7 @@ def escalate_cmd(
     try:
         package = _controller().escalate(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('escalate',), exc)
+        _lifecycle_lookup_failure(("escalate",), exc)
 
     emit_payload(package, renderers=LIFECYCLE_STATE_RENDERERS)
 
@@ -1860,7 +1555,7 @@ def history_cmd(
     try:
         history = _controller().get_history(operation)
     except RExecOpError as exc:
-        _lifecycle_lookup_failure(('history',), exc)
+        _lifecycle_lookup_failure(("history",), exc)
 
     emit_payload(history, renderers=HISTORY_RENDERERS)
 
