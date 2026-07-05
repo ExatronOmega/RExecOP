@@ -14,8 +14,8 @@ import rexecop  # noqa: E402
 
 EXPECTED_GOVENGINE = "govengine==0.16.9"
 EXPECTED_SCLITE = "sclite-core==1.0.8"
-EXPECTED_TECRAX_EXTRA = "tecrax==0.3.14a0"
-PUBLISHED_PYPI_VERSION = "0.2.20a0"
+EXPECTED_TECRAX_EXTRA = "tecrax==0.3.15a0"
+PUBLISHED_PYPI_VERSION = "0.2.21a0"
 
 VERSION_DOCS = (
     "README.md",
