@@ -4,10 +4,10 @@
 
 | Field | Value |
 |-------|-------|
-| RExecOp version (dev line) | `0.2.23a0` |
-| RExecOp version (PyPI published) | `0.2.23a0` |
+| RExecOp version (dev line) | `0.2.24a0` |
+| RExecOp version (PyPI published) | `0.2.24a0` |
 | GovEngine version | `0.16.5` |
-| SCLite version | `1.0.8` |
+| SCLite version | `1.0.9` |
 | Tecrax version | `0.3.9a0` |
 | Operator | |
 | Host / environment | |

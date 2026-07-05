@@ -7,7 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 **Versioning:** pre-1.0 alpha tags use the `0.y.za0` form. Roadmap delivery before the
 public alpha gate used **`0.3.0a0`–`0.11.0a0`** (Phases 2B–9; see [Pre-alpha gate history](#pre-alpha-gate-history)).
 **`0.1.0a0`** (Phase 10) reset the public line and declared the alpha gate. The current
-PyPI alpha line is **`0.2.23a0`**. Entries under
+PyPI alpha line is **`0.2.24a0`**. Entries under
 [Releases](#releases) are newest first.
 
 ## Unreleased
@@ -24,11 +24,22 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
   `automation_chain.v0.1` artifacts and exposes the projection through
   `reaction explain`, `chain explain`, truth-path summaries and auto-reaction
   metadata.
-- When the installed GovEngine exposes `AutomationTransitionRequest`,
-  RExecOp records GovEngine automation transition request/admission digests for
-  admitted child-operation chain decisions. Current `govengine==0.16.9`
-  installs without that unreleased API remain compatible and report the
-  automation admission binding as unavailable rather than claiming a digest.
+- Bound GovEngine `0.16.11` automation-transition admission into reaction-planned
+  child-operation chains. RExecOp now declares
+  `automation_transition_request` and `automation_transition_explanation` in the
+  GovEngine compatibility gate and records request/admission digests in
+  reaction explanations, chain explanations and truth-path summaries.
+
+## [0.2.24a0] - 2026-07-05
+
+- Published `rexecop==0.2.24a0` on PyPI with `govengine==0.16.11`,
+  `sclite-core==1.0.9` and `tecrax==0.3.21a0` extra pin.
+- The `tecrax` extra targets the first Tecrax wheel that includes public
+  `examples/` files used by operator quickstarts and RExecOp golden fixtures.
+- Promoted GovEngine automation-transition admission from a source-compatible
+  optional binding to the supported stack contract baseline.
+- **Current supported line:** `rexecop==0.2.24a0` or
+  `rexecop[tecrax]==0.2.24a0`. Supersedes `0.2.23a0`.
 
 ## [0.2.23a0] - 2026-07-05
 
@@ -44,7 +55,7 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 
 ## [0.2.22a0] - 2026-07-05
 
-- Published `rexecop==0.2.22a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
+- Published `rexecop==0.2.22a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
   and `tecrax==0.3.17a0` extra pin (`e15cd1f`); superseded by `0.2.23a0`.
 - **Feature delta:** none since `0.2.17a0`. `0.2.18a0`–`0.2.22a0` were coordinated stack
   repair artifacts only (stale `tecrax` extra pins).
@@ -60,7 +71,7 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 
 ## [0.2.17a0] - 2026-07-05
 
-- Published `rexecop==0.2.17a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
+- Published `rexecop==0.2.17a0` on PyPI with `govengine==0.16.8`, `sclite-core==1.0.8`
   and `tecrax==0.3.12a0` extra pin.
 - G8 slice 2 (`1d2df2d`): global CLI output context (`cli_output.py`) with root-level
   `--json`, `--format`, `--quiet`, `--verbose`, and `--no-color`.
@@ -117,7 +128,7 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 
 ## [0.2.14a0] - 2026-07-04
 
-- Published `rexecop==0.2.14a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`
+- Published `rexecop==0.2.14a0` on PyPI with `govengine==0.16.7`, `sclite-core==1.0.8`
   and `tecrax==0.3.9a0` extra pin.
 - Added `rexecop.profile_connector_execution_spec.v0.1` typed execution compilation
   for registered plugin connector backends.
@@ -322,7 +333,7 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 - Bound trigger decisions to GovEngine `TriggerPlanningRequest` admission before
   creating operation plans; trigger decision artifacts now carry bounded request
   and admission digests.
-- Raised the SCLite source dependency to `sclite-core==1.0.8` and projected
+- Raised the SCLite source dependency to `sclite-core==1.0.9` and projected
   trigger decisions into the SCLite `trigger_decision.v0.1` artifact
   shape with event/rule/admission digests and optional child-operation refs,
   while keeping trigger matching, policy and execution ownership outside SCLite.

@@ -16,9 +16,19 @@ from rexecop.truth_path import TRUTH_PATH_PROJECTION_SCHEMA, project_truth_path
 tecrax = pytest.importorskip("tecrax")
 
 ROOT = Path(__file__).resolve().parents[1]
-TECRAX_ROOT = Path(tecrax.profile_root()).parents[2]
-HOST_INVENTORY_ENVIRONMENT = (
-    TECRAX_ROOT / "examples/environments/ubuntu-host.readonly.example.yaml"
+
+
+def _tecrax_example(path: str) -> Path:
+    profile_root = Path(tecrax.profile_root())
+    for root in (profile_root.parents[2], profile_root.parents[1]):
+        candidate = root / path
+        if candidate.is_file():
+            return candidate
+    return profile_root.parents[2] / path
+
+
+HOST_INVENTORY_ENVIRONMENT = _tecrax_example(
+    "examples/environments/ubuntu-host.readonly.example.yaml"
 )
 DOCKER_SERVICE_SHOW = (
     "systemctl show docker --property=LoadState --property=ActiveState "

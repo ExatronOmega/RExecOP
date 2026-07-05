@@ -28,10 +28,10 @@ The static adapter is explicitly marked `bootstrap_only` and documented as non-p
 ## Dependency
 
 ```text
-govengine==0.16.9
+govengine==0.16.11
 ```
 
-Pinned compatible with the SCLite alpha line used by RExecOp (`sclite-core==1.0.8`).
+Pinned compatible with the SCLite alpha line used by RExecOp (`sclite-core==1.0.9`).
 
 ## PolicyEngine integration
 
@@ -157,7 +157,7 @@ See [runtime-recovery-ops.md](runtime-recovery-ops.md) and GovEngine
 Reaction-planned child operations are projected into SCLite
 `automation_chain.v0.1` artifacts. RExecOp owns runtime projection and
 child-operation plan mechanics; SCLite owns the chain artifact shape; GovEngine
-owns automation-transition admission when the installed GovEngine line exposes:
+`0.16.11` owns automation-transition admission through:
 
 - `AutomationTransitionRequest`
 - `admit_automation_transition()`
@@ -165,12 +165,11 @@ owns automation-transition admission when the installed GovEngine line exposes:
 - `automation_transition_admission_digest()`
 - `explain_automation_transition()`
 
-When those contracts are present, RExecOp records the request digest,
-admission digest and redacted explanation in the reaction admission binding and
-writes the GovEngine admission digest onto the `admitted_child` edge. When the
-current installed GovEngine does not expose the unreleased automation API,
-RExecOp reports the binding as `unavailable` and does not claim a GovEngine
-automation admission digest.
+RExecOp records the request digest, admission digest and redacted explanation in
+the reaction admission binding and writes the GovEngine admission digest onto the
+`admitted_child` edge. The runtime still reports the binding as `unavailable`
+for older local GovEngine installs, but the supported package line requires
+`govengine==0.16.11`.
 
 ## Profile governance (G3)
 
