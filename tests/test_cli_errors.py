@@ -98,6 +98,16 @@ def _planned_operation(tmp_path: Path):
             "operation_lookup_failed",
         ),
         (
+            ("chain", "explain", "op-missing"),
+            "chain explain",
+            "operation_lookup_failed",
+        ),
+        (
+            ("reaction", "explain", "--reaction", "reaction-missing"),
+            "reaction explain",
+            "reaction_lookup_failed",
+        ),
+        (
             ("support", "bundle", "op-missing"),
             "support bundle",
             "support_bundle_unavailable",
@@ -234,7 +244,9 @@ def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
         "operation diff",
         "receipt show",
         "evidence show",
+        "chain explain",
         "chain summary",
+        "reaction explain",
         "support bundle",
         "runtime status",
         "dead-letter list",

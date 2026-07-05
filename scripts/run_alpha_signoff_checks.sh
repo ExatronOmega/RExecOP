@@ -26,6 +26,9 @@ echo "==> validate_profile_conformance"
 echo "==> validate_first_run_smoke"
 "$PYTHON" scripts/validate_first_run_smoke.py
 
+echo "==> validate_cross_repo_golden_fixture"
+"$PYTHON" scripts/validate_cross_repo_golden_fixture.py
+
 echo "==> core boundary grep"
 if rg -il '\b(tecrax|proxmox|pbs|zabbix|adguard|frigate|hillstone|docker|ubuntu|ntp)\b' src/rexecop --glob '!**/connectors/command_shape.py'; then
   echo "domain token detected in rexecop core"
@@ -62,5 +65,5 @@ else
 fi
 
 printf '%s\n' \
-  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
+  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK cross_repo_golden_fixture=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
 echo "alpha_signoff_checks_ok"

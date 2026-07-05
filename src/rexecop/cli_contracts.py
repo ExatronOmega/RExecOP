@@ -115,6 +115,22 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         authority="digest_link_projection",
     ),
     CliContract(
+        command=("chain", "explain"),
+        schema="rexecop.chain_explain.v0.1",
+        stability="alpha_contract",
+        group="audit_inspection",
+        authority="digest_link_projection",
+        notes=("May include reaction replay status, but does not execute recovery.",),
+    ),
+    CliContract(
+        command=("reaction", "explain"),
+        schema="rexecop.reaction_explain.v0.1",
+        stability="alpha_contract",
+        group="audit_inspection",
+        authority="sclite_reaction_chain_projection",
+        notes=("Verifies persisted reaction-chain artifacts without starting a child operation.",),
+    ),
+    CliContract(
         command=("support", "bundle"),
         schema="rexecop.support_bundle.v0.1",
         stability="alpha_contract",

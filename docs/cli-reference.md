@@ -103,6 +103,7 @@ See [operator-catalog.md](operator-catalog.md).
 | `receipt show OPERATION_ID` | Redacted receipt export and SCLite refs with descriptor digest checks |
 | `evidence show OPERATION_ID` | Bounded, redacted internal evidence event summary |
 | `chain summary OPERATION_ID` | Digest-linked operation, evidence, reaction and SCLite chain summary |
+| `chain explain OPERATION_ID` | Operation truth-path plus verified reaction replay status |
 | `support bundle OPERATION_ID --redacted` | Redacted diagnostic bundle combining receipt, evidence and chain projections |
 
 Inspection commands require a runtime store and an existing operation id from `plan`.
@@ -151,9 +152,10 @@ Exit-code policy for registry commands:
 
 Representative failure paths include missing operation lookups (`status`,
 `operation explain`, `operation review`, `operation diff`), audit projection
-failures (`receipt show`, `evidence show`, `chain summary`, unredacted
+failures (`receipt show`, `evidence show`, `chain summary`, `chain explain`, unredacted
 `support bundle`), runtime triage failures (`runtime status --no-json`,
-`dead-letter show`, `explain-error`), runtime blockers in `ops`, and failed
+`dead-letter show`, `explain-error`), reaction lookup failures (`reaction explain`),
+runtime blockers in `ops`, and failed
 `profile lint` conformance. `runtime status` is JSON-only: use `--json` (default)
 or `--no-json` triggers `unsupported_output_format`.
 
@@ -223,6 +225,7 @@ See [operator-scheduler-pattern.md](operator-scheduler-pattern.md).
 | `reaction-plan --profile PATH --env PATH --target ID [--observation PATH] [--operation ID]` | Compile and evaluate one bounded profile-defined reaction |
 | `reaction-start --reaction ID` | Start the admitted child operation for a reaction |
 | `reaction-replay --reaction ID` | Replay a completed reaction chain |
+| `reaction explain --reaction ID` | Explain persisted reaction artifacts and replay status without execution |
 | `reaction-proposal-validate --proposal PATH` | Validate an LLM escalation proposal as non-executable input |
 
 See [reaction-interpreter.md](reaction-interpreter.md).
@@ -257,5 +260,5 @@ rexecop [--root] [--instance] [--storage]
   queue [--drain]
   worker run
   trigger
-  reaction-plan | reaction-start | reaction-replay | reaction-proposal-validate
+  reaction-plan | reaction-start | reaction-replay | reaction explain | reaction-proposal-validate
 ```

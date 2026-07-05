@@ -43,12 +43,15 @@ rexecop reaction-plan \
 
 rexecop reaction-start --reaction reaction-...
 rexecop reaction-replay --reaction reaction-...
+rexecop reaction explain --reaction reaction-...
 rexecop reaction-proposal-validate --profile tecrax --proposal proposal.json
 ```
 
 `reaction-plan` never starts the child operation. `reaction-start` can start
 only the already admitted child and uses the ordinary connector, validation,
 evidence, and receipt path. `reaction-replay` performs no execution.
+`reaction explain` verifies the persisted reaction-chain manifest and emits a
+bounded, redacted operator projection; SCLite remains the truth authority.
 
 Operation creation also supports an explicit plan-only automation mode:
 

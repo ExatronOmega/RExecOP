@@ -22,6 +22,7 @@ from rexecop.truth_path import project_truth_path
 RECEIPT_SHOW_SCHEMA = "rexecop.receipt_show.v0.1"
 EVIDENCE_SHOW_SCHEMA = "rexecop.evidence_show.v0.1"
 CHAIN_SUMMARY_SCHEMA = "rexecop.chain_summary.v0.1"
+CHAIN_EXPLAIN_SCHEMA = "rexecop.chain_explain.v0.1"
 SUPPORT_BUNDLE_SCHEMA = "rexecop.support_bundle.v0.1"
 
 _PREVIEW_CHAR_LIMIT = 2048
@@ -131,6 +132,39 @@ def summarize_chain(
             "Summarizes digest-linked runtime/SCLite refs; it is not a ledger.",
             "Does not verify external target state.",
             "Does not execute replay or recovery.",
+        ],
+    }
+
+
+def explain_chain(
+    operation: Operation,
+    plan: OperationPlan,
+    store: RuntimeStore,
+) -> dict[str, Any]:
+    summary = summarize_chain(operation, plan, store)
+    reaction = _reaction_explain_summary(operation, store)
+    status = "ready"
+    if summary["truth_path"]["status"] != "present":
+        status = "partial"
+    if reaction.get("status") in {"unverified", "unavailable"}:
+        status = "partial"
+    return {
+        "schema": CHAIN_EXPLAIN_SCHEMA,
+        "status": status,
+        "operation_id": operation.id,
+        "operation": summary["operation"],
+        "truth_path": summary["truth_path"],
+        "reaction": reaction,
+        "links": summary["links"],
+        "replay": {
+            **summary["replay"],
+            "reaction_replay_status": str(reaction.get("replay_status") or ""),
+        },
+        "safe_next_actions": _chain_explain_next_actions(operation.id, reaction),
+        "non_claims": [
+            "Explains persisted operation/reaction links without executing replay against targets.",
+            "Does not replace SCLite reaction-chain or receipt artifacts.",
+            "Does not interpret GovEngine policy logic in RExecOp core.",
         ],
     }
 
@@ -343,6 +377,45 @@ def _chain_links(
     return _dedupe_links(links)
 
 
+def _reaction_explain_summary(
+    operation: Operation,
+    store: RuntimeStore,
+) -> dict[str, Any]:
+    auto_reaction = operation.metadata.get("auto_reaction")
+    if not isinstance(auto_reaction, Mapping):
+        return {"status": "absent", "reaction_id": "", "replay_status": ""}
+    reaction_id = str(auto_reaction.get("reaction_id") or "")
+    if not reaction_id:
+        return {"status": "absent", "reaction_id": "", "replay_status": ""}
+    try:
+        from rexecop.operation.controller import OperationController
+        from rexecop.reaction.service import ReactionService
+
+        payload = ReactionService(OperationController(store=store)).explain(reaction_id)
+    except RExecOpValidationError as exc:
+        return {
+            "status": "unavailable",
+            "reaction_id": reaction_id,
+            "replay_status": "unavailable",
+            "error": str(exc),
+        }
+    child_operation_id = str(payload.get("child_operation_id") or "")
+    chain_raw = payload.get("chain")
+    chain: Mapping[str, Any] = chain_raw if isinstance(chain_raw, Mapping) else {}
+    replay_raw = chain.get("replay")
+    replay: Mapping[str, Any] = replay_raw if isinstance(replay_raw, Mapping) else {}
+    return {
+        "status": str(payload.get("status") or ""),
+        "schema": str(payload.get("schema") or ""),
+        "reaction_id": reaction_id,
+        "outcome": str(payload.get("outcome") or ""),
+        "intent_ref": str(payload.get("intent_ref") or ""),
+        "child_operation_id": child_operation_id,
+        "chain_root": str(chain.get("root_digest") or ""),
+        "replay_status": str(replay.get("status") or ""),
+    }
+
+
 def _dedupe_links(links: list[dict[str, str]]) -> list[dict[str, str]]:
     seen: set[tuple[str, str, str]] = set()
     unique: list[dict[str, str]] = []
@@ -384,6 +457,21 @@ def _support_next_actions(
         actions.append("Inspect SCLite bundle files before trusting this runtime root.")
     if evidence.get("status") == "missing" or chain.get("status") == "missing":
         actions.append(f"rexecop operation explain --operation {operation_id}")
+    return actions
+
+
+def _chain_explain_next_actions(operation_id: str, reaction: Mapping[str, Any]) -> list[str]:
+    actions = [
+        f"rexecop operation truth-path --operation {operation_id}",
+        f"rexecop chain summary {operation_id}",
+    ]
+    reaction_id = str(reaction.get("reaction_id") or "")
+    if reaction_id:
+        actions.append(f"rexecop reaction explain --reaction {reaction_id}")
+        actions.append(f"rexecop reaction-replay --reaction {reaction_id}")
+    child_id = str(reaction.get("child_operation_id") or "")
+    if child_id and child_id != operation_id:
+        actions.append(f"rexecop operation explain --operation {child_id}")
     return actions
 
 

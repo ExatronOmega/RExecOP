@@ -75,7 +75,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - SCLite port: GovEngine-integration bundle emission (scoped ticket, kernel guard, review pass)
 - Profile resolution by path or `rexecop.profiles` entry point (`tecrax`)
 - Declarative profile validation rules (YAML, not hardcoded domain logic in core)
-- Deterministic reaction interpreter (`reaction-plan`, `reaction-start`, `reaction-replay`)
+- Deterministic reaction interpreter (`reaction-plan`, `reaction-start`, `reaction-replay`,
+  `reaction explain`)
 - Connectors: `mock`, `http_api`, `local_shell_readonly`, `ssh_readonly` (bounded output + digests)
 - Execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` (schema `v0.2`)
 - GovEngine `PolicyEngine` when `environment.policy_pack` is set
@@ -102,7 +103,7 @@ Ravenclaw is legacy and out of scope for RExecOp.
   shell/SSH allowlist skeletons)
 - Pre-run inspection: `policy explain`, `operations explain`, `operation explain`,
   `operation review`, `operation diff`, `runbook show`, `operations unavailable`
-- Audit inspection: `receipt show`, `evidence show`, `chain summary`,
+- Audit inspection: `receipt show`, `evidence show`, `chain summary`, `chain explain`,
   `support bundle --redacted` for redacted, digest-bound runtime/SCLite projections
 - Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
   `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record`
@@ -213,7 +214,7 @@ The CLI has grown across M1–M5 milestones. **Full command reference:**
 | Observability | `observability logs list`, `observability diagnostics` |
 | Lifecycle | `plan`, `approve`, `start`, `pause`, `resume`, `cancel`, `retry`, `rollback`, `validate`, `escalate`, `status`, `history` |
 | Scheduling | `queue`, `worker run`, `trigger` |
-| Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction-proposal-validate` |
+| Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction explain`, `reaction-proposal-validate` |
 
 Global options: `--root`, `--instance`, `--storage file|sqlite`.
 

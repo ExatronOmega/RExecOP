@@ -246,6 +246,8 @@ def collect_errors() -> list[str]:
     _require(errors, "README.md", "receipt show")
     _require(errors, "README.md", "evidence show")
     _require(errors, "README.md", "chain summary")
+    _require(errors, "README.md", "chain explain")
+    _require(errors, "README.md", "reaction explain")
     _require(errors, "README.md", "support bundle --redacted")
     _require(errors, "README.md", "runtime status")
     _require(errors, "README.md", "explain-error")
@@ -293,11 +295,18 @@ def collect_errors() -> list[str]:
     _require(errors, "CHANGELOG.md", "runtime recover")
     _require(errors, "CHANGELOG.md", "operations unavailable")
     _require(errors, "docs/alpha-sign-off.md", "validate_first_run_smoke.py")
+    _require(errors, "docs/alpha-sign-off.md", "validate_cross_repo_golden_fixture.py")
     _require(errors, "docs/alpha-sign-off.md", "validate_stack_contracts.py")
     _require(errors, ".github/workflows/ci.yml", "validate_first_run_smoke.py")
+    _require(errors, ".github/workflows/ci.yml", "validate_cross_repo_golden_fixture.py")
     _require(errors, "scripts/validate_stack_contracts.py", "stack_contracts_ok")
     _require(errors, "scripts/validate_profile_conformance.py", "profile_conformance_ok")
     _require(errors, "scripts/validate_first_run_smoke.py", "first_run_smoke_ok")
+    _require(
+        errors,
+        "scripts/validate_cross_repo_golden_fixture.py",
+        "cross_repo_golden_fixture_ok",
+    )
     _require(errors, "docs/first-run.md", "rexecop --root /tmp/rexecop-first-run init --guided")
     _require(errors, "README.md", "docs/first-run.md")
     _require(errors, ".github/workflows/ci.yml", "python scripts/validate_public_truth.py")

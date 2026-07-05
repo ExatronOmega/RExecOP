@@ -61,6 +61,7 @@ from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
 from rexecop.operation.audit import (
     build_support_bundle,
+    explain_chain,
     show_evidence,
     show_receipt,
     summarize_chain,
@@ -135,6 +136,7 @@ operation_app = typer.Typer(help="Inspect stored operation plans.", no_args_is_h
 receipt_app = typer.Typer(help="Inspect redacted receipt and SCLite refs.", no_args_is_help=True)
 evidence_app = typer.Typer(help="Inspect bounded operation evidence.", no_args_is_help=True)
 chain_app = typer.Typer(help="Summarize digest-linked operation chains.", no_args_is_help=True)
+reaction_app = typer.Typer(help="Inspect persisted reaction chains.", no_args_is_help=True)
 support_app = typer.Typer(help="Build redacted support diagnostics.", no_args_is_help=True)
 runbook_app = typer.Typer(help="Show profile-owned runbooks.", no_args_is_help=True)
 operations_app = typer.Typer(
@@ -154,6 +156,7 @@ app.add_typer(operation_app, name="operation")
 app.add_typer(receipt_app, name="receipt")
 app.add_typer(evidence_app, name="evidence")
 app.add_typer(chain_app, name="chain")
+app.add_typer(reaction_app, name="reaction")
 app.add_typer(support_app, name="support")
 app.add_typer(runbook_app, name="runbook")
 app.add_typer(operations_app, name="operations")
@@ -901,6 +904,52 @@ def chain_summary_cmd(
                 safe_next_actions=(
                     "Check the operation or reaction id.",
                     "Run rexecop history from the same runtime root.",
+                ),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@chain_app.command("explain")
+def chain_explain_cmd(
+    operation: str = typer.Argument(..., help="Operation id."),
+) -> None:
+    """Explain operation, reaction replay and truth-path links without executing."""
+    try:
+        controller = _controller()
+        item = controller.get_operation(operation)
+        plan = controller.store.load_plan(operation)
+        result = explain_chain(item, plan, controller.store)
+    except RExecOpError as exc:
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("chain", "explain"),
+                message=str(exc),
+                safe_next_actions=(
+                    "Check the operation id.",
+                    "Run rexecop history from the same runtime root.",
+                ),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@reaction_app.command("explain")
+def reaction_explain_cmd(
+    reaction: str = typer.Option(..., "--reaction", help="Reaction id."),
+) -> None:
+    """Explain a persisted reaction chain without executing the child operation."""
+    try:
+        result = _reaction_service().explain(reaction)
+    except (RExecOpError, ValueError) as exc:
+        _emit_cli_error(
+            lookup_cli_error(
+                command=("reaction", "explain"),
+                message=str(exc),
+                reason_code="reaction_lookup_failed",
+                safe_next_actions=(
+                    "Check the reaction id.",
+                    "Run rexecop reaction-replay --reaction <id> from the same runtime root.",
                 ),
             )
         )

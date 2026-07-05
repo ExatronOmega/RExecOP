@@ -18,12 +18,13 @@ The script runs:
 2. `python scripts/validate_stack_contracts.py`
 3. `python scripts/validate_profile_conformance.py`
 4. `python scripts/validate_first_run_smoke.py`
-5. Core boundary greps (`tecrax` / domain strings forbidden in core)
-6. `scripts/secret_scan.sh`
-7. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
-8. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
+5. `python scripts/validate_cross_repo_golden_fixture.py`
+6. Core boundary greps (`tecrax` / domain strings forbidden in core)
+7. `scripts/secret_scan.sh`
+8. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
+9. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
-9. Post-publish: `python scripts/validate_clean_install_smoke.py` against the PyPI line
+10. Post-publish: `python scripts/validate_clean_install_smoke.py` against the PyPI line
 
 CI on `main` runs the same validators (except the optional build step), the full pytest
 suite, and the `package-dry-run` job. PyPI publication uses `.github/workflows/publish.yml`

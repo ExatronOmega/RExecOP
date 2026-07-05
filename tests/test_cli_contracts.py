@@ -15,6 +15,7 @@ from rexecop.cli_errors import CLI_ERROR_SCHEMA
 runner = CliRunner()
 
 EXPECTED_COMMAND_SCHEMAS = {
+    "chain explain": "rexecop.chain_explain.v0.1",
     "chain summary": "rexecop.chain_summary.v0.1",
     "dead-letter list": "rexecop.dead_letter_list.v0.1",
     "dead-letter show": "rexecop.dead_letter_show.v0.1",
@@ -29,6 +30,7 @@ EXPECTED_COMMAND_SCHEMAS = {
     "ops": "rexecop.ops.v0.1",
     "profile lint": "rexecop.profile_conformance.v0.1",
     "receipt show": "rexecop.receipt_show.v0.1",
+    "reaction explain": "rexecop.reaction_explain.v0.1",
     "runtime status": "rexecop.runtime_status.v0.1",
     "status": "rexecop.operation_status.v0.1",
     "support bundle": "rexecop.support_bundle.v0.1",
@@ -36,8 +38,10 @@ EXPECTED_COMMAND_SCHEMAS = {
 
 EXPECTED_COMMAND_GROUPS = {
     "audit_inspection": {
+        "chain explain",
         "chain summary",
         "evidence show",
+        "reaction explain",
         "receipt show",
         "support bundle",
     },

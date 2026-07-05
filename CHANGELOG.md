@@ -12,6 +12,13 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 
 ## Unreleased
 
+- Added `reaction explain` (`rexecop.reaction_explain.v0.1`) and
+  `chain explain` (`rexecop.chain_explain.v0.1`) as bounded, redacted audit
+  projections over persisted operation/reaction artifacts.
+- Added `scripts/validate_cross_repo_golden_fixture.py`, a delivery gate for the
+  sanitized Tecrax diagnosis flow through RExecOp reaction planning, GovEngine
+  admission, SCLite reaction-chain replay and idempotent recovery planning.
+
 ## [0.2.23a0] - 2026-07-05
 
 - Published `rexecop==0.2.23a0` on PyPI with `govengine==0.16.9`, `sclite-core==1.0.8`

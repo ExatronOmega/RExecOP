@@ -64,6 +64,8 @@ M7 audit commands expose operator-facing projections over the existing runtime s
 | `receipt show OPERATION_ID` | `rexecop.receipt_show.v0.1` | Redacted receipt export and SCLite descriptor refs with missing/broken digest status |
 | `evidence show OPERATION_ID` | `rexecop.evidence_show.v0.1` | Bounded internal evidence events plus sensitivity summary |
 | `chain summary OPERATION_ID` | `rexecop.chain_summary.v0.1` | Operation/evidence/reaction/SCLite digest-link summary |
+| `chain explain OPERATION_ID` | `rexecop.chain_explain.v0.1` | Truth-path and reaction replay explanation without execution |
+| `reaction explain --reaction ID` | `rexecop.reaction_explain.v0.1` | Persisted reaction-chain verification summary |
 | `support bundle OPERATION_ID --redacted` | `rexecop.support_bundle.v0.1` | Redacted diagnostic bundle for handoff/support |
 
 These commands do not create new truth artifacts, do not read secrets and do not print raw

@@ -309,6 +309,76 @@ class ReactionService:
         manifest = _read_json(directory / "reaction_chain_manifest.json")
         return verify_reaction_chain_manifest(manifest, root=directory)
 
+    def explain(self, reaction_id: str) -> dict[str, Any]:
+        directory = self.root / reaction_id
+        plan = _read_json(directory / "03_reaction_plan.json")
+        manifest = _read_json(directory / "reaction_chain_manifest.json")
+        replay = verify_reaction_chain_manifest(manifest, root=directory)
+        observation = _read_json(directory / "01_observation.json")
+        finding = _read_json(directory / "02_finding.json")
+        receipt_path = directory / "04_execution_receipt.json"
+        receipt_status = "present" if receipt_path.is_file() else "not_started_or_not_required"
+        admission_raw = plan.get("admission")
+        admission: Mapping[str, Any] = admission_raw if isinstance(admission_raw, Mapping) else {}
+        profile_ref_raw = plan.get("profile_ref")
+        profile_ref: Mapping[str, Any] = (
+            profile_ref_raw if isinstance(profile_ref_raw, Mapping) else {}
+        )
+        replay_status = str(replay.get("status") or "")
+        return {
+            "schema": "rexecop.reaction_explain.v0.1",
+            "status": "verified" if replay_status in {"passed", "verified"} else "unverified",
+            "reaction_id": reaction_id,
+            "profile_ref": {
+                "id": str(profile_ref.get("id") or ""),
+                "version": str(profile_ref.get("version") or ""),
+                "digest": str(profile_ref.get("digest") or ""),
+            },
+            "outcome": str(plan.get("outcome") or ""),
+            "intent_ref": str(plan.get("intent_ref") or ""),
+            "child_operation_id": str(plan.get("child_operation_id") or ""),
+            "reason": str(plan.get("reason") or ""),
+            "finding": {
+                "id": str(finding.get("id") or finding.get("finding_id") or ""),
+                "kind": str(finding.get("kind") or ""),
+                "severity": str(finding.get("severity") or ""),
+                "digest": artifact_sha256(finding),
+            },
+            "observation": {
+                "digest": artifact_sha256(observation),
+                "schema_ref": str(
+                    observation.get("schema_ref") or observation.get("schema") or ""
+                ),
+                "source_operation_id": _source_operation_id(observation),
+            },
+            "admission": {
+                "status": str(admission.get("status") or ""),
+                "decision": str(admission.get("decision") or ""),
+                "decision_id": str(admission.get("decision_id") or ""),
+            },
+            "chain": {
+                "root_digest": _normalize_digest(str(manifest.get("root_chain_digest") or "")),
+                "manifest_digest": artifact_sha256(manifest),
+                "receipt_status": receipt_status,
+                "replay": replay,
+            },
+            "files": {
+                "observation": "01_observation.json",
+                "finding": "02_finding.json",
+                "reaction_plan": "03_reaction_plan.json",
+                "execution_receipt": (
+                    "04_execution_receipt.json" if receipt_path.is_file() else ""
+                ),
+                "manifest": "reaction_chain_manifest.json",
+            },
+            "safe_next_actions": _reaction_safe_next_actions(reaction_id, plan, receipt_status),
+            "non_claims": [
+                "Explains persisted reaction artifacts without executing anything.",
+                "Does not print raw observation facts, connector output, or secret values.",
+                "SCLite reaction-chain artifacts remain the verification authority.",
+            ],
+        }
+
     def validate_proposal(self, *, profile_path: str | Path, proposal_path: Path) -> dict[str, Any]:
         profile = load_profile(resolve_profile_path(profile_path))
         proposal = _read_json(proposal_path)
@@ -355,3 +425,33 @@ class ReactionService:
         if not catalog_path or not target_id:
             raise RExecOpValidationError("source operation catalog runtime is incomplete")
         return Path(catalog_path), target_id
+
+
+def _source_operation_id(observation: Mapping[str, Any]) -> str:
+    source = observation.get("source")
+    if not isinstance(source, Mapping):
+        return ""
+    return str(source.get("operation_id") or "")
+
+
+def _normalize_digest(value: str) -> str:
+    digest = str(value or "").strip()
+    if not digest:
+        return ""
+    return digest if digest.startswith("sha256:") else f"sha256:{digest}"
+
+
+def _reaction_safe_next_actions(
+    reaction_id: str,
+    plan: Mapping[str, Any],
+    receipt_status: str,
+) -> list[str]:
+    actions = [f"rexecop reaction explain --reaction {reaction_id}"]
+    if plan.get("outcome") in {"run_intent", "retry_intent"}:
+        child_id = str(plan.get("child_operation_id") or "")
+        if child_id:
+            actions.append(f"rexecop chain explain {child_id}")
+        if receipt_status != "present":
+            actions.append(f"rexecop reaction-start --reaction {reaction_id}")
+    actions.append(f"rexecop reaction-replay --reaction {reaction_id}")
+    return actions

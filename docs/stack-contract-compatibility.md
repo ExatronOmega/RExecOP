@@ -78,6 +78,10 @@ runtime behavior change. Compatibility policy id: `unknown_major_fail_closed`.
 
 Golden fixture `tests/fixtures/stack_contract_compatibility_golden.json` guards
 required GovEngine surfaces, runtime projections and SCLite artifact versions.
+`scripts/validate_cross_repo_golden_fixture.py` additionally gates the sanitized
+Tecrax diagnosis flow through RExecOp reaction planning, GovEngine admission,
+SCLite reaction-chain replay, `reaction explain`, `chain explain` and
+idempotent recovery planning.
 
 ## M8 claim-to-code matrix
 
@@ -88,6 +92,7 @@ required GovEngine surfaces, runtime projections and SCLite artifact versions.
 | Structured logs | `rexecop.structured_log_event.v0.1` | `tests/test_observability.py`, `observability/logs list` |
 | Runtime diagnostics | `rexecop.runtime_diagnostics.v0.1` | `tests/test_observability.py`, `observability diagnostics` |
 | M6/M7 typed execution + truth-path | `project_truth_path()`, `admit_typed_execution()` | `validate_artifact_install_smoke.py`, `validate_clean_install_smoke.py` |
+| Cross-repo golden fixture | `rexecop.reaction_explain.v0.1`, `rexecop.chain_explain.v0.1` | `scripts/validate_cross_repo_golden_fixture.py` |
 
 ## Required gates
 
@@ -95,6 +100,7 @@ The stack must keep these gates green before implementing later automation:
 
 - RExecOp: `scripts/validate_public_truth.py`, `scripts/validate_stack_contracts.py`,
   `scripts/validate_profile_conformance.py`, `scripts/validate_first_run_smoke.py`,
+  `scripts/validate_cross_repo_golden_fixture.py`,
   `scripts/validate_artifact_install_smoke.py`, `scripts/validate_clean_install_smoke.py`,
   `scripts/secret_scan.sh`, core-domain-token guard, `ruff`, `mypy src/rexecop`, and pytest.
 - Tecrax: public truth, active profile validation, secret topology validation, `ruff`, `mypy src/tecrax`, and pytest.
