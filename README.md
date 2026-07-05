@@ -22,6 +22,7 @@ policy engine or a parallel truth layer.
 | Item | Value |
 | --- | --- |
 | Current source line | `0.2.24a0` |
+| Main branch | May include unreleased changes listed under `CHANGELOG.md` / Unreleased |
 | Maturity | **alpha** — operator evaluation with documented limits |
 | Delivery | Published single supported alpha line; older PyPI releases are archived only |
 | Tests | CI reruns the current suite; `pytest -m delivery` runs the sign-off scope |
@@ -77,9 +78,12 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Declarative profile validation rules (YAML, not hardcoded domain logic in core)
 - Deterministic reaction interpreter (`reaction-plan`, `reaction-start`, `reaction-replay`,
   `reaction explain`)
+- Reaction automation-chain projection for admitted child-operation planning
+  (`automation_chain.v0.1`) with GovEngine automation-transition admission refs
 - Connectors: `mock`, `http_api`, `local_shell_readonly`, `ssh_readonly` (bounded output + digests)
 - Execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` (schema `v0.2`)
-- GovEngine `PolicyEngine` when `environment.policy_pack` is set
+- GovEngine `PolicyEngine` when `environment.policy_pack` is set, plus
+  `rexecop.policy_pack_lifecycle.v0.1` projections for pack status, digest and enforcement binding
 - Operator target catalog and profile-derived operation catalog with drift rejection at start
 - Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
@@ -105,11 +109,15 @@ Ravenclaw is legacy and out of scope for RExecOp.
   `operation review`, `operation diff`, `runbook show`, `operations unavailable`
 - Audit inspection: `receipt show`, `evidence show`, `chain summary`, `chain explain`,
   `support bundle --redacted` for redacted, digest-bound runtime/SCLite projections
-- Runtime triage: `runtime status`, `ops`, `explain-error`, `dead-letter list/show`,
-  `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record`
+- Runtime triage: `runtime status`, `runtime reconstruct-status`, `ops`, `explain-error`,
+  `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`,
+  `watchdog manual-record`
 - Lifecycle controls: `plan`, `approve`, `start`, `pause`/`resume`, `cancel`, `retry`,
   `rollback`, `validate`, `escalate`, `status`, `history`
 - Host-owned scheduling: `queue`, `worker run`, `trigger` (see operator scheduler pattern)
+- Advisory escalation proposal handling: validate `escalation_proposal.v0.1`,
+  review without printing raw explanation text, and record `accept_for_planning`/`reject`
+  decisions without planning, approval or execution
 
 **Examples and fixtures**
 
@@ -126,6 +134,11 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Web UI or multi-tenant RBAC
 - Unattended apply on critical infrastructure without operator and governance gates
 - `mutation_ready` apply on production targets without explicit stack gate update
+- An LLM provider adapter or prompt execution pipeline; current proposal handling is
+  advisory, local and non-executable
+- Automatic conversion of accepted advisory proposals into operations; operators must
+  create a normal plan that passes profile validation and GovEngine admission
+- Profile-owned graph runbook traversal beyond the current single-step reaction/automation-chain path
 
 ## Installation
 
@@ -210,11 +223,11 @@ The CLI has grown across M1–M5 milestones. **Full command reference:**
 | Action metadata | `action list`, `action show`, `action preview`, `action policy-preview`, `action validate`, `action diff`, `action configure` |
 | Catalog | `targets list/show`, `operations list`, `operations explain`, `operations unavailable` |
 | Pre-run inspection | `policy explain`, `operation explain`, `operation review`, `operation diff`, `runbook show` |
-| Runtime triage | `runtime status`, `ops`, `explain-error`, `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record` |
+| Runtime triage | `runtime status`, `runtime reconstruct-status`, `ops`, `explain-error`, `dead-letter list/show`, `locks list`, `runtime recover`, `backup create/restore`, `watchdog manual-record` |
 | Observability | `observability logs list`, `observability diagnostics` |
 | Lifecycle | `plan`, `approve`, `start`, `pause`, `resume`, `cancel`, `retry`, `rollback`, `validate`, `escalate`, `status`, `history` |
 | Scheduling | `queue`, `worker run`, `trigger` |
-| Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction explain`, `reaction-proposal-validate` |
+| Reactions | `reaction-plan`, `reaction-start`, `reaction-replay`, `reaction explain`, `reaction-proposal-validate`, `reaction-proposal-review`, `reaction-proposal-submit` |
 
 Global options: `--root`, `--instance`, `--storage file|sqlite`.
 
