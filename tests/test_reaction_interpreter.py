@@ -7,7 +7,9 @@ from pathlib import Path
 import pytest
 import yaml
 from sclite import build_observation_envelope
+from typer.testing import CliRunner
 
+from rexecop.cli import app
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.controller import OperationController
 from rexecop.operation.model import Operation, utc_now_iso
@@ -16,12 +18,17 @@ from rexecop.profile.loader import load_profile
 from rexecop.reaction.compiler import compile_reaction_pack
 from rexecop.reaction.evaluator import evaluate_reaction
 from rexecop.reaction.model import ReactionContext
+from rexecop.reaction.proposal import (
+    review_escalation_proposal,
+    submit_escalation_proposal,
+)
 from rexecop.reaction.service import ReactionService
 from rexecop.storage.file_store import FileStore
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PROFILE = ROOT / "examples/profiles/runtime-fixture"
 POLICY_ENV = ROOT / "examples/environments/runtime-fixture.policy.example.yaml"
+runner = CliRunner()
 
 
 def _pack(*, outcome: str = "run_intent", intent_ref: str | None = "inspect_fixture_state") -> dict:
@@ -90,6 +97,27 @@ def _add_catalog_metadata(profile_root: Path) -> None:
         "runbook_ref": "docs/inspect-fixture.md",
     }
     intent_path.write_text(yaml.safe_dump(intent, sort_keys=False), encoding="utf-8")
+
+
+def _proposal() -> dict:
+    return {
+        "artifact_type": "escalation_proposal",
+        "schema_version": "v0.1",
+        "schema_ref": "schemas/escalation_proposal.v0.1.schema.json",
+        "proposal_id": "proposal-1",
+        "reaction_id": "reaction-1",
+        "created_at": "2026-06-22T20:00:00+00:00",
+        "suggested_outcome": "run_intent",
+        "intent_ref": "inspect_fixture_state",
+        "explanation": "Re-run the bounded read-only inspection.",
+        "evidence_refs": ["01_observation.json"],
+        "authority": {
+            "trusted": False,
+            "may_execute": False,
+            "requires_profile_validation": True,
+            "requires_govengine_admission": True,
+        },
+    }
 
 
 def _catalog(
@@ -643,24 +671,7 @@ def test_reaction_fails_closed_on_unenforceable_obligations(tmp_path: Path) -> N
 
 def test_llm_proposal_validation_never_grants_execution(tmp_path: Path) -> None:
     profile_root = _profile(tmp_path)
-    proposal = {
-        "artifact_type": "escalation_proposal",
-        "schema_version": "v0.1",
-        "schema_ref": "schemas/escalation_proposal.v0.1.schema.json",
-        "proposal_id": "proposal-1",
-        "reaction_id": "reaction-1",
-        "created_at": "2026-06-22T20:00:00+00:00",
-        "suggested_outcome": "run_intent",
-        "intent_ref": "inspect_fixture_state",
-        "explanation": "Re-run the bounded read-only inspection.",
-        "evidence_refs": ["01_observation.json"],
-        "authority": {
-            "trusted": False,
-            "may_execute": False,
-            "requires_profile_validation": True,
-            "requires_govengine_admission": True,
-        },
-    }
+    proposal = _proposal()
     proposal_path = tmp_path / "proposal.json"
     proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
     service = ReactionService(OperationController(store=FileStore(tmp_path / "runtime")))
@@ -670,3 +681,121 @@ def test_llm_proposal_validation_never_grants_execution(tmp_path: Path) -> None:
     assert result["status"] == "valid_untrusted_proposal"
     assert result["may_execute"] is False
     assert result["requires_govengine_admission"] is True
+
+
+def test_proposal_review_redacts_explanation_and_never_grants_execution(
+    tmp_path: Path,
+) -> None:
+    profile_root = _profile(tmp_path)
+    proposal = _proposal()
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+
+    result = review_escalation_proposal(
+        profile_path=profile_root,
+        proposal_path=proposal_path,
+    )
+
+    assert result["schema"] == "rexecop.proposal_review.v0.1"
+    assert result["status"] == "reviewable"
+    assert result["proposal"]["proposal_id"] == "proposal-1"
+    assert result["proposal"]["proposal_digest"].startswith("sha256:")
+    assert result["proposal"]["explanation_chars"] == len(proposal["explanation"])
+    assert "explanation" not in result["proposal"]
+    assert proposal["explanation"] not in json.dumps(result)
+    assert result["verdict"]["may_execute"] is False
+    assert result["verdict"]["requires_govengine_admission"] is True
+
+
+def test_proposal_submit_records_operator_decision_without_planning(
+    tmp_path: Path,
+) -> None:
+    profile_root = _profile(tmp_path)
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(json.dumps(_proposal()), encoding="utf-8")
+    root = tmp_path / "runtime"
+
+    result = submit_escalation_proposal(
+        root=root,
+        profile_path=profile_root,
+        proposal_path=proposal_path,
+        decision="accept_for_planning",
+        reviewer="operator:alice",
+        reason="bounded_review",
+    )
+
+    assert result["schema"] == "rexecop.proposal_submission.v0.1"
+    assert result["status"] == "recorded"
+    assert result["decision"] == "accept_for_planning"
+    assert result["may_execute"] is False
+    assert result["requires_normal_plan"] is True
+    assert (root / "proposal_reviews" / "proposal-1.json").is_file()
+    stored = json.loads((root / "proposal_reviews" / "proposal-1.json").read_text())
+    assert stored == result
+
+
+def test_proposal_submit_rejects_invalid_decision(tmp_path: Path) -> None:
+    profile_root = _profile(tmp_path)
+    proposal_path = tmp_path / "proposal.json"
+    proposal_path.write_text(json.dumps(_proposal()), encoding="utf-8")
+
+    with pytest.raises(RExecOpValidationError, match="unsupported proposal decision"):
+        submit_escalation_proposal(
+            root=tmp_path / "runtime",
+            profile_path=profile_root,
+            proposal_path=proposal_path,
+            decision="execute",
+            reviewer="operator:alice",
+            reason="bad",
+        )
+
+
+def test_cli_proposal_review_and_submit_protocol(tmp_path: Path) -> None:
+    profile_root = _profile(tmp_path)
+    proposal_path = tmp_path / "proposal.json"
+    proposal = _proposal()
+    proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+    root = tmp_path / "runtime"
+
+    review = runner.invoke(
+        app,
+        [
+            "--root",
+            str(root),
+            "reaction-proposal-review",
+            "--profile",
+            str(profile_root),
+            "--proposal",
+            str(proposal_path),
+        ],
+    )
+    assert review.exit_code == 0, review.output
+    review_payload = json.loads(review.stdout)
+    assert review_payload["schema"] == "rexecop.proposal_review.v0.1"
+    assert proposal["explanation"] not in review.stdout
+    assert review_payload["verdict"]["may_execute"] is False
+
+    submit = runner.invoke(
+        app,
+        [
+            "--root",
+            str(root),
+            "reaction-proposal-submit",
+            "--profile",
+            str(profile_root),
+            "--proposal",
+            str(proposal_path),
+            "--decision",
+            "accept_for_planning",
+            "--reviewer",
+            "operator:alice",
+            "--reason",
+            "bounded_review",
+        ],
+    )
+    assert submit.exit_code == 0, submit.output
+    submit_payload = json.loads(submit.stdout)
+    assert submit_payload["schema"] == "rexecop.proposal_submission.v0.1"
+    assert submit_payload["may_execute"] is False
+    assert submit_payload["requires_normal_plan"] is True
+    assert (root / "proposal_reviews" / "proposal-1.json").is_file()

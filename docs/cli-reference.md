@@ -228,6 +228,8 @@ See [operator-scheduler-pattern.md](operator-scheduler-pattern.md).
 | `reaction-replay --reaction ID` | Replay a completed reaction chain |
 | `reaction explain --reaction ID` | Explain persisted reaction artifacts and replay status without execution |
 | `reaction-proposal-validate --proposal PATH` | Validate an LLM escalation proposal as non-executable input |
+| `reaction-proposal-review --proposal PATH` | Review an advisory proposal without exposing raw explanation text |
+| `reaction-proposal-submit --proposal PATH --decision accept_for_planning\|reject` | Record operator proposal handling without planning or execution |
 
 See [reaction-interpreter.md](reaction-interpreter.md).
 

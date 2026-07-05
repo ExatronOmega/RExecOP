@@ -89,6 +89,10 @@ from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.profile.runbook import render_runbook_show, show_profile_runbook
 from rexecop.reaction.model import ReactionContext
+from rexecop.reaction.proposal import (
+    review_escalation_proposal,
+    submit_escalation_proposal,
+)
 from rexecop.runtime.doctor import CHECK_BLOCKER, count_secret_refs, run_runtime_doctor
 from rexecop.runtime.init import initialize_runtime_root
 from rexecop.runtime_ops.watchdog import WatchdogService
@@ -1182,9 +1186,68 @@ def reaction_proposal_validate_cmd(
             profile_path=profile,
             proposal_path=proposal,
         )
-    except (RExecOpError, ValueError) as exc:
+    except (OSError, RExecOpError, ValueError) as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from exc
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("reaction-proposal-review")
+def reaction_proposal_review_cmd(
+    profile: str = typer.Option(..., "--profile"),
+    proposal: Path = typer.Option(..., "--proposal"),
+) -> None:
+    """Review an untrusted advisory proposal without executing or planning it."""
+    try:
+        result = review_escalation_proposal(
+            profile_path=profile,
+            proposal_path=proposal,
+        )
+    except (OSError, RExecOpError, ValueError) as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("reaction-proposal-review",),
+                reason_code="proposal_review_failed",
+                message=str(exc),
+                safe_next_actions=(
+                    "Validate the proposal shape and profile intent compatibility.",
+                    "Ensure the proposal is an untrusted escalation_proposal.v0.1 artifact.",
+                ),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@app.command("reaction-proposal-submit")
+def reaction_proposal_submit_cmd(
+    profile: str = typer.Option(..., "--profile"),
+    proposal: Path = typer.Option(..., "--proposal"),
+    decision: str = typer.Option(..., "--decision"),
+    reviewer: str = typer.Option(..., "--reviewer"),
+    reason: str = typer.Option(..., "--reason"),
+) -> None:
+    """Record operator review of an advisory proposal; this never executes it."""
+    try:
+        result = submit_escalation_proposal(
+            root=runtime_root(),
+            profile_path=profile,
+            proposal_path=proposal,
+            decision=decision,
+            reviewer=reviewer,
+            reason=reason,
+        )
+    except (OSError, RExecOpError, ValueError) as exc:
+        _emit_cli_error(
+            validation_cli_error(
+                command=("reaction-proposal-submit",),
+                reason_code="proposal_submit_failed",
+                message=str(exc),
+                safe_next_actions=(
+                    "Run reaction-proposal-review first.",
+                    "Use decision accept_for_planning or reject.",
+                ),
+            )
+        )
     typer.echo(json.dumps(result, indent=2, sort_keys=True))
 
 

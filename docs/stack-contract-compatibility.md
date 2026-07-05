@@ -94,6 +94,7 @@ idempotent recovery planning.
 | Structured logs | `rexecop.structured_log_event.v0.1` | `tests/test_observability.py`, `observability/logs list` |
 | Runtime diagnostics | `rexecop.runtime_diagnostics.v0.1` | `tests/test_observability.py`, `observability diagnostics` |
 | Runtime-store reconstruction | `rexecop.runtime_reconstruction.v0.1` | `tests/test_runtime_recovery.py`, `runtime reconstruct-status --json` |
+| Advisory proposal review | `rexecop.proposal_review.v0.1`, `rexecop.proposal_submission.v0.1` | `tests/test_reaction_interpreter.py`, CLI registry/error tests |
 | M6/M7 typed execution + truth-path | `project_truth_path()`, `admit_typed_execution()` | `validate_artifact_install_smoke.py`, `validate_clean_install_smoke.py` |
 | Cross-repo golden fixture | `rexecop.reaction_explain.v0.1`, `rexecop.chain_explain.v0.1` | `scripts/validate_cross_repo_golden_fixture.py` |
 

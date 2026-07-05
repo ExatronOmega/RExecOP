@@ -109,5 +109,23 @@ interpret finding taxonomy or profile facts.
 An LLM may produce only `escalation_proposal.v0.1`. The schema rejects commands
 and executable payloads and declares `may_execute=false`. Validation proves only
 shape and profile intent compatibility; it does not authorize the proposal.
-Any future acceptance path must repeat GovEngine admission and create a normal
-operation. No LLM adapter has connector or executor access.
+RExecOp can review and record operator handling of the advisory proposal:
+
+```bash
+rexecop reaction-proposal-review --profile tecrax --proposal proposal.json
+rexecop reaction-proposal-submit --profile tecrax --proposal proposal.json \
+  --decision accept_for_planning --reviewer operator:alice --reason bounded_review
+rexecop reaction-proposal-submit --profile tecrax --proposal proposal.json \
+  --decision reject --reviewer operator:alice --reason unsafe_or_irrelevant
+```
+
+`reaction-proposal-review` emits `rexecop.proposal_review.v0.1`. It reports the
+proposal digest, outcome, intent ref, evidence refs and authority flags, but it
+does not print the raw proposal explanation text.
+
+`reaction-proposal-submit` writes `rexecop.proposal_submission.v0.1` under the
+runtime root as an operator review record. `accept_for_planning` still has
+`may_execute=false`: it only means the operator may create a normal RExecOp plan
+with explicit profile, environment, target and mode. GovEngine admission and
+SCLite evidence remain required for later execution claims. No LLM adapter has
+connector or executor access.

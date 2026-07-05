@@ -131,6 +131,22 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         notes=("Verifies persisted reaction-chain artifacts without starting a child operation.",),
     ),
     CliContract(
+        command=("reaction-proposal-review",),
+        schema="rexecop.proposal_review.v0.1",
+        stability="alpha_contract",
+        group="audit_inspection",
+        authority="untrusted_proposal_projection",
+        notes=("Does not execute, plan, or approve advisory proposal output.",),
+    ),
+    CliContract(
+        command=("reaction-proposal-submit",),
+        schema="rexecop.proposal_submission.v0.1",
+        stability="alpha_contract",
+        group="audit_inspection",
+        authority="operator_review_record",
+        notes=("Records accept_for_planning or reject without creating an operation.",),
+    ),
+    CliContract(
         command=("support", "bundle"),
         schema="rexecop.support_bundle.v0.1",
         stability="alpha_contract",

@@ -12,6 +12,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- Added advisory proposal review/submit protocol:
+  `reaction-proposal-review` (`rexecop.proposal_review.v0.1`) and
+  `reaction-proposal-submit` (`rexecop.proposal_submission.v0.1`) record
+  operator review without planning, approval or execution.
 - Added `runtime reconstruct-status --json`
   (`rexecop.runtime_reconstruction.v0.1`), a read-only projection of
   runtime-store reconstruction rules, required inputs, blockers and safe next
