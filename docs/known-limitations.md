@@ -1,6 +1,6 @@
 # Known limitations (alpha)
 
-RExecOp `0.2.18a0` is the current source alpha line for operator evaluation.
+RExecOp `0.2.19a0` is the current source alpha line for operator evaluation.
 This document states what the current published alpha line does **not** provide so expectations stay aligned with implementation.
 
 ## Governance and truth
@@ -55,9 +55,9 @@ This document states what the current published alpha line does **not** provide 
 
 | Limitation | Detail |
 | --- | --- |
-| Public PyPI | `rexecop==0.2.18a0` published for alpha evaluation — not a production-ready claim |
-| Source alpha line | `0.2.18a0` is current on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
-| Coordinated dependencies | Source line requires `govengine==0.16.9` and `sclite-core==1.0.8`; the `tecrax` extra requires `tecrax==0.3.12a0` |
+| Public PyPI | `rexecop==0.2.19a0` published for alpha evaluation — not a production-ready claim |
+| Source alpha line | `0.2.19a0` is current on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
+| Coordinated dependencies | Source line requires `govengine==0.16.9` and `sclite-core==1.0.8`; the `tecrax` extra requires `tecrax==0.3.13a0` |
 
 ## Stack readiness labels
 
