@@ -7,6 +7,7 @@ import typer
 from rexecop.cli_context import controller, emit_cli_error
 from rexecop.cli_errors import cli_error_payload, validation_cli_error
 from rexecop.errors import RExecOpError
+from rexecop.runtime_ops.reconstruction import collect_runtime_reconstruction_status
 from rexecop.runtime_ops.recovery import run_startup_recovery
 from rexecop.runtime_ops.triage import (
     collect_ops_snapshot,
@@ -63,6 +64,34 @@ def runtime_status_cmd(
             validation_cli_error(
                 command=("runtime", "status"),
                 reason_code="runtime_status_unavailable",
+                message=str(exc),
+                safe_next_actions=("Run rexecop init in the runtime root first.",),
+            )
+        )
+    typer.echo(json.dumps(result, indent=2, sort_keys=True))
+
+
+@runtime_app.command("reconstruct-status")
+def runtime_reconstruct_status_cmd(
+    as_json: bool = typer.Option(True, "--json/--no-json", help="Emit JSON status."),
+) -> None:
+    """Show read-only runtime-store reconstruction readiness and blockers."""
+    if not as_json:
+        emit_cli_error(
+            validation_cli_error(
+                command=("runtime", "reconstruct-status"),
+                reason_code="unsupported_output_format",
+                message="only --json output is supported",
+                safe_next_actions=("Re-run with --json.",),
+            )
+        )
+    try:
+        result = collect_runtime_reconstruction_status(controller().store)
+    except RExecOpError as exc:
+        emit_cli_error(
+            validation_cli_error(
+                command=("runtime", "reconstruct-status"),
+                reason_code="runtime_reconstruction_unavailable",
                 message=str(exc),
                 safe_next_actions=("Run rexecop init in the runtime root first.",),
             )

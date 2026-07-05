@@ -181,6 +181,7 @@ expose raw secrets or private connector payloads.
 | `dead-letter show ID` | One dead-letter item (redacted) |
 | `locks list` | Advisory target locks and stale holders |
 | `runtime recover [--json]` | Reconcile stale leases and receipt gaps after restart |
+| `runtime reconstruct-status [--json]` | Read-only runtime-store reconstruction readiness, rules and blockers |
 | `backup create [--output PATH]` | Secret-scanned runtime store tarball + manifest |
 | `backup restore --archive PATH` | Restore from tarball manifest |
 | `watchdog manual-record --action ... --reason ... --actor-ref ... --scope ...` | Governed manual watchdog decision without executing recovery |

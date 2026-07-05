@@ -23,6 +23,7 @@ rexecop explain-error <operation-id|dead-letter-name|watchdog-record-id>
 | `dead-letter show` | `rexecop.dead_letter_show.v0.1` | One redacted dead-letter item |
 | `locks list` | `rexecop.locks_list.v0.1` | Advisory target locks and stale holders |
 | `explain-error` | `rexecop.explain_error.v0.1` | Failure class, bounded summary, safe next actions |
+| `runtime reconstruct-status --json` | `rexecop.runtime_reconstruction.v0.1` | Read-only reconstruction readiness and blockers |
 
 `explain-error` accepts an operation id, dead-letter file name, or watchdog record
 id under `<root>/watchdog/`. For watchdog records it may include a redacted
@@ -50,6 +51,31 @@ under `<root>/recovery_blockers/` when receipt repair cannot proceed safely.
 Recovery does **not** re-run connector IO. Idempotency keys on plan/start/trigger
 paths prevent duplicate backend invocation after partial progress — see
 `rexecop.runtime_ops.idempotency`.
+
+## Runtime-store reconstruction status
+
+Before or after recovery, inspect whether the local runtime store has enough
+records to rebuild RExecOp's operational view without mutating it:
+
+```bash
+rexecop --root /operator/rexecop-runtime runtime reconstruct-status --json
+```
+
+Output schema: `rexecop.runtime_reconstruction.v0.1`.
+
+The command is read-only. It checks operation records, plan records, terminal
+receipt exports, evidence directories, SCLite bundle refs, idempotency metadata,
+recovery blockers and auto-reaction chain refs. It reports:
+
+- `reconstructable` when all required local runtime inputs are present;
+- `needs_recovery` when active states require `runtime recover` before a
+  reconstruction claim;
+- `partial` when the runtime can be rebuilt but non-authoritative refs are
+  incomplete;
+- `blocked` when required runtime records are missing or invalid.
+
+Reconstruction status does **not** repair state, export receipts, execute
+connectors, recompute GovEngine admission, or canonicalize SCLite artifacts.
 
 ## Runtime store backup
 

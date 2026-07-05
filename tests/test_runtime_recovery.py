@@ -15,6 +15,7 @@ from rexecop.operation.state import OperationState
 from rexecop.runtime_ops.backup import create_runtime_backup, restore_runtime_backup
 from rexecop.runtime_ops.idempotency import start_idempotency_key
 from rexecop.runtime_ops.lease import WorkerLeaseManager
+from rexecop.runtime_ops.reconstruction import collect_runtime_reconstruction_status
 from rexecop.runtime_ops.recovery import run_startup_recovery, start_is_idempotent
 from rexecop.runtime_ops.target_lock import TargetLockManager
 from rexecop.runtime_ops.worker import run_worker
@@ -211,6 +212,69 @@ def test_recovery_replay_drill_worker_restart_does_not_duplicate_start(
     assert final.state == OperationState.FAILED.value
 
 
+def test_runtime_reconstruction_status_reports_rebuildable_completed_operation(
+    tmp_path: Path,
+) -> None:
+    controller = _controller(tmp_path)
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
+    )
+    controller.start(operation.id)
+
+    payload = collect_runtime_reconstruction_status(controller.store)
+
+    assert payload["schema"] == "rexecop.runtime_reconstruction.v0.1"
+    assert payload["status"] == "reconstructable"
+    assert payload["summary"]["reconstructable_count"] == 1
+    item = payload["operations"][0]
+    assert item["operation_id"] == operation.id
+    assert item["status"] == "reconstructable"
+    assert item["inputs"]["operation_record"]["status"] == "present"
+    assert item["inputs"]["plan_record"]["status"] == "present"
+    assert item["inputs"]["receipt_export"]["status"] == "present"
+    assert item["blockers"] == []
+
+
+def test_runtime_reconstruction_status_blocks_missing_plan_and_active_state(
+    tmp_path: Path,
+) -> None:
+    controller = _controller(tmp_path)
+    now = NOW.isoformat()
+    operation = Operation(
+        id="op-running-reconstruct",
+        profile="runtime-fixture",
+        environment="runtime-fixture",
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
+        requested_by="operator",
+        state=OperationState.RUNNING.value,
+        created_at=now,
+        updated_at=now,
+        correlation_id="corr-running-reconstruct",
+    )
+    controller.store.save_operation(operation)
+
+    payload = collect_runtime_reconstruction_status(controller.store)
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_count"] == 1
+    item = payload["operations"][0]
+    assert item["status"] == "blocked"
+    assert item["blockers"] == [
+        "plan_record_missing",
+        "active_state_requires_runtime_recover",
+    ]
+    assert payload["safe_next_actions"] == [
+        "rexecop runtime recover --json",
+        "rexecop runtime reconstruct-status --json",
+    ]
+
+
 def test_cli_runtime_recover_and_backup(tmp_path: Path) -> None:
     root = tmp_path / "runtime"
     init = runner.invoke(app, ["--root", str(root), "init"])
@@ -226,3 +290,18 @@ def test_cli_runtime_recover_and_backup(tmp_path: Path) -> None:
     )
     assert backup.exit_code == 0, backup.output
     assert '"status": "created"' in backup.output
+
+
+def test_cli_runtime_reconstruct_status(tmp_path: Path) -> None:
+    root = tmp_path / "runtime"
+    init = runner.invoke(app, ["--root", str(root), "init"])
+    assert init.exit_code == 0, init.output
+
+    result = runner.invoke(
+        app,
+        ["--root", str(root), "runtime", "reconstruct-status", "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert '"schema": "rexecop.runtime_reconstruction.v0.1"' in result.output
+    assert '"status": "reconstructable"' in result.output

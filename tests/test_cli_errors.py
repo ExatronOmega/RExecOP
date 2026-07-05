@@ -127,6 +127,11 @@ def _planned_operation(tmp_path: Path):
             "runtime status",
             "unsupported_output_format",
         ),
+        (
+            ("runtime", "reconstruct-status", "--no-json"),
+            "runtime reconstruct-status",
+            "unsupported_output_format",
+        ),
     ],
 )
 def test_registry_commands_emit_cli_error_on_failure(
@@ -235,6 +240,11 @@ def test_runtime_group_success_schemas(tmp_path: Path) -> None:
     runtime_status = _json_success(_invoke(root, "runtime", "status", "--json"))
     assert runtime_status["schema"] == "rexecop.runtime_status.v0.1"
 
+    reconstruction = _json_success(
+        _invoke(root, "runtime", "reconstruct-status", "--json")
+    )
+    assert reconstruction["schema"] == "rexecop.runtime_reconstruction.v0.1"
+
 
 def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
     covered = {
@@ -255,6 +265,7 @@ def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
         "explain-error",
         "ops",
         "profile lint",
+        "runtime reconstruct-status",
         "observability logs list",
         "observability diagnostics",
     }

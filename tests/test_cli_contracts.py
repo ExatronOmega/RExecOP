@@ -31,6 +31,7 @@ EXPECTED_COMMAND_SCHEMAS = {
     "profile lint": "rexecop.profile_conformance.v0.1",
     "receipt show": "rexecop.receipt_show.v0.1",
     "reaction explain": "rexecop.reaction_explain.v0.1",
+    "runtime reconstruct-status": "rexecop.runtime_reconstruction.v0.1",
     "runtime status": "rexecop.runtime_status.v0.1",
     "status": "rexecop.operation_status.v0.1",
     "support bundle": "rexecop.support_bundle.v0.1",
@@ -62,6 +63,7 @@ EXPECTED_COMMAND_GROUPS = {
         "explain-error",
         "locks list",
         "ops",
+        "runtime reconstruct-status",
         "runtime status",
     },
 }
@@ -69,6 +71,7 @@ EXPECTED_COMMAND_GROUPS = {
 EXPECTED_OUTPUT_POLICIES = {
     "operation diff": "format_option",
     "operation review": "format_option",
+    "runtime reconstruct-status": "json_only_flag",
     "runtime status": "json_only_flag",
 }
 

@@ -150,6 +150,15 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
         output_policy="json_only_flag",
     ),
     CliContract(
+        command=("runtime", "reconstruct-status"),
+        schema="rexecop.runtime_reconstruction.v0.1",
+        stability="alpha_contract",
+        group="runtime_triage",
+        output_policy="json_only_flag",
+        authority="runtime_store_projection",
+        notes=("Read-only reconstruction rules; does not execute recovery.",),
+    ),
+    CliContract(
         command=("ops",),
         schema="rexecop.ops.v0.1",
         stability="alpha_contract",

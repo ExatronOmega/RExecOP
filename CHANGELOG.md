@@ -12,6 +12,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- Added `runtime reconstruct-status --json`
+  (`rexecop.runtime_reconstruction.v0.1`), a read-only projection of
+  runtime-store reconstruction rules, required inputs, blockers and safe next
+  actions.
 - Added `rexecop.policy_pack_lifecycle.v0.1`, a redacted lifecycle projection
   for `environment.policy_pack` covering absent/compiled/bound/enforcement
   stages, GovEngine-owned pack digests and operation/explain visibility.
