@@ -27,6 +27,7 @@
     "truth_path_projection"
   ],
   "sclite_artifact_versions": {
+    "automation_chain": "v0.1",
     "evidence_contract": "v0.2",
     "execution_contract": "v0.2",
     "execution_receipt": "v0.2",

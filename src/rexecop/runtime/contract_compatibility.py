@@ -41,7 +41,14 @@ SUPPORTED_SCLITE_ARTIFACT_VERSIONS: dict[str, str] = {
     "execution_receipt": "v0.2",
     "evidence_contract": "v0.2",
     "trigger_decision": "v0.1",
+    "automation_chain": "v0.1",
 }
+
+STACK_SCLITE_SCHEMA_REF_ROLES: tuple[str, ...] = (
+    *ARTIFACT_SLOTS,
+    "trigger_decision",
+    "automation_chain",
+)
 
 REXECOP_RUNTIME_PROJECTIONS: tuple[dict[str, Any], ...] = (
     {
@@ -242,7 +249,7 @@ def _sclite_schema_version(schema_ref: str) -> tuple[str, str]:
 
 def supported_sclite_artifact_refs() -> list[dict[str, str]]:
     refs: list[dict[str, str]] = []
-    for role in ARTIFACT_SLOTS:
+    for role in STACK_SCLITE_SCHEMA_REF_ROLES:
         schema_ref = SCLITE_SCHEMA_REFS[role]
         artifact, version = _sclite_schema_version(schema_ref)
         refs.append(
@@ -258,7 +265,7 @@ def supported_sclite_artifact_refs() -> list[dict[str, str]]:
 
 def validate_sclite_artifact_pins() -> list[str]:
     errors: list[str] = []
-    for role in ARTIFACT_SLOTS:
+    for role in STACK_SCLITE_SCHEMA_REF_ROLES:
         schema_ref = SCLITE_SCHEMA_REFS[role]
         artifact, version = _sclite_schema_version(schema_ref)
         expected = SUPPORTED_SCLITE_ARTIFACT_VERSIONS.get(artifact)

@@ -21,6 +21,7 @@ SCLITE_SCHEMA_REFS: dict[str, str] = {
     "execution_receipt": "schemas/execution_receipt.v0.2.schema.json",
     "evidence_contract": "schemas/evidence_contract.v0.2.schema.json",
     "trigger_decision": "schemas/trigger_decision.v0.1.schema.json",
+    "automation_chain": "schemas/automation_chain.v0.1.schema.json",
 }
 
 ARTIFACT_SLOTS = (

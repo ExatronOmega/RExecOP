@@ -18,6 +18,9 @@ PyPI alpha line is **`0.2.23a0`**. Entries under
 - Added `scripts/validate_cross_repo_golden_fixture.py`, a delivery gate for the
   sanitized Tecrax diagnosis flow through RExecOp reaction planning, GovEngine
   admission, SCLite reaction-chain replay and idempotent recovery planning.
+- Added downstream compatibility awareness for SCLite `automation_chain.v0.1`
+  as the future multi-step automation-chain truth contract. RExecOp does not
+  emit the chain yet.
 
 ## [0.2.23a0] - 2026-07-05
 
