@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish-rexecop:
@@ -29,7 +30,7 @@ jobs:
           test "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')" = "${{ inputs.version }}"
 
       - name: Install build tooling
-        run: python -m pip install --upgrade pip build twine
+        run: python -m pip install --upgrade pip build twine pip-audit cyclonedx-bom
 
       - name: Build package
         run: |
@@ -41,6 +42,9 @@ jobs:
 
       - name: Check package secret and path hygiene
         run: python scripts/validate_distribution.py dist
+
+      - name: Supply-chain gate
+        run: python scripts/validate_supply_chain_gate.py dist
 
       - name: Publish to PyPI
         env:

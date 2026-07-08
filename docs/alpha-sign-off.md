@@ -28,6 +28,8 @@ The script runs:
 11. Post-publish: `python scripts/validate_public_index_release_smoke.py --write-evidence --verify-post-publish`
     (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, records
     `docs/release-evidence/<version>.md`, then `validate_release_train_preflight.py --post-publish`)
+12. Package supply-chain: `python scripts/validate_supply_chain_gate.py dist` after `python -m build`
+    (`pip-audit` + CycloneDX SBOM; exceptions in `docs/supply-chain-audit-exceptions.json`)
 
 CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
 and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the

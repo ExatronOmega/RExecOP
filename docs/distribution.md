@@ -67,7 +67,31 @@ rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
 python scripts/validate_distribution.py dist
+python scripts/validate_supply_chain_gate.py dist
 ```
+
+## Supply-chain release gate
+
+`package-dry-run` and `publish.yml` run `scripts/validate_supply_chain_gate.py` on built
+`dist/` artifacts. The gate:
+
+1. installs the built wheel in an isolated venv,
+2. runs `pip-audit` on the frozen dependency tree,
+3. writes `dist/rexecop-<version>.cdx.json` (CycloneDX SBOM),
+4. fails on vulnerabilities not listed in `docs/supply-chain-audit-exceptions.json`.
+
+Documented audit exceptions use schema `rexecop.supply_chain_audit_exceptions.v0.1`.
+
+### PyPI trusted publishing (preferred)
+
+Long-lived `PYPI_API_TOKEN` upload remains supported in `publish.yml`, but the preferred
+path is **PyPI trusted publishing (OIDC)** from GitHub Actions:
+
+1. Configure a trusted publisher for `rozmiarD/RExecOP` on PyPI.
+2. Replace the `twine upload` step with `pypa/gh-action-pypi-publish@release/v1`.
+3. Keep `permissions.id-token: write` in the workflow (already enabled).
+
+Do not store upload tokens in the repository, handoffs, or agent memory.
 
 ## Install from Git (no local clone)
 
