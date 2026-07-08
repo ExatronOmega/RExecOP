@@ -24,7 +24,10 @@ The script runs:
 8. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
 9. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
-10. Post-publish: `python scripts/validate_clean_install_smoke.py` against the PyPI line
+10. Before PyPI upload: `python scripts/validate_release_train_preflight.py` (offline stack-line gate)
+11. Post-publish: `python scripts/validate_clean_install_smoke.py` against the PyPI line, then
+    `python scripts/validate_release_train_preflight.py --post-publish` after recording
+    `clean_install_smoke_ok:rexecop==<version>` in `CHANGELOG` or `docs/release-evidence/<version>.md`
 
 CI on `main` runs the same validators (except the optional build step), the full pytest
 suite, and the `package-dry-run` job. PyPI publication uses `.github/workflows/publish.yml`

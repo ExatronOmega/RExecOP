@@ -12,6 +12,11 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- Added `scripts/validate_release_train_preflight.py`, an offline release-train gate that
+  reuses public-truth and stack-contract validators, checks sibling GovEngine/SCLite/Tecrax
+  pins when local checkouts exist, and supports `--post-publish` evidence for public-index
+  clean-install smoke (`docs/release-evidence/`).
+- Wired release preflight into `.github/workflows/publish.yml` and `docs/alpha-sign-off.md`.
 - Added advisory proposal review/submit protocol:
   `reaction-proposal-review` (`rexecop.proposal_review.v0.1`) and
   `reaction-proposal-submit` (`rexecop.proposal_submission.v0.1`) record

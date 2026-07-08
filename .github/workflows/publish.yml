@@ -24,6 +24,8 @@ jobs:
       - name: Validate version and public truth
         run: |
           python scripts/validate_public_truth.py
+          python scripts/validate_stack_contracts.py
+          python scripts/validate_release_train_preflight.py
           test "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')" = "${{ inputs.version }}"
 
       - name: Install build tooling
