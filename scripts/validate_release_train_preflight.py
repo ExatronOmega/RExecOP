@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 import sys
 import tomllib
 from pathlib import Path
@@ -23,16 +24,25 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-DEFAULT_STACK_REPOS: dict[str, Path] = {
-    "govengine": Path("/home/probo/projects/govengine"),
-    "sclite": Path("/home/probo/projects/sclite"),
-    "tecrax": Path("/home/probo/projects/tecrax"),
+_STACK_REPO_ENV: dict[str, str] = {
+    "govengine": "GOVSTACK_REPO_GOVENGINE",
+    "sclite": "GOVSTACK_REPO_SCLITE",
+    "tecrax": "GOVSTACK_REPO_TECRAX",
 }
 
 _VALIDATOR_MODULES: tuple[Any, Any] | None = None
 
 RELEASE_EVIDENCE_DIR = ROOT / "docs" / "release-evidence"
 CLEAN_INSTALL_MARKER_PREFIX = "clean_install_smoke_ok:rexecop=="
+
+
+def stack_repos_from_env() -> dict[str, Path]:
+    repos: dict[str, Path] = {}
+    for name, env_var in _STACK_REPO_ENV.items():
+        value = os.environ.get(env_var, "").strip()
+        if value:
+            repos[name] = Path(value)
+    return repos
 
 
 def _load_module(name: str, path: Path):
@@ -189,7 +199,7 @@ def collect_errors(
         expected_govengine=public_truth.EXPECTED_GOVENGINE,
         expected_sclite=public_truth.EXPECTED_SCLITE,
         expected_tecrax=public_truth.EXPECTED_TECRAX_EXTRA,
-        stack_repos=stack_repos or DEFAULT_STACK_REPOS,
+        stack_repos=stack_repos if stack_repos is not None else stack_repos_from_env(),
     )
 
     if post_publish and not _has_post_publish_evidence(version):
