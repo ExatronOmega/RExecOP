@@ -12,6 +12,7 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- CI `test` job now runs validators, ruff, mypy, and pytest on Python 3.11, 3.12, and 3.13.
 - Added `scripts/validate_public_index_release_smoke.py`, a post-publish PyPI gate that reuses
   clean-install smoke plus `rexecop version` and `rexecop --json doctor`, writes release evidence,
   and verifies `validate_release_train_preflight.py --post-publish`.

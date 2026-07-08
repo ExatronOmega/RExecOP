@@ -29,8 +29,9 @@ The script runs:
     (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, records
     `docs/release-evidence/<version>.md`, then `validate_release_train_preflight.py --post-publish`)
 
-CI on `main` runs the same validators (except the optional build step), the full pytest
-suite, and the `package-dry-run` job. PyPI publication uses `.github/workflows/publish.yml`
+CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
+and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the
+`package-dry-run` job. PyPI publication uses `.github/workflows/publish.yml`
 (manual) or operator `twine upload` after sign-off.
 
 ## Human acceptance checklist

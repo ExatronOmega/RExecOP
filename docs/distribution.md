@@ -16,7 +16,7 @@ The published wheel contains full B2, R4c, watchdog decision truth, and manual r
 
 ## Prerequisites
 
-- Python **3.11+**
+- Python **3.11+** (CI on `main` exercises **3.11**, **3.12**, and **3.13**)
 - Network access to install pinned dependencies:
   - `govengine==0.16.11`
   - `sclite-core==1.0.9`

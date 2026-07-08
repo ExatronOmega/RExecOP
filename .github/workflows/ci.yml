@@ -8,6 +8,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +38,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install
         run: |
@@ -77,6 +81,7 @@ jobs:
           fi
 
       - name: Secret scan (tracked tree and history)
+        if: matrix.python-version == '3.11'
         run: bash scripts/secret_scan.sh
 
       - name: Package install smoke
