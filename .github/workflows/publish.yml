@@ -47,3 +47,10 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: python -m twine upload dist/*
+
+      - name: Public-index release smoke
+        run: |
+          python scripts/validate_public_index_release_smoke.py \
+            --version "${{ inputs.version }}" \
+            --write-evidence \
+            --verify-post-publish

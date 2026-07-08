@@ -2,12 +2,19 @@
 
 Store post-publish public-index smoke output for a released line.
 
-After `python scripts/validate_clean_install_smoke.py` succeeds for version `<version>`,
-record the stdout marker here as `docs/release-evidence/<version>.md` or in the matching
-`CHANGELOG` section. Then run:
+Preferred path:
 
 ```bash
-python scripts/validate_release_train_preflight.py --post-publish
+python scripts/validate_public_index_release_smoke.py \
+  --version <version> \
+  --write-evidence \
+  --verify-post-publish
 ```
 
-This directory is intentionally empty until a release is published and verified on PyPI.
+This records `clean_install_smoke_ok:rexecop==<version>` and runs offline
+`validate_release_train_preflight.py --post-publish`.
+
+Manual fallback: run `validate_clean_install_smoke.py`, copy the stdout marker into
+`docs/release-evidence/<version>.md`, then run preflight `--post-publish`.
+
+This directory stays empty until a release is published and verified on PyPI.

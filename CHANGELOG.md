@@ -12,6 +12,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- Added `scripts/validate_public_index_release_smoke.py`, a post-publish PyPI gate that reuses
+  clean-install smoke plus `rexecop version` and `rexecop --json doctor`, writes release evidence,
+  and verifies `validate_release_train_preflight.py --post-publish`.
+- Refactored `validate_clean_install_smoke.py` to expose reusable isolated PyPI install helpers.
 - Added `scripts/validate_release_train_preflight.py`, an offline release-train gate that
   reuses public-truth and stack-contract validators, checks sibling GovEngine/SCLite/Tecrax
   pins when local checkouts exist, and supports `--post-publish` evidence for public-index
