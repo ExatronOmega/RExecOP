@@ -12,6 +12,12 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+- Added `scripts/validate_stack_invariants.py` and `tests/test_stack_invariants.py`
+  (`pytest -m invariant`) for digest normalization, unknown-major fail-closed, typed
+  execution binding, public projection, and idempotency/replay invariants.
+- Added `scripts/validate_external_review_gate.py` with
+  `docs/release-security-review/<version>.json` records (`independent_review` or
+  `solo_reviewed_alpha_risk`).
 - Added profile-declared `public_projection.safe_fields` allowlists for connector/runtime
   outputs (`rexecop.public_projection.v0.1`); evidence, structured logs and dead-letter
   triage project payloads before finite redaction detectors run.

@@ -1,0 +1,15 @@
+{
+  "schema": "rexecop.release_security_review.v0.1",
+  "version": "0.2.24a0",
+  "review_mode": "solo_reviewed_alpha_risk",
+  "reviewed_at": "2026-07-08",
+  "reviewer_ref": "operator:stack-maintainer",
+  "surfaces": [
+    "governance_admission_binding",
+    "mutation_gates",
+    "connector_output_safety",
+    "release_train_scripts",
+    "supply_chain_workflow"
+  ],
+  "notes": "Solo-maintainer alpha risk acceptance for the current PyPI line after M8.5 release/process hardening gates (preflight, supply-chain, public projection, stack invariants)."
+}

@@ -30,6 +30,10 @@ The script runs:
     `docs/release-evidence/<version>.md`, then `validate_release_train_preflight.py --post-publish`)
 12. Package supply-chain: `python scripts/validate_supply_chain_gate.py dist` after `python -m build`
     (`pip-audit` + CycloneDX SBOM; exceptions in `docs/supply-chain-audit-exceptions.json`)
+13. Stack invariants: `python scripts/validate_stack_invariants.py` (`pytest -m invariant`)
+14. External/security review: `python scripts/validate_external_review_gate.py` with record in
+    `docs/release-security-review/<version>.json` (`independent_review` or documented
+    `solo_reviewed_alpha_risk`)
 
 CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
 and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the
