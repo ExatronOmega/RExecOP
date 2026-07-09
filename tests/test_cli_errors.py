@@ -274,6 +274,24 @@ def test_runtime_group_success_schemas(tmp_path: Path) -> None:
     assert reconstruction["schema"] == "rexecop.runtime_reconstruction.v0.1"
 
 
+def test_governance_controls_profile_not_found_uses_cli_error_schema() -> None:
+    payload = _json_error(
+        runner.invoke(
+            app,
+            [
+                "--json",
+                "governance",
+                "controls",
+                "--profile",
+                "/nonexistent/profile.yaml",
+            ],
+        )
+    )
+    assert payload["error_class"] == "validation_error"
+    assert payload["reason_code"] == "validation_error"
+    assert payload["command"] == "governance controls"
+
+
 def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
     covered = {
         "status",
@@ -293,6 +311,7 @@ def test_all_registry_commands_have_cli_error_failure_coverage() -> None:
         "explain-error",
         "ops",
         "profile lint",
+        "governance controls",
         "reaction-proposal-review",
         "reaction-proposal-submit",
         "runtime reconstruct-status",
