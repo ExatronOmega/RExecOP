@@ -427,6 +427,8 @@ class SCLiteArtifactEmitter:
             chain_id=f"rexecop-{operation.id}",
             created_at=operation.created_at,
             generated_at=datetime.now(UTC).replace(microsecond=0).isoformat(),
+            mode="local_review",
+            overwrite=True,
         )
         manifest_path = Path(bundle_dir) / "artifact_chain_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

@@ -14,6 +14,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## [0.2.25a0] - coordinated SCLite/GovEngine candidate
 
+- Declares RExecOp's owner-extended SCLite emission as `local_review` and uses
+  explicit atomic `overwrite=True` when replacing the provisional intent
+  directory with the complete operation bundle. RExecOp sidecars are not
+  misrepresented as SCLite closed-world `public_export` files.
 - Pins the local candidate line to `govengine==0.16.12rc1` and
   `sclite-core==1.1.0rc1`, with `tecrax==0.3.22a0` retained as the matching
   optional profile candidate.
