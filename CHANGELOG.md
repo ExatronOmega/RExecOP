@@ -12,10 +12,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
-## [0.2.25a0] - coordinated SCLite/GovEngine hotfix candidate
+## [0.2.25a0] - coordinated SCLite/GovEngine candidate
 
 - Pins the local candidate line to `govengine==0.16.12rc1` and
-  `sclite-core==1.0.10rc1`, with `tecrax==0.3.22a0` retained as the matching
+  `sclite-core==1.1.0rc1`, with `tecrax==0.3.22a0` retained as the matching
   optional profile candidate.
 - No execution, profile, or governance semantics change: this package exists
   to validate the exact downstream candidate pair before publication. The

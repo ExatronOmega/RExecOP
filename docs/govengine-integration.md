@@ -31,7 +31,7 @@ The static adapter is explicitly marked `bootstrap_only` and documented as non-p
 govengine==0.16.12rc1
 ```
 
-Pinned compatible with the SCLite hotfix candidate used by RExecOp (`sclite-core==1.0.10rc1`).
+Pinned compatible with the SCLite verifier-hardening candidate used by RExecOp (`sclite-core==1.1.0rc1`).
 
 ## PolicyEngine integration
 

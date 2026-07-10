@@ -59,7 +59,7 @@ This document states what the current published alpha line does **not** provide 
 | --- | --- |
 | Public PyPI | `rexecop==0.2.24a0` published for alpha evaluation — not a production-ready claim |
 | Source alpha line | `0.2.25a0` is the local candidate on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
-| Coordinated dependencies | Source line requires `govengine==0.16.12rc1` and `sclite-core==1.0.10rc1`; the `tecrax` extra requires `tecrax==0.3.22a0` |
+| Coordinated dependencies | Source line requires `govengine==0.16.12rc1` and `sclite-core==1.1.0rc1`; the `tecrax` extra requires `tecrax==0.3.22a0` |
 
 ## Stack readiness labels
 

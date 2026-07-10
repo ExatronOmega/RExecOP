@@ -7,7 +7,7 @@
 | RExecOp version (dev line) | `0.2.25a0` (candidate, not published) |
 | RExecOp version (PyPI published) | `0.2.24a0` |
 | GovEngine version | `0.16.12rc1` (candidate; published `0.16.11`) |
-| SCLite version | `1.0.10rc1` (candidate; published `1.0.9`) |
+| SCLite version | `1.1.0rc1` (candidate; published `1.0.9`) |
 | Tecrax version | `0.3.22a0` (candidate; published `0.3.21a0`) |
 | Operator | |
 | Host / environment | |

@@ -17,7 +17,7 @@ Document id: `stack-contract-compatibility`.
 
 | Package | Public line | Required range in RExecOp | Role |
 | --- | --- | --- | --- |
-| `sclite-core` | `1.0.10rc1` | `sclite-core==1.0.10rc1` | SCLite truth, reaction, trigger-decision, watchdog-decision and automation-chain artifact schemas. |
+| `sclite-core` | `1.1.0rc1` | `sclite-core==1.1.0rc1` | SCLite truth, reaction, trigger-decision, watchdog-decision and automation-chain artifact schemas. |
 | `govengine` | `0.16.12rc1` | `govengine==0.16.12rc1` | PolicyEngine MVP, B2 enforcement-plan contracts, trigger-planning admission, supervisor-action admission, supervisor explanations and automation-transition admission. |
 | `rexecop` | `0.2.25a0` | current package | Neutral runner, connectors, catalog and reaction mechanics. |
 | `tecrax` | `0.3.22a0` | `tecrax==0.3.22a0` via optional extra | Domain infrastructure profile. |
