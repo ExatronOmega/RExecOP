@@ -14,6 +14,9 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## [0.2.25a0] - coordinated SCLite/GovEngine candidate
 
+- Migrates the public fixture Guard key above SCLite's 32-byte production
+  floor and documents that short `REXECOP_KERNEL_GUARD_KEY` values fail closed;
+  RExecOp retains custody/rotation responsibility and does not infer entropy.
 - Declares RExecOp's owner-extended SCLite emission as `local_review` and uses
   explicit atomic `overwrite=True` when replacing the provisional intent
   directory with the complete operation bundle. RExecOp sidecars are not

@@ -11,8 +11,8 @@ from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 
 # Test/lab-only HMAC key for kernel_guard fixtures. Never ship as production default.
-REXECOP_FIXTURE_GUARD_KEY = "rexecop-fixture-guard-key"
-REXECOP_FIXTURE_GUARD_KEY_ID = "rexecop-fixture-guard-key"
+REXECOP_FIXTURE_GUARD_KEY = "rexecop-fixture-guard-key-32-bytes"
+REXECOP_FIXTURE_GUARD_KEY_ID = "rexecop-fixture-guard-key-32-bytes"
 
 
 def write_fixture_kernel_guard_manifest(bundle_dir: str | Path) -> dict[str, Any]:

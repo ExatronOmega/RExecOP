@@ -28,7 +28,10 @@ Bundle profile aligned with `sclite/examples/govengine-integration/`:
 - `execution_ticket.v0.3` scoped ticket with `ticket_use` binding
 - Receipt-bounded `evidence_contract` (no live-vuln claims)
 - `trust_profile_ref.json` and `carrier_profile_ref.json` sidecars
-- Optional `kernel_guard_manifest.json` when `REXECOP_KERNEL_GUARD_KEY` is set; otherwise `not_required`
+- Optional `kernel_guard_manifest.json` when `REXECOP_KERNEL_GUARD_KEY` is set
+  to a production key of at least 32 UTF-8 bytes; shorter values fail closed in
+  SCLite. Otherwise the sidecar is `not_required`. RExecOp owns secret custody;
+  SCLite enforces only type/length and does not claim entropy validation.
 - Fixture/lab guard via `adapters/sclite_port/fixture_bundle.py` (`emit_fixture_operation_bundle`) — not used in production emit
 - `verify_ticket_use` + `review_bundle` → verdict `pass` on emission
 - Explicit `target_host` resolution for scope-fidelity (`adapters/sclite_port/target_host.py`)

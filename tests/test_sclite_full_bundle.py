@@ -4,17 +4,21 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
 from sclite.artifacts import validate_artifact
 from sclite.bundles import review_bundle
 from sclite.integrity import artifact_descriptor
+from sclite.kernel_guard import KernelGuardError
 
 from rexecop.adapters.sclite_port.emitter import SCLiteArtifactEmitter
 from rexecop.adapters.sclite_port.fixture_bundle import emit_fixture_operation_bundle
 from rexecop.adapters.sclite_port.full_bundle import (
     CARRIER_PROFILE_REF_FILE,
     FULL_BUNDLE_SIDECARS,
+    KERNEL_GUARD_KEY_ENV,
     KERNEL_GUARD_MANIFEST_FILE,
     TRUST_PROFILE_REF_FILE,
+    maybe_write_operator_kernel_guard_manifest,
 )
 from rexecop.adapters.sclite_port.target_host import resolve_sclite_target_host
 from rexecop.operation.model import Operation
@@ -105,6 +109,23 @@ def test_full_bundle_sidecars_and_kernel_guard(tmp_path: Path) -> None:
     assert carrier["integrity"]["subject_artifact_digest"] == ticket_digest
     assert result.sidecars is not None
     assert set(result.sidecars) == {TRUST_PROFILE_REF_FILE, CARRIER_PROFILE_REF_FILE}
+
+
+def test_operator_kernel_guard_short_key_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    emitter = SCLiteArtifactEmitter()
+    bundle_dir = tmp_path / "bundle"
+    emitter.emit_operation_bundle(
+        operation=_sample_operation(),
+        plan=_sample_plan(),
+        bundle_dir=str(bundle_dir),
+    )
+    monkeypatch.setenv(KERNEL_GUARD_KEY_ENV, "short")
+
+    with pytest.raises(KernelGuardError, match="at least 32 bytes"):
+        maybe_write_operator_kernel_guard_manifest(bundle_dir)
 
 
 def test_full_bundle_scoped_ticket_v03_and_receipt_bounded_evidence(tmp_path: Path) -> None:
