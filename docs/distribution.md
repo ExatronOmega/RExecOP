@@ -1,6 +1,7 @@
 # Distribution and installation
 
-RExecOp `0.2.24a0` is the current published alpha line on
+RExecOp `0.2.25a0` is the current unpublished coordinated candidate; the
+published alpha line remains `0.2.24a0` on
 [PyPI](https://pypi.org/project/rexecop/).
 The published wheel contains full B2, R4c, watchdog decision truth, and manual recovery records while retaining the maturity limits in
 [known-limitations.md](known-limitations.md).
@@ -18,8 +19,8 @@ The published wheel contains full B2, R4c, watchdog decision truth, and manual r
 
 - Python **3.11+** (CI on `main` exercises **3.11**, **3.12**, and **3.13**)
 - Network access to install pinned dependencies:
-  - `govengine==0.16.11`
-  - `sclite-core==1.0.9`
+  - `govengine==0.16.12rc1`
+  - `sclite-core==1.0.10rc1`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 
 ## Install from PyPI
@@ -62,7 +63,7 @@ Matches the CI `package-dry-run` job:
 ```bash
 python -m pip install --upgrade pip build twine
 python -m pip install -e /path/to/govengine
-python -m pip install "sclite-core==1.0.9"
+python -m pip install "sclite-core==1.0.10rc1"
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
@@ -100,7 +101,7 @@ python -m pip install "govengine @ git+https://github.com/rozmiarD/GovEngine.git
 python -m pip install "rexecop @ git+https://github.com/rozmiarD/RExecOP.git@main"
 ```
 
-The current RExecOp source line and published `0.2.24a0` wheel require GovEngine `0.16.11` and SCLite `1.0.9`.
+The current RExecOp source candidate requires GovEngine `0.16.12rc1` and SCLite `1.0.10rc1`; the published `0.2.24a0` wheel remains on the prior public line.
 
 ## Private index / GitHub Packages (operator-owned)
 

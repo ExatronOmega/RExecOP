@@ -77,7 +77,8 @@ def test_public_index_release_smoke_writes_evidence(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     release = _load("rexecop_public_index_release_smoke", SCRIPT)
-    version = "0.2.24a0"
+    clean_install = _load("rexecop_clean_install_smoke_current", CLEAN_INSTALL)
+    version = clean_install.project_version()
     evidence_dir = tmp_path / "release-evidence"
     monkeypatch.setattr(release, "RELEASE_EVIDENCE_DIR", evidence_dir)
 
@@ -114,7 +115,8 @@ def test_public_index_release_smoke_verify_post_publish(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     release = _load("rexecop_public_index_release_smoke", SCRIPT)
-    version = "0.2.24a0"
+    clean_install = _load("rexecop_clean_install_smoke_post_publish", CLEAN_INSTALL)
+    version = clean_install.project_version()
     evidence_dir = tmp_path / "release-evidence"
     monkeypatch.setattr(release, "RELEASE_EVIDENCE_DIR", evidence_dir)
 

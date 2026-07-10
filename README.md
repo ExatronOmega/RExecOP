@@ -21,13 +21,13 @@ policy engine or a parallel truth layer.
 
 | Item | Value |
 | --- | --- |
-| Current source line | `0.2.24a0` |
+| Current source line | `0.2.25a0` |
 | Main branch | May include unreleased changes listed under `CHANGELOG.md` / Unreleased |
 | Maturity | **alpha** — operator evaluation with documented limits |
-| Delivery | Published single supported alpha line; older PyPI releases are archived only |
+| Delivery | Unpublished coordinated hotfix candidate; published `0.2.24a0` remains the public alpha line |
 | Tests | CI reruns the current suite; `pytest -m delivery` runs the sign-off scope |
 | Latest PyPI | [`rexecop==0.2.24a0`](https://pypi.org/project/rexecop/0.2.24a0/) |
-| Source dependencies | `govengine==0.16.11`, `sclite-core==1.0.9` (see `pyproject.toml`) |
+| Source dependencies | `govengine==0.16.12rc1`, `sclite-core==1.0.10rc1` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 
@@ -153,7 +153,7 @@ The published `0.2.24a0` wheel is the single supported alpha stack line for read
 evaluation, M2–M8 operator UX (CLI contracts, error envelope, observability,
 explain/review/diff, triage/recovery, profile developer surface, action metadata),
 catalog drift binding, watchdog decision truth and manual recovery record paths.
-Older PyPI lines do not contain the watchdog decision truth path or manual recovery
+An older PyPI line does not contain the watchdog decision truth path or manual recovery
 record path guarantees bundled in `0.2.24a0`.
 
 See [docs/distribution.md](docs/distribution.md) for Tecrax extra, wheels, Git URL, and private index notes.

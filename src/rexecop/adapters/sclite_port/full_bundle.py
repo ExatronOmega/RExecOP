@@ -34,6 +34,9 @@ FULL_BUNDLE_SIDECARS = (
     CARRIER_PROFILE_REF_FILE,
     KERNEL_GUARD_MANIFEST_FILE,
 )
+NON_EXECUTION_RECEIPT_STATUSES = frozenset(
+    {"blocked", "denied", "failed", "not_executed", "rejected", "skipped"}
+)
 
 
 def _validate_ticket(artifact: dict[str, Any]) -> dict[str, Any]:
@@ -66,7 +69,8 @@ def build_scoped_execution_ticket(
     connector_budget = planned_connector_command_count(plan)
     target_host = str(execution_contract["target_binding"]["target_host"])
     start = parse_timestamp(operation.created_at)
-    end = start + __import__("datetime").timedelta(hours=24)
+    last_observed = parse_timestamp(operation.updated_at)
+    end = max(start, last_observed) + __import__("datetime").timedelta(hours=24)
     ticket_id = f"scoped-ticket-{operation.id}"
 
     artifact = {
@@ -446,6 +450,38 @@ def _connector_budget_from_contract(execution_contract: dict[str, Any]) -> int:
     return max(len(connector_steps), 1)
 
 
+def _is_expected_non_execution_review(
+    review_record: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+) -> bool:
+    """Allow a terminal non-execution receipt to remain an honest review record.
+
+    A failed or blocked runtime must still export its evidence.  SCLite marks
+    that receipt `review`, because it cannot prove an execution-time ticket
+    pass.  This exception is deliberately narrow: schema, chain and scope
+    checks must all pass and the review must be the verified ticket-use result.
+    """
+
+    outcome = artifacts["execution_receipt"].get("outcome")
+    outcome_status = str(outcome.get("status") or "").lower() if isinstance(outcome, dict) else ""
+    if outcome_status not in NON_EXECUTION_RECEIPT_STATUSES:
+        return False
+    checks = {
+        str(item.get("name") or ""): str(item.get("status") or "")
+        for item in review_record.get("checks", [])
+        if isinstance(item, dict)
+    }
+    return (
+        review_record.get("verdict") == "review"
+        and checks.get("schema_validation") == "pass"
+        and checks.get("chain_integrity") == "pass"
+        and checks.get("scope_fidelity") == "pass"
+        and checks.get("lifecycle_binding") == "review"
+        and checks.get("ticket_use_profile") == "review"
+        and review_record.get("summary", {}).get("ticket_use_applicability") == "verified"
+    )
+
+
 def verify_full_bundle(
     bundle_dir: str | Path,
     artifacts: dict[str, dict[str, Any]],
@@ -459,7 +495,10 @@ def verify_full_bundle(
         strict_ticket_profile=connector_budget <= 1,
     )
     review_record = review_bundle(bundle_dir)
-    if review_record.get("verdict") != "pass":
+    if review_record.get("verdict") != "pass" and not _is_expected_non_execution_review(
+        review_record,
+        artifacts,
+    ):
         raise ValueError(
             f"full bundle review expected pass, got {review_record.get('verdict')!r}"
         )

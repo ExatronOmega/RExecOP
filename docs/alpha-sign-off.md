@@ -1,6 +1,8 @@
 # Alpha sign-off
 
-RExecOp `0.2.24a0` source line — formal operator acceptance before production-adjacent use.
+RExecOp `0.2.25a0` source candidate — formal operator acceptance before
+production-adjacent use. This candidate is not published; `0.2.24a0` remains
+the latest PyPI alpha line.
 
 This document separates **automated checks** (CI / script) from **human acceptance** (operator).
 

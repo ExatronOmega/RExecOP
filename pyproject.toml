@@ -1,6 +1,6 @@
 [project]
 name = "rexecop"
-version = "0.2.24a0"
+version = "0.2.25a0"
 description = "Regulated Execution Operations control-plane for profile-defined workflows bound to GovEngine and SCLite."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -8,8 +8,8 @@ license = { text = "MIT" }
 dependencies = [
     "typer>=0.12.0",
     "PyYAML>=6.0",
-    "govengine==0.16.11",
-    "sclite-core==1.0.9",
+    "govengine==0.16.12rc1",
+    "sclite-core==1.0.10rc1",
 ]
 
 [project.urls]
@@ -25,10 +25,10 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 sclite = [
-    "sclite-core==1.0.9",
+    "sclite-core==1.0.10rc1",
 ]
 tecrax = [
-    "tecrax==0.3.21a0",
+    "tecrax==0.3.22a0",
 ]
 
 [project.scripts]

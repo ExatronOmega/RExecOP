@@ -10,7 +10,7 @@ Create `docs/release-security-review/<version>.json`:
 ```json
 {
   "schema": "rexecop.release_security_review.v0.1",
-  "version": "0.2.24a0",
+  "version": "<version>",
   "review_mode": "independent_review",
   "reviewed_at": "2026-07-08",
   "reviewer_ref": "reviewer:example",

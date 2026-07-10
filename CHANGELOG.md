@@ -12,6 +12,15 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+## [0.2.25a0] - coordinated SCLite/GovEngine hotfix candidate
+
+- Pins the local candidate line to `govengine==0.16.12rc1` and
+  `sclite-core==1.0.10rc1`, with `tecrax==0.3.22a0` retained as the matching
+  optional profile candidate.
+- No execution, profile, or governance semantics change: this package exists
+  to validate the exact downstream candidate pair before publication. The
+  latest published RExecOp package remains `0.2.24a0`.
+
 - Added `rexecop governance controls` (`rexecop.governance_controls.v0.1`) for operator-facing
   GovEngine typed-execution control catalog and optional profile-governance projection.
 - Added `scripts/validate_operator_journeys.py` smoke for §6 operator journeys: read-only

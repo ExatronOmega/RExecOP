@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from sclite.artifacts import validate_artifact
@@ -122,6 +123,34 @@ def test_full_bundle_scoped_ticket_v03_and_receipt_bounded_evidence(tmp_path: Pa
     assert receipt["ticket_use"]["ticket_id"] == ticket["ticket_id"]
     assert evidence["claims"][0]["bounded_by_receipt"] is True
     assert evidence["claims"][0]["source_receipt_id"] == receipt["receipt_id"]
+
+
+def test_full_bundle_records_terminal_non_execution_as_review(tmp_path: Path) -> None:
+    emitter = SCLiteArtifactEmitter()
+    operation = replace(
+        _sample_operation(),
+        mode="apply",
+        state="failed",
+        govengine_decision_type="allowed",
+    )
+    plan = replace(_sample_plan(), mode="apply")
+
+    result = emitter.emit_operation_bundle(
+        operation=operation,
+        plan=plan,
+        bundle_dir=str(tmp_path / "bundle"),
+    )
+
+    assert result.review_record["verdict"] == "review"
+    assert result.review_record["summary"]["ticket_use_status"] == "review"
+    checks = {item["name"]: item["status"] for item in result.review_record["checks"]}
+    assert checks == {
+        "schema_validation": "pass",
+        "chain_integrity": "pass",
+        "lifecycle_binding": "review",
+        "scope_fidelity": "pass",
+        "ticket_use_profile": "review",
+    }
 
 
 def test_target_host_resolution_for_logical_targets() -> None:
