@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+from collections.abc import Sequence
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +72,16 @@ def _resolve_wheel(dist_dir: Path) -> Path:
     return wheels[-1]
 
 
+def _candidate_install_options(candidate_wheel_dirs: Sequence[Path]) -> list[str]:
+    options: list[str] = []
+    for wheel_dir in candidate_wheel_dirs:
+        resolved = wheel_dir.resolve()
+        if not resolved.is_dir():
+            raise RuntimeError(f"candidate_wheel_dir_missing:{resolved}")
+        options.extend(["--find-links", str(resolved)])
+    return options
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -83,6 +94,16 @@ def main() -> int:
         "--build",
         action="store_true",
         help="Run python -m build before installing the wheel.",
+    )
+    parser.add_argument(
+        "--candidate-wheel-dir",
+        action="append",
+        type=Path,
+        default=[],
+        help=(
+            "Local wheelhouse used to resolve exact dependency pins before publication; "
+            "repeat for multiple directories."
+        ),
     )
     args = parser.parse_args()
 
@@ -105,6 +126,11 @@ def main() -> int:
             return create.returncode
 
         venv_python = str(_python(venv))
+        try:
+            candidate_options = _candidate_install_options(args.candidate_wheel_dir)
+        except RuntimeError as exc:
+            print(f"artifact_install_smoke_failed:{exc}", file=sys.stderr)
+            return 1
         install = _run(
             [
                 venv_python,
@@ -114,7 +140,8 @@ def main() -> int:
                 "-q",
                 "--upgrade",
                 "pip",
-                str(wheel),
+                *candidate_options,
+                str(wheel.resolve()),
             ],
             cwd=ROOT,
         )

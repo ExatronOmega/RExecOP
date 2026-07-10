@@ -62,13 +62,15 @@ Matches the CI `package-dry-run` job:
 
 ```bash
 python -m pip install --upgrade pip build twine
-python -m pip install -e /path/to/govengine
-python -m pip install "sclite-core==1.0.10rc1"
+mkdir -p /tmp/rexecop-candidate-wheels
+python -m build --wheel --outdir /tmp/rexecop-candidate-wheels /path/to/sclite
+python -m build --wheel --outdir /tmp/rexecop-candidate-wheels /path/to/govengine
 rm -rf dist build *.egg-info
 python -m build
 python -m twine check dist/*
 python scripts/validate_distribution.py dist
-python scripts/validate_supply_chain_gate.py dist
+python scripts/validate_supply_chain_gate.py dist \
+  --candidate-wheel-dir /tmp/rexecop-candidate-wheels
 ```
 
 ## Supply-chain release gate
@@ -82,6 +84,10 @@ python scripts/validate_supply_chain_gate.py dist
 4. fails on vulnerabilities not listed in `docs/supply-chain-audit-exceptions.json`.
 
 Documented audit exceptions use schema `rexecop.supply_chain_audit_exceptions.v0.1`.
+For an unpublished release-candidate train, build the exact-pin dependencies into a
+local wheelhouse and pass it with `--candidate-wheel-dir`. The isolated install still
+resolves and checks the complete wheel environment; it does not require those
+candidates to exist on PyPI first.
 
 ### PyPI trusted publishing (preferred)
 

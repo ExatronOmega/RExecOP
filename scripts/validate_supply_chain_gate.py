@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -131,6 +132,7 @@ def install_wheel_venv(
     tmp_dir: Path,
     *,
     host_python: str | None = None,
+    candidate_wheel_dirs: Sequence[Path] = (),
 ) -> tuple[Path, Path]:
     artifact = _load_module("rexecop_validate_artifact_install_smoke", ARTIFACT_SMOKE)
     wheel = artifact._resolve_wheel(dist_dir)
@@ -140,8 +142,19 @@ def install_wheel_venv(
     if create.returncode != 0:
         raise RuntimeError(create.stderr.strip() or "venv_create_failed")
     venv_python = artifact._python(venv)
+    candidate_options = artifact._candidate_install_options(candidate_wheel_dirs)
     install = _run(
-        [str(venv_python), "-m", "pip", "install", "-q", "--upgrade", "pip", str(wheel)],
+        [
+            str(venv_python),
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "--upgrade",
+            "pip",
+            *candidate_options,
+            str(wheel.resolve()),
+        ],
         cwd=ROOT,
     )
     if install.returncode != 0:
@@ -161,6 +174,7 @@ def collect_errors(
     cyclonedx_cmd: list[str] | None = None,
     exceptions_path: Path = EXCEPTIONS_PATH,
     write_sbom: bool = True,
+    candidate_wheel_dirs: Sequence[Path] = (),
 ) -> list[str]:
     errors: list[str] = []
     version = project_version()
@@ -171,7 +185,11 @@ def collect_errors(
 
     try:
         with tempfile.TemporaryDirectory(prefix="rexecop-supply-chain-") as tmp:
-            _venv, venv_python = install_wheel_venv(dist_dir, Path(tmp))
+            _venv, venv_python = install_wheel_venv(
+                dist_dir,
+                Path(tmp),
+                candidate_wheel_dirs=candidate_wheel_dirs,
+            )
             with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
                 freeze_path = Path(handle.name)
             freeze = _run([str(venv_python), "-m", "pip", "freeze"], cwd=ROOT)
@@ -216,11 +234,25 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run pip-audit and SBOM gate for dist artifacts.")
     parser.add_argument("dist", type=Path, nargs="?", default=ROOT / "dist")
     parser.add_argument("--no-sbom", action="store_true", help="Skip CycloneDX SBOM generation.")
+    parser.add_argument(
+        "--candidate-wheel-dir",
+        action="append",
+        type=Path,
+        default=[],
+        help=(
+            "Local wheelhouse used to resolve exact dependency pins before publication; "
+            "repeat for multiple directories."
+        ),
+    )
     args = parser.parse_args(argv)
 
     dist_dir = args.dist.resolve()
     version = project_version()
-    errors = collect_errors(dist_dir, write_sbom=not args.no_sbom)
+    errors = collect_errors(
+        dist_dir,
+        write_sbom=not args.no_sbom,
+        candidate_wheel_dirs=args.candidate_wheel_dir,
+    )
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

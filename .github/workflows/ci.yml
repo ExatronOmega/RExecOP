@@ -128,6 +128,12 @@ jobs:
       - name: Clean build artifacts
         run: rm -rf dist build *.egg-info
 
+      - name: Build dependency candidate wheels
+        run: |
+          mkdir -p ci-candidates
+          python -m build --wheel --outdir "$GITHUB_WORKSPACE/ci-candidates" ci-deps/sclite
+          python -m build --wheel --outdir "$GITHUB_WORKSPACE/ci-candidates" ci-deps/govengine
+
       - name: Build package
         run: python -m build
 
@@ -138,7 +144,11 @@ jobs:
         run: python scripts/validate_distribution.py dist
 
       - name: Supply-chain gate
-        run: python scripts/validate_supply_chain_gate.py dist
+        run: >-
+          python scripts/validate_supply_chain_gate.py dist
+          --candidate-wheel-dir ci-candidates
 
       - name: Artifact install smoke
-        run: python scripts/validate_artifact_install_smoke.py --dist dist
+        run: >-
+          python scripts/validate_artifact_install_smoke.py --dist dist
+          --candidate-wheel-dir ci-candidates

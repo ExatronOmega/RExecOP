@@ -8,6 +8,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "validate_supply_chain_gate.py"
+ARTIFACT_SCRIPT = ROOT / "scripts" / "validate_artifact_install_smoke.py"
 
 
 def _load():
@@ -16,6 +17,35 @@ def _load():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_artifact():
+    spec = importlib.util.spec_from_file_location(
+        "rexecop_validate_artifact_install_smoke",
+        ARTIFACT_SCRIPT,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_candidate_install_options_use_local_wheelhouse(tmp_path: Path) -> None:
+    artifact = _load_artifact()
+    wheelhouse = tmp_path / "candidate-wheels"
+    wheelhouse.mkdir()
+
+    assert artifact._candidate_install_options([wheelhouse]) == [
+        "--find-links",
+        str(wheelhouse.resolve()),
+    ]
+
+
+def test_candidate_install_options_reject_missing_wheelhouse(tmp_path: Path) -> None:
+    artifact = _load_artifact()
+
+    with pytest.raises(RuntimeError, match="candidate_wheel_dir_missing"):
+        artifact._candidate_install_options([tmp_path / "missing"])
 
 
 def test_supply_chain_gate_filters_documented_exceptions() -> None:
@@ -80,6 +110,14 @@ def test_supply_chain_gate_cli_success(tmp_path: Path, monkeypatch: pytest.Monke
     gate = _load()
     version = gate.project_version()
     sbom = tmp_path / f"rexecop-{version}.cdx.json"
-    monkeypatch.setattr(gate, "collect_errors", lambda *_args, **_kwargs: [])
+    captured: dict[str, object] = {}
+
+    def _collect_errors(*_args, **kwargs):
+        captured.update(kwargs)
+        return []
+
+    monkeypatch.setattr(gate, "collect_errors", _collect_errors)
     monkeypatch.setattr(gate, "sbom_output_path", lambda *_args, **_kwargs: sbom)
-    assert gate.main([str(tmp_path)]) == 0
+    candidate = tmp_path / "candidate-wheels"
+    assert gate.main([str(tmp_path), "--candidate-wheel-dir", str(candidate)]) == 0
+    assert captured["candidate_wheel_dirs"] == [candidate]
