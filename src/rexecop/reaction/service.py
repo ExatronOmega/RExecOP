@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sclite.artifacts import artifact_sha256, canonical_artifact_bytes, validate_artifact
+from sclite.artifacts import artifact_sha256, canonical_artifact_bytes
 
 from rexecop.contracts.orchestration import (
     automation_edge,
@@ -18,6 +18,7 @@ from rexecop.contracts.orchestration import (
     reaction_idempotency_key,
     validate_escalation_proposal,
     verify_automation_chain,
+    verify_owner_artifact,
     verify_reaction_chain_manifest,
 )
 from rexecop.environment.loader import load_environment
@@ -117,7 +118,7 @@ class ReactionService:
         else:
             assert observation_path is not None
             observation = _read_json(observation_path)
-        validate_artifact(observation, "schemas/observation_envelope.v0.1.schema.json")
+        verify_owner_artifact(observation, "observation_envelope")
         if len(canonical_artifact_bytes(observation)) > MAX_OBSERVATION_BYTES:
             raise RExecOpValidationError("canonical observation exceeds bounded size")
         profile_ref = observation.get("profile_ref")
