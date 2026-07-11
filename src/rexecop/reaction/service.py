@@ -6,7 +6,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from sclite import (
+from sclite.artifacts import artifact_sha256, canonical_artifact_bytes, validate_artifact
+
+from rexecop.contracts.orchestration import (
     automation_edge,
     automation_node,
     build_automation_chain,
@@ -18,8 +20,6 @@ from sclite import (
     verify_automation_chain,
     verify_reaction_chain_manifest,
 )
-from sclite.artifacts import artifact_sha256, canonical_artifact_bytes, validate_artifact
-
 from rexecop.environment.loader import load_environment
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.controller import OperationController

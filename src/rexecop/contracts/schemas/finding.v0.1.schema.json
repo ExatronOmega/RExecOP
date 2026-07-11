@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sclite.dev/finding.v0.1.schema.json",
+  "title": "SCLite Finding v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "schema_version", "schema_ref", "finding_id", "created_at", "profile_ref", "taxonomy", "summary", "links"],
+  "properties": {
+    "artifact_type": {"const": "finding"},
+    "schema_version": {"const": "v0.1"},
+    "schema_ref": {"const": "schemas/finding.v0.1.schema.json"},
+    "finding_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "created_at": {"type": "string", "minLength": 1, "maxLength": 64},
+    "profile_ref": {"$ref": "#/$defs/profile_ref"},
+    "taxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "severity"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "severity": {"enum": ["info", "low", "medium", "high", "critical"]}
+      }
+    },
+    "summary": {"type": "string", "minLength": 1, "maxLength": 512},
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["observation"],
+      "properties": {"observation": {"$ref": "#/$defs/link"}}
+    }
+  },
+  "$defs": {
+    "profile_ref": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version", "digest"],
+      "properties": {"id": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "descriptor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact_type", "schema_version", "schema_ref", "canonicalization", "algorithm", "digest", "canonical_bytes"],
+      "properties": {
+        "artifact_type": {"type": "string"}, "schema_version": {"type": "string"}, "schema_ref": {"type": "string"},
+        "canonicalization": {"type": "string"}, "algorithm": {"const": "sha256"}, "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "canonical_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "link": {
+      "type": "object", "additionalProperties": false, "required": ["descriptor"],
+      "properties": {"descriptor": {"$ref": "#/$defs/descriptor"}}
+    }
+  }
+}

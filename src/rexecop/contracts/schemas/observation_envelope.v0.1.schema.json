@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sclite.dev/observation_envelope.v0.1.schema.json",
+  "title": "SCLite Observation Envelope v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "schema_version", "schema_ref", "observation_id", "observed_at", "profile_ref", "source", "facts"],
+  "properties": {
+    "artifact_type": {"const": "observation_envelope"},
+    "schema_version": {"const": "v0.1"},
+    "schema_ref": {"const": "schemas/observation_envelope.v0.1.schema.json"},
+    "observation_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "observed_at": {"type": "string", "minLength": 1, "maxLength": 64},
+    "profile_ref": {"$ref": "#/$defs/profile_ref"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "intent_id", "target_id"],
+      "properties": {
+        "operation_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "intent_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "target_id": {"type": "string", "minLength": 1, "maxLength": 128}
+      }
+    },
+    "facts": {"type": "object"}
+  },
+  "$defs": {
+    "profile_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

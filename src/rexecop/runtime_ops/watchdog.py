@@ -13,9 +13,9 @@ from govengine import (
     supervisor_action_admission_digest,
     supervisor_action_request_digest,
 )
-from sclite import build_watchdog_decision
 from sclite.integrity import artifact_descriptor
 
+from rexecop.contracts.orchestration import build_watchdog_decision
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.evidence.manager import EvidenceManager

@@ -16,9 +16,13 @@ from govengine import (
     trigger_planning_admission_digest,
     trigger_planning_request_digest,
 )
-from sclite import build_trigger_decision, trigger_decision_descriptor, trigger_decision_digest
 
 from rexecop.catalog.digest import canonical_digest
+from rexecop.contracts.orchestration import (
+    build_trigger_decision,
+    trigger_decision_descriptor,
+    trigger_decision_digest,
+)
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.controller import OperationController

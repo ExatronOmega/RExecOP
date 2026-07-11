@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sclite.dev/automation_chain.v0.1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "schema_ref",
+    "chain_id",
+    "created_at",
+    "profile_ref",
+    "source_operation_id",
+    "controls",
+    "recovery",
+    "compatibility",
+    "nodes",
+    "edges",
+    "non_claims"
+  ],
+  "properties": {
+    "artifact_type": {"const": "automation_chain"},
+    "schema_version": {"const": "v0.1"},
+    "schema_ref": {"const": "schemas/automation_chain.v0.1.schema.json"},
+    "chain_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "minLength": 1},
+    "profile_ref": {"$ref": "#/$defs/profile_ref"},
+    "source_operation_id": {"type": "string", "minLength": 1},
+    "controls": {"$ref": "#/$defs/controls"},
+    "recovery": {"$ref": "#/$defs/recovery"},
+    "compatibility": {"$ref": "#/$defs/compatibility"},
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/node"}
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/edge"}
+    },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "$defs": {
+    "profile_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "digest": {"type": "string", "minLength": 1}
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_depth",
+        "max_nodes",
+        "max_reactions",
+        "requires_govengine_admission",
+        "requires_profile_transition",
+        "allowed_child_intent_classes",
+        "llm_may_execute"
+      ],
+      "properties": {
+        "max_depth": {"type": "integer", "minimum": 0},
+        "max_nodes": {"type": "integer", "minimum": 1, "maximum": 128},
+        "max_reactions": {"type": "integer", "minimum": 0, "maximum": 128},
+        "requires_govengine_admission": {"type": "boolean"},
+        "requires_profile_transition": {"type": "boolean"},
+        "allowed_child_intent_classes": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "llm_may_execute": {"const": false}
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "append_mode",
+        "idempotency_scope",
+        "duplicate_child_policy",
+        "replay_policy",
+        "checkpoint_required"
+      ],
+      "properties": {
+        "append_mode": {"enum": ["append_only"]},
+        "idempotency_scope": {"enum": ["chain_edge"]},
+        "duplicate_child_policy": {"enum": ["reject", "reuse_existing_child"]},
+        "replay_policy": {"enum": ["verify_before_append", "verify_before_execute"]},
+        "checkpoint_required": {"type": "boolean"}
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reaction_chain_v0_1_subset", "single_step_reaction_compatible"],
+      "properties": {
+        "reaction_chain_v0_1_subset": {"type": "boolean"},
+        "single_step_reaction_compatible": {"type": "boolean"}
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "node_type",
+        "depth",
+        "status",
+        "owner_layer",
+        "authority_level",
+        "operation_id",
+        "artifact_ref",
+        "labels"
+      ],
+      "properties": {
+        "node_id": {"type": "string", "minLength": 1},
+        "node_type": {
+          "enum": [
+            "operation",
+            "observation",
+            "finding",
+            "reaction_plan",
+            "child_operation",
+            "execution_receipt",
+            "escalation_proposal",
+            "trigger_decision",
+            "watchdog_decision",
+            "automation_checkpoint",
+            "external_ref"
+          ]
+        },
+        "depth": {"type": "integer", "minimum": 0},
+        "status": {
+          "enum": [
+            "planned",
+            "admitted",
+            "blocked",
+            "completed",
+            "failed",
+            "escalated",
+            "skipped",
+            "replayed",
+            "pending",
+            "no_op"
+          ]
+        },
+        "owner_layer": {
+          "enum": ["sclite", "govengine", "rexecop", "profile", "operator", "llm"]
+        },
+        "authority_level": {"enum": ["canonical", "projection", "proposal", "none"]},
+        "operation_id": {"type": "string"},
+        "artifact_ref": {"$ref": "#/$defs/artifact_ref"},
+        "labels": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "edge_id",
+        "edge_type",
+        "from_node",
+        "to_node",
+        "depth",
+        "idempotency_key",
+        "admission",
+        "labels"
+      ],
+      "properties": {
+        "edge_id": {"type": "string", "minLength": 1},
+        "edge_type": {
+          "enum": [
+            "observed",
+            "detected",
+            "planned_reaction",
+            "admitted_child",
+            "spawned_child",
+            "emitted_receipt",
+            "escalated",
+            "replayed_from",
+            "supersedes",
+            "blocked_by",
+            "checkpointed",
+            "continued_as"
+          ]
+        },
+        "from_node": {"type": "string", "minLength": 1},
+        "to_node": {"type": "string", "minLength": 1},
+        "depth": {"type": "integer", "minimum": 0},
+        "idempotency_key": {"type": "string"},
+        "admission": {"$ref": "#/$defs/admission_ref"},
+        "labels": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "admission_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision_id", "decision_digest", "owner_layer"],
+      "properties": {
+        "status": {"enum": ["not_applicable", "admitted", "blocked", "approval_required"]},
+        "decision_id": {"type": "string"},
+        "decision_digest": {"type": "string"},
+        "owner_layer": {"enum": ["govengine", "rexecop", "sclite", "profile", "operator"]}
+      }
+    },
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_type", "schema_version", "schema_ref", "digest"],
+      "properties": {
+        "artifact_type": {"type": "string"},
+        "schema_version": {"type": "string"},
+        "schema_ref": {"type": "string"},
+        "digest": {"type": "string"}
+      }
+    }
+  }
+}

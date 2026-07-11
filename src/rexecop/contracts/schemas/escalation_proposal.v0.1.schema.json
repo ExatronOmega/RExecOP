@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sclite.dev/escalation_proposal.v0.1.schema.json",
+  "title": "SCLite Untrusted Escalation Proposal v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type", "schema_version", "schema_ref", "proposal_id", "reaction_id", "created_at", "suggested_outcome", "intent_ref", "explanation", "evidence_refs", "authority"],
+  "properties": {
+    "artifact_type": {"const": "escalation_proposal"},
+    "schema_version": {"const": "v0.1"},
+    "schema_ref": {"const": "schemas/escalation_proposal.v0.1.schema.json"},
+    "proposal_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "reaction_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "created_at": {"type": "string", "minLength": 1, "maxLength": 64},
+    "suggested_outcome": {"enum": ["run_intent", "retry_intent", "escalate", "no_op"]},
+    "intent_ref": {"type": ["string", "null"], "maxLength": 128},
+    "explanation": {"type": "string", "minLength": 1, "maxLength": 2048},
+    "evidence_refs": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+    "authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["trusted", "may_execute", "requires_profile_validation", "requires_govengine_admission"],
+      "properties": {
+        "trusted": {"const": false}, "may_execute": {"const": false},
+        "requires_profile_validation": {"const": true}, "requires_govengine_admission": {"const": true}
+      }
+    }
+  }
+}
