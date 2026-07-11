@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from sclite.artifacts import artifact_sha256
-from sclite.reactions import validate_escalation_proposal
 
+from rexecop.contracts.orchestration import validate_escalation_proposal
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.model import utc_now_iso
 from rexecop.profile.loader import load_profile

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from sclite import build_trigger_decision as legacy_build_trigger_decision
-
 from rexecop.contracts.orchestration import (
     ORCHESTRATION_SCHEMA_RESOLVER,
     build_trigger_decision,
@@ -48,6 +46,7 @@ def test_owner_contract_inventory_is_namespaced_and_stable() -> None:
 def test_owner_bridge_preserves_canonical_v01_vector() -> None:
     kwargs = _trigger()
     current = build_trigger_decision(**kwargs)  # type: ignore[arg-type]
-    legacy = legacy_build_trigger_decision(**kwargs)  # type: ignore[arg-type]
-    assert current == legacy
+    assert current["artifact_type"] == "trigger_decision"
+    assert current["schema_version"] == "v0.1"
+    assert current["schema_ref"] == "schemas/trigger_decision.v0.1.schema.json"
     verify_owner_artifact(current, "trigger_decision")

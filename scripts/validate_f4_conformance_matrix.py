@@ -78,25 +78,27 @@ def build_report(projects_root: Path, wheelhouse: Path) -> dict[str, Any]:
                 errors.append(
                     f"exact_pin_drift:{consumer}:{package}:{pins.get(package)}:{versions[provider]}"
                 )
-    parity: list[dict[str, str]] = []
+    separation: list[dict[str, str | bool]] = []
     for filename in OWNER_SCHEMAS:
         legacy = roots["sclite"] / "sclite/schemas" / filename
         owner = roots["rexecop"] / "src/rexecop/contracts/schemas" / filename
-        left, right = _sha256(legacy), _sha256(owner)
-        parity.append(
+        if not owner.is_file():
+            errors.append(f"owner_schema_missing:{filename}")
+            continue
+        separation.append(
             {
                 "schema": filename,
-                "sclite_legacy_sha256": left,
-                "rexecop_owner_sha256": right,
+                "sclite_schema_absent": not legacy.exists(),
+                "rexecop_owner_sha256": _sha256(owner),
             }
         )
-        if left != right:
-            errors.append(f"installed_resource_parity:{filename}")
+        if legacy.exists():
+            errors.append(f"retired_sclite_schema_present:{filename}")
     return {
         "schema": "govstack.f4_conformance_matrix.v1",
         "order": list(REPOS),
         "repositories": repositories,
-        "owner_schema_parity": parity,
+        "owner_schema_separation": separation,
         "negative_vectors": ["resolver_unknown_namespace", "resolver_contract_collision"],
         "status": "pass" if not errors else "fail",
         "errors": errors,

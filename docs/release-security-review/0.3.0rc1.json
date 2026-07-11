@@ -1,6 +1,6 @@
 {
   "schema": "rexecop.release_security_review.v0.1",
-  "version": "0.2.25a0",
+  "version": "0.3.0rc1",
   "review_mode": "solo_reviewed_alpha_risk",
   "reviewed_at": "2026-07-10",
   "reviewer_ref": "operator:stack-maintainer",

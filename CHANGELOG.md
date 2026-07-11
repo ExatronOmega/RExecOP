@@ -2,6 +2,12 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Completes the SCLite 2.0 migration by moving the builders and semantic
+  verifiers themselves into RExecOp, not only their schema resources.
+- Removes every production import of the retired SCLite reaction, trigger,
+  watchdog and automation surfaces while preserving v0.1 artifact reads through
+  the owner resolver.
+
 - Moves seven reaction, trigger, watchdog and automation schema resources into
   the RExecOp package and exposes them through an immutable namespaced resolver.
 - Routes runtime builders and verifiers through the RExecOp owner surface while
@@ -24,7 +30,7 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
-## [0.2.25a0] - coordinated SCLite/GovEngine candidate
+## [0.3.0rc1] - coordinated SCLite/GovEngine candidate
 
 - Emits `policy_decision.v0.3` and `execution_contract.v0.3` with the exact
   GovEngine-produced scope assertion, decision digest and subject/target
@@ -43,8 +49,8 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
   explicit atomic `overwrite=True` when replacing the provisional intent
   directory with the complete operation bundle. RExecOp sidecars are not
   misrepresented as SCLite closed-world `public_export` files.
-- Pins the local candidate line to `govengine==0.16.12rc1` and
-  `sclite-core==1.1.0rc1`, with `tecrax==0.3.22a0` retained as the matching
+- Pins the local candidate line to `govengine==0.17.0rc1` and
+  `sclite-core==2.0.0rc1`, with `tecrax==0.4.0rc1` retained as the matching
   optional profile candidate.
 - No execution, profile, or governance semantics change: this package exists
   to validate the exact downstream candidate pair before publication. The

@@ -4,11 +4,11 @@
 
 | Field | Value |
 |-------|-------|
-| RExecOp version (dev line) | `0.2.25a0` (candidate, not published) |
+| RExecOp version (dev line) | `0.3.0rc1` (candidate, not published) |
 | RExecOp version (PyPI published) | `0.2.24a0` |
-| GovEngine version | `0.16.12rc1` (candidate; published `0.16.11`) |
-| SCLite version | `1.1.0rc1` (candidate; published `1.0.9`) |
-| Tecrax version | `0.3.22a0` (candidate; published `0.3.21a0`) |
+| GovEngine version | `0.17.0rc1` (candidate; published `0.16.11`) |
+| SCLite version | `2.0.0rc1` (candidate; published `1.0.9`) |
+| Tecrax version | `0.4.0rc1` (candidate; published `0.3.21a0`) |
 | Operator | |
 | Host / environment | |
 | Runtime root used for lab | |

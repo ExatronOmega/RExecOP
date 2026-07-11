@@ -9,6 +9,11 @@ trigger, watchdog and automation contract resources. The explicit
 namespace. SCLite remains the neutral byte/schema verifier and does not become
 the runtime or policy owner.
 
+With SCLite 2.0 these builders and semantic verifiers are implemented directly
+under `rexecop.contracts`; no deprecated SCLite owner modules are imported.
+Historical v0.1 artifacts retain their original embedded `schema_ref` and are
+resolved explicitly by the RExecOp owner resolver.
+
 Release candidates are checked by
 `scripts/validate_f4_conformance_matrix.py`, which requires a fixed local
 wheelhouse and reports exact candidate artifact digests rather than testing

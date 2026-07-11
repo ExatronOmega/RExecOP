@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from sclite import build_observation_envelope
 from typer.testing import CliRunner
 
 from rexecop.cli import app
+from rexecop.contracts.orchestration import build_observation_envelope
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.controller import OperationController
 from rexecop.operation.model import Operation, utc_now_iso
