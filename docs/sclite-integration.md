@@ -3,6 +3,17 @@
 RExecOp does **not** own long-term auditable truth. SCLite does. RExecOp maps completed
 operation lifecycles into SCLite-compatible artifact bundles without forking a parallel schema.
 
+RExecOp does own orchestration semantics and the corresponding reaction,
+trigger, watchdog and automation contract resources. The explicit
+`ORCHESTRATION_SCHEMA_RESOLVER` binds these resources under the `rexecop.io`
+namespace. SCLite remains the neutral byte/schema verifier and does not become
+the runtime or policy owner.
+
+Release candidates are checked by
+`scripts/validate_f4_conformance_matrix.py`, which requires a fixed local
+wheelhouse and reports exact candidate artifact digests rather than testing
+against an arbitrary branch tip.
+
 ## Authority model
 
 Paths use `<root>/` for the selected runtime root (`--root`, `REXECOP_ROOT`, named

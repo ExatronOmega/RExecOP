@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — explicit orchestration contract ownership
+
+- Moves seven reaction, trigger, watchdog and automation schema resources into
+  the RExecOp package and exposes them through an immutable namespaced resolver.
+- Routes runtime builders and verifiers through the RExecOp owner surface while
+  preserving byte-compatible v0.1 migration vectors.
+- Moves target-host normalization into the RExecOp adapter without DNS or
+  network access.
+- Adds a fixed four-repository conformance matrix recording exact commits,
+  versions, wheel/sdist SHA-256 digests, dependency pins and installed-resource
+  parity.
+
 All notable changes to RExecOp (`rexecop`) are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).

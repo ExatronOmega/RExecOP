@@ -64,6 +64,12 @@ SCLite   validate schemas, ticket binding, review_bundle (truth authority)
 | **GovEngine** | Governance: admission and runner request/receipt **contracts** — does not execute steps or emit SCLite files |
 | **SCLite** | Proof: auditable artifacts, scoped tickets, receipt-bounded evidence, review bundles |
 
+RExecOp also owns the orchestration-specific observation, finding, reaction,
+trigger, watchdog and automation contract resources. They are exposed through
+the immutable `rexecop.contracts.orchestration` resolver under
+`rexecop.io/*@v0.1`. SCLite verifies their bytes and descriptors without
+discovering plugins or interpreting runtime semantics.
+
 Tecrax ships as the [`tecrax`](https://github.com/rozmiarD/tecrax) package (`rexecop.profiles:tecrax`).
 Ravenclaw is legacy and out of scope for RExecOp.
 
