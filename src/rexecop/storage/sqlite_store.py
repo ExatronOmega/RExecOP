@@ -122,6 +122,9 @@ class SqliteStore:
     def release_execution_lease(self, lease: dict[str, Any]) -> bool:
         return self._files.release_execution_lease(lease)
 
+    def validate_execution_lease(self, lease: dict[str, Any]) -> None:
+        self._files.validate_execution_lease(lease)
+
     def queue_list_pending(self) -> list[str]:
         return self._files.queue_list_pending()
 
@@ -174,6 +177,12 @@ class SqliteStore:
             if isinstance(operation.metadata.get("sclite_projection"), dict)
             and operation.metadata["sclite_projection"].get("status") == "pending"
         ]
+
+    def save_execution_permit(self, permit: dict[str, Any]) -> Path:
+        return self._files.save_execution_permit(permit)
+
+    def load_execution_permit(self, operation_id: str, step_id: str) -> dict[str, Any]:
+        return self._files.load_execution_permit(operation_id, step_id)
 
     def save_operation(self, operation: Operation) -> None:
         with self._connection(immediate=True) as conn:

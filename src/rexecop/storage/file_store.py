@@ -21,6 +21,7 @@ class FileStore:
         self.sclite_dir = self.root / "sclite"
         self.approvals_dir = self.root / "approvals"
         self.observability_dir = self.root / "observability" / "events"
+        self.permits_dir = self.root / "permits"
 
     def ensure_layout(self) -> None:
         secure_directory(self.root)
@@ -32,6 +33,7 @@ class FileStore:
             self.sclite_dir,
             self.approvals_dir,
             self.observability_dir,
+            self.permits_dir,
         ):
             secure_directory(path)
 
@@ -193,6 +195,11 @@ class FileStore:
             process_instance_id=str(lease["process_instance_id"]),
         )
 
+    def validate_execution_lease(self, lease: dict[str, Any]) -> None:
+        from rexecop.runtime_ops.lease import WorkerLeaseManager
+
+        WorkerLeaseManager(self.root).validate(lease)
+
     def _queue(self) -> Any:
         from rexecop.runtime_ops.queue import RunNowQueue
 
@@ -266,3 +273,19 @@ class FileStore:
             if isinstance(operation.metadata.get("sclite_projection"), dict)
             and operation.metadata["sclite_projection"].get("status") == "pending"
         ]
+
+    def save_execution_permit(self, permit: dict[str, Any]) -> Path:
+        self.ensure_layout()
+        operation_id = str(permit["operation_id"])
+        step_id = str(permit["step_id"])
+        operation_dir = self.permits_dir / operation_id
+        secure_directory(operation_dir)
+        path = operation_dir / f"{step_id}.json"
+        self._write_json(path, permit)
+        return path
+
+    def load_execution_permit(self, operation_id: str, step_id: str) -> dict[str, Any]:
+        path = self.permits_dir / operation_id / f"{step_id}.json"
+        if not path.is_file():
+            raise RExecOpValidationError(f"execution permit not found: {operation_id}/{step_id}")
+        return json.loads(path.read_text(encoding="utf-8"))

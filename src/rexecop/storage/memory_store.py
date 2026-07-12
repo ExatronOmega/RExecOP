@@ -109,6 +109,9 @@ class InMemoryStore:
     def release_execution_lease(self, lease: dict[str, Any]) -> bool:
         return self._file_store.release_execution_lease(lease)
 
+    def validate_execution_lease(self, lease: dict[str, Any]) -> None:
+        self._file_store.validate_execution_lease(lease)
+
     def queue_list_pending(self) -> list[str]:
         return self._file_store.queue_list_pending()
 
@@ -161,6 +164,12 @@ class InMemoryStore:
             if isinstance(operation.metadata.get("sclite_projection"), dict)
             and operation.metadata["sclite_projection"].get("status") == "pending"
         ]
+
+    def save_execution_permit(self, permit: dict[str, Any]) -> Any:
+        return self._file_store.save_execution_permit(permit)
+
+    def load_execution_permit(self, operation_id: str, step_id: str) -> dict[str, Any]:
+        return self._file_store.load_execution_permit(operation_id, step_id)
 
     def dump_state(self) -> dict[str, Any]:
         return {

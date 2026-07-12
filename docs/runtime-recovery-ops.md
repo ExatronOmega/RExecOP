@@ -56,6 +56,12 @@ invocation. Connector attempts are persisted before IO. A process loss after IO 
 the durable result becomes `outcome_indeterminate`; side-effectful work is never retried
 automatically and requires explicit reconciliation.
 
+Immediately before connector IO, RExecOp writes and verifies
+`rexecop.execution_permit.v0.1`. The permit binds the current operation revision,
+plan/spec digests, recorded GovEngine decision/admission digest, target binding, mode,
+lease epoch and expiry. It is a freshness record only: it does not evaluate policy,
+grant governance authority or create SCLite truth.
+
 ## Runtime-store reconstruction status
 
 Before or after recovery, inspect whether the local runtime store has enough

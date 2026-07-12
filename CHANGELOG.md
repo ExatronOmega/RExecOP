@@ -10,6 +10,8 @@
   remains an alpha tier, and `doctor` blocks unsupported storage or executor posture.
 - Adds `validate_m9_runtime_gate.py` with real multiprocessing, stale-write,
   crash-point, repeated-recovery and projection reconciliation coverage.
+- Adds a short-lived `rexecop.execution_permit.v0.1` freshness record checked
+  immediately before connector IO and bound to operation/plan/spec/admission/target/lease facts.
 
 - Starts M8.6 security hardening: pagination is same-origin only with loop
   detection, auth headers cannot target transport-reserved names, and public

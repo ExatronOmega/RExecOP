@@ -155,6 +155,16 @@ class WorkerLeaseManager:
             self.lease_path.unlink(missing_ok=True)
             return True
 
+    def validate(self, lease: dict[str, Any], *, now: datetime | None = None) -> None:
+        with self._locked():
+            existing = self._require_owner(
+                str(lease.get("owner_token") or ""),
+                int(lease.get("lease_epoch") or 0),
+                str(lease.get("process_instance_id") or ""),
+            )
+            if self.is_stale(existing, now=now):
+                raise RExecOpValidationError("lease_lost: execution lease expired")
+
     def _require_owner(
         self, owner_token: str, lease_epoch: int, process_instance_id: str
     ) -> dict[str, Any]:

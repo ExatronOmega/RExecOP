@@ -31,6 +31,7 @@ from rexecop.policy.enforcement import (
 )
 from rexecop.policy.pack import compile_environment_policy_pack
 from rexecop.profile.loader import LoadedProfile, load_profile
+from rexecop.runtime_ops.permit import ExecutionPermitManager
 from rexecop.storage.port import RuntimeStore
 from rexecop.validation.validator import validate_operation_result
 from rexecop.workflow.runner import WorkflowRunner
@@ -112,6 +113,7 @@ class OperationOrchestrator:
         self._export_receipt = export_receipt
         self._auto_reaction_handler = auto_reaction_handler
         self.execution_lease_record: dict[str, Any] | None = None
+        self.permits = ExecutionPermitManager(store)
 
     def _runner_for_operation(self, operation: Operation) -> WorkflowRunner:
         connectors = operation.metadata.get("environment_connectors")
@@ -147,19 +149,49 @@ class OperationOrchestrator:
         operation = self.store.load_operation(context.operation_id)
         plan = self.store.load_plan(context.operation_id)
         governance = operation.metadata.get("governance_admission")
-        permit_ref = ""
+        governance_admission_digest = ""
         if isinstance(governance, dict):
-            permit_ref = str(governance.get("admission_digest") or "")
+            governance_admission_digest = str(governance.get("admission_digest") or "")
+        typed_admissions = context.shared_state.get("typed_execution_admissions")
+        if isinstance(typed_admissions, dict):
+            step_admission = typed_admissions.get(str(context.step.get("id") or ""))
+            if isinstance(step_admission, dict):
+                governance_admission_digest = str(
+                    step_admission.get("admission_digest") or governance_admission_digest
+                )
+        execution_spec = dict(spec or {})
+        target_binding = {
+            "target": context.target,
+            "destination": dict(execution_spec.get("destination") or {}),
+        }
+        permit = self.permits.issue(
+            operation=operation,
+            plan=plan,
+            step_id=str(context.step.get("id") or ""),
+            execution_spec=execution_spec,
+            target_binding=target_binding,
+            lease=lease,
+            governance_admission_digest=governance_admission_digest,
+        )
+        self.permits.require_fresh(
+            permit,
+            operation=self.store.load_operation(operation.id),
+            plan=self.store.load_plan(operation.id),
+            execution_spec=execution_spec,
+            target_binding=target_binding,
+            lease=lease,
+            governance_admission_digest=governance_admission_digest,
+        )
         return self.store.start_execution_attempt(
             operation_id=operation.id,
             operation_revision=operation.operation_revision,
             step_id=str(context.step.get("id") or ""),
             plan=plan.as_dict(),
-            execution_spec=spec,
+            execution_spec=execution_spec,
             target=context.target,
             mode=context.mode,
             lease=lease,
-            execution_permit_ref=permit_ref,
+            execution_permit_ref=str(permit["permit_digest"]),
         )
 
     def _finish_attempt(
