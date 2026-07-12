@@ -1,0 +1,15 @@
+{
+  "schema": "rexecop.release_security_review.v0.1",
+  "version": "0.3.0rc2",
+  "review_mode": "solo_reviewed_alpha_risk",
+  "reviewed_at": "2026-07-12",
+  "reviewer_ref": "operator:stack-maintainer",
+  "surfaces": [
+    "governance_admission_binding",
+    "mutation_gates",
+    "connector_output_safety",
+    "release_train_scripts",
+    "supply_chain_workflow"
+  ],
+  "notes": "Solo-maintainer alpha review of normalized HTTP destination metadata, origin-digest admission, observed-hop receipt binding, fail-closed drift checks, and exact candidate pins. This is not an independent security audit or a production-readiness claim."
+}

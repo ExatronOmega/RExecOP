@@ -46,7 +46,9 @@ def test_http_api_reads_fixture_state_against_staging_server() -> None:
             )
         )
         assert response.success
-        assert response.data == {"observed": True, "status": "ready"}
+        assert response.data["observed"] is True
+        assert response.data["status"] == "ready"
+        assert response.data["observed_destination_binding"]["address_class"] == "loopback"
     finally:
         server.stop()
 

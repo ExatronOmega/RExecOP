@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+from ipaddress import ip_address
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
+from rexecop.catalog.digest import canonical_digest
 from rexecop.connectors import errors as connector_errors
 from rexecop.evidence.redaction import redact_payload, redact_text
 
@@ -22,6 +24,30 @@ def require_same_origin(expected_url: str, candidate_url: str) -> str:
     if normalized_origin(expected_url) != normalized_origin(candidate_url):
         raise ValueError("unsafe_destination")
     return candidate_url
+
+
+def destination_binding(url: str) -> dict[str, Any]:
+    scheme, host, port = normalized_origin(url)
+    try:
+        address = ip_address(host)
+    except ValueError:
+        address_class = "dns_name"
+    else:
+        if address.is_loopback:
+            address_class = "loopback"
+        elif address.is_link_local:
+            address_class = "link_local"
+        elif address.is_private:
+            address_class = "private"
+        else:
+            address_class = "public_ip"
+    return {
+        "scheme": scheme,
+        "effective_port": port,
+        "address_class": address_class,
+        "origin_binding_digest": "sha256:"
+        + canonical_digest({"scheme": scheme, "host": host, "effective_port": port}),
+    }
 
 
 def resolve_retry_config(

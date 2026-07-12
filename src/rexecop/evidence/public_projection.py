@@ -23,6 +23,7 @@ TOP_LEVEL_SAFE_FIELDS = frozenset(
         "output_truncated",
         "output_sizes",
         "max_output_bytes",
+        "observed_destination_binding",
     }
 )
 
@@ -35,6 +36,7 @@ OUTPUT_SAFE_FIELDS = frozenset(
         "output_truncated",
         "output_sizes",
         "max_output_bytes",
+        "observed_destination_binding",
     }
 )
 
@@ -45,6 +47,7 @@ STRUCTURED_OUTPUT_SUBTREES = frozenset(
         "output_digests",
         "output_truncated",
         "output_sizes",
+        "observed_destination_binding",
     }
 )
 

@@ -67,6 +67,10 @@ outside the profile workflow.
 - `typed_execution_binding`: aggregate digest map (`rexecop.typed_execution_binding.v0.1`)
   for executed connector steps; binds policy/admission via existing
   `policy_binding` and per-step typed/output digests without embedding payloads
+- HTTP step bindings carry normalized scheme, effective port, address class and
+  origin-binding digest. Per-step receipts compare the planned and observed
+  destination binding and include the GovEngine admission/request digests; raw
+  connector hosts are never included in this projection.
 
 Receipts reference bounded runtime output-record digests and connector stream
 digests where available; they do **not** embed raw stdout/stderr or HTTP bodies.

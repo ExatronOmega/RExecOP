@@ -70,7 +70,7 @@ def test_release_train_preflight_passes(tmp_path: Path) -> None:
         "govengine": f'''
 [project]
 name = "govengine"
-version = "0.17.0rc1"
+version = "0.17.0rc2"
 dependencies = ["{public_truth.EXPECTED_SCLITE}"]
 ''',
         "sclite": '''
@@ -82,7 +82,7 @@ dependencies = []
         "tecrax": f'''
 [project]
 name = "tecrax"
-version = "0.4.0rc1"
+version = "0.4.0rc2"
 dependencies = [
   "{public_truth.EXPECTED_GOVENGINE}",
   "{public_truth.EXPECTED_SCLITE}",

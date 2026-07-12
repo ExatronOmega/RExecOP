@@ -113,6 +113,8 @@ def test_composite_routes_http_api_backend() -> None:
             )
         )
         assert response.success
-        assert response.data == {"observed": True, "status": "ready"}
+        assert response.data["observed"] is True
+        assert response.data["status"] == "ready"
+        assert response.data["observed_destination_binding"]["address_class"] == "loopback"
     finally:
         server.stop()

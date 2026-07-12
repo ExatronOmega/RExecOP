@@ -28,7 +28,7 @@ The static adapter is explicitly marked `bootstrap_only` and documented as non-p
 ## Dependency
 
 ```text
-govengine==0.17.0rc1
+govengine==0.17.0rc2
 ```
 
 Pinned compatible with the final frozen SCLite 2.0 verifier used by RExecOp (`sclite-core==2.0.0`).

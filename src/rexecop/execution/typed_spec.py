@@ -14,6 +14,7 @@ from rexecop.connectors.capability_descriptor import compile_connector_capabilit
 from rexecop.connectors.command_shape import normalize_allowlisted_argv
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.connectors.fixture_loader import list_registered_connector_backends
+from rexecop.connectors.http_support import destination_binding
 from rexecop.errors import RExecOpValidationError
 from rexecop.profile.loader import LoadedProfile, load_profile
 from rexecop.profile.resolver import resolve_profile_path
@@ -196,12 +197,16 @@ def bind_step_execution_spec(
         capability_digest = ""
         if isinstance(capability, Mapping):
             capability_digest = str(capability.get("digest") or "")
+        payload = spec.get("payload")
+        destination = payload.get("destination_binding") if isinstance(payload, Mapping) else None
         specs[step_id] = {
             "schema": str(spec.get("schema") or ""),
             "digest": str(spec.get("digest") or ""),
             "payload_schema": str(spec.get("payload_schema") or ""),
             "capability_descriptor_digest": capability_digest,
         }
+        if isinstance(destination, Mapping):
+            specs[step_id]["destination_binding"] = dict(destination)
 
 
 def _compile_http_action_execution_spec(
@@ -232,6 +237,12 @@ def _compile_http_action_execution_spec(
         "mutating": bool(shape.get("mutating")),
         "max_response_bytes": int(shape.get("max_response_bytes") or 65536),
     }
+    base_url = str(connector_config.get("base_url") or "").strip()
+    declared_binding = connector_config.get("destination_binding")
+    if base_url:
+        payload["destination_binding"] = destination_binding(base_url)
+    elif isinstance(declared_binding, Mapping):
+        payload["destination_binding"] = dict(declared_binding)
     validate_typed_execution_schema_version(payload)
     return payload
 

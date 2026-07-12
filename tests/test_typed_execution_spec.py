@@ -200,6 +200,61 @@ def test_compile_http_action_execution_spec_from_fixture(tmp_path: Path) -> None
     assert spec["payload"]["shape"]["method"] == "GET"
 
 
+def test_http_execution_spec_binds_destination_without_raw_host(tmp_path: Path) -> None:
+    profile_root = tmp_path / "profile"
+    (profile_root / "connectors").mkdir(parents=True)
+    for directory in ("intents", "workflows", "validation_rules"):
+        (profile_root / directory).mkdir()
+    (profile_root / "profile.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "profile_contract": {
+                    "name": "destination",
+                    "version": "0.1.0",
+                    **{
+                        section: {"required": True}
+                        for section in (
+                            "intents",
+                            "workflows",
+                            "connector_requirements",
+                            "risk_classes",
+                            "evidence_requirements",
+                            "governance_expectations",
+                            "validation_rules",
+                            "escalation_rules",
+                        )
+                    },
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (profile_root / "connectors" / "api.yaml").write_text(
+        "connector:\n  name: api\n  backend: http_api\n  capabilities: [read]\n"
+        "  action_shapes:\n    read:\n      method: GET\n      path: /state\n",
+        encoding="utf-8",
+    )
+    config = {
+        "backend": "http_api",
+        "base_url": "https://private-api.example:8443",
+        "actions": {"read": {"method": "GET", "path": "/state"}},
+    }
+    spec = compile_step_execution_spec(
+        step={"id": "read", "type": "connector", "connector": "api", "action": "read"},
+        profile=load_profile(profile_root / "profile.yaml"),
+        connector_config=config,
+        mode="dry_run",
+    )
+    binding = spec["payload"]["destination_binding"]
+    assert binding["scheme"] == "https"
+    assert binding["effective_port"] == 8443
+    assert binding["address_class"] == "dns_name"
+    assert binding["origin_binding_digest"].startswith("sha256:")
+    assert "private-api.example" not in repr(spec)
+    assert spec["capability_descriptor"]["network_boundary"]["destination_binding"] == binding
+
+
 def test_compile_command_execution_spec_for_readonly_shell(tmp_path: Path) -> None:
     profile_root = tmp_path / "profile"
     (profile_root / "connectors").mkdir(parents=True)
@@ -421,6 +476,14 @@ def test_execution_receipt_binds_policy_and_typed_execution_digests() -> None:
             "schema": STEP_EXECUTION_SPEC_SCHEMA,
             "digest": "sha256:" + "e" * 64,
             "capability_descriptor_digest": "sha256:" + "f" * 64,
+            "admission_digest": "sha256:" + "1" * 64,
+            "governance_request_digest": "sha256:" + "2" * 64,
+            "destination_binding": {
+                "scheme": "https",
+                "effective_port": 443,
+                "address_class": "dns_name",
+                "origin_binding_digest": "sha256:" + "3" * 64,
+            },
         }
     }
     receipt = execution_receipt_from_results(
@@ -430,7 +493,17 @@ def test_execution_receipt_binds_policy_and_typed_execution_digests() -> None:
         step_results={
             "inspect_state": {
                 "success": True,
-                "output": {"data": {"output_digests": {"record": "sha256:" + "0" * 64}}},
+                "output": {
+                    "data": {
+                        "output_digests": {"record": "sha256:" + "0" * 64},
+                        "observed_destination_binding": {
+                            "scheme": "https",
+                            "effective_port": 443,
+                            "address_class": "dns_name",
+                            "origin_binding_digest": "sha256:" + "3" * 64,
+                        },
+                    }
+                },
             }
         },
         typed_execution_specs=typed_specs,
@@ -442,4 +515,11 @@ def test_execution_receipt_binds_policy_and_typed_execution_digests() -> None:
     assert payload["enforcement"]["typed_execution_specs_bound"] is True
     assert build_typed_execution_binding(["inspect_state"], typed_specs) == (
         payload["typed_execution_binding"]
+    )
+    binding = payload["typed_execution_binding"]["step_digests"]["inspect_state"]
+    assert binding["origin_binding_digest"] == "sha256:" + "3" * 64
+    assert binding["admission_digest"] == "sha256:" + "1" * 64
+    step_receipt = payload["step_receipts"][0]
+    assert step_receipt["planned_destination_binding"] == (
+        step_receipt["observed_destination_binding"]
     )

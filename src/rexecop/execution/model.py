@@ -173,6 +173,8 @@ class ExecutionStepReceipt:
     output_truncated: Mapping[str, bool] = field(default_factory=dict)
     execution_spec_digest: str = ""
     capability_descriptor_digest: str = ""
+    planned_destination_binding: Mapping[str, Any] = field(default_factory=dict)
+    observed_destination_binding: Mapping[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         payload = {
@@ -186,6 +188,10 @@ class ExecutionStepReceipt:
             payload["execution_spec_digest"] = self.execution_spec_digest
         if self.capability_descriptor_digest:
             payload["capability_descriptor_digest"] = self.capability_descriptor_digest
+        if self.planned_destination_binding:
+            payload["planned_destination_binding"] = dict(self.planned_destination_binding)
+        if self.observed_destination_binding:
+            payload["observed_destination_binding"] = dict(self.observed_destination_binding)
         return payload
 
 
@@ -337,6 +343,15 @@ def build_typed_execution_binding(
             "capability_descriptor_digest": capability_digest,
             "schema": str(entry.get("schema") or "").strip(),
         }
+        destination = entry.get("destination_binding")
+        if isinstance(destination, Mapping):
+            step_digests[str(step_id)]["origin_binding_digest"] = str(
+                destination.get("origin_binding_digest") or ""
+            )
+        for source_key in ("admission_digest", "governance_request_digest"):
+            value = str(entry.get(source_key) or "").strip()
+            if value:
+                step_digests[str(step_id)][source_key] = value
     if not step_digests:
         return {}
     binding = {
@@ -378,6 +393,7 @@ def _step_receipt(
             truncated.update({str(key): bool(value) for key, value in source.items()})
     execution_spec_digest = ""
     capability_descriptor_digest = ""
+    planned_destination: Mapping[str, Any] = {}
     if isinstance(typed_execution_specs, Mapping):
         entry = typed_execution_specs.get(step_id)
         if isinstance(entry, Mapping):
@@ -385,6 +401,17 @@ def _step_receipt(
             capability_descriptor_digest = str(
                 entry.get("capability_descriptor_digest") or ""
             ).strip()
+            destination = entry.get("destination_binding")
+            if isinstance(destination, Mapping):
+                planned_destination = dict(destination)
+    observed_destination = response_data.get("observed_destination_binding")
+    if not isinstance(observed_destination, Mapping):
+        observed_destination = {}
+    if planned_destination and observed_destination:
+        planned_digest = str(planned_destination.get("origin_binding_digest") or "")
+        observed_digest = str(observed_destination.get("origin_binding_digest") or "")
+        if planned_digest != observed_digest:
+            raise RExecOpValidationError("observed destination binding drift")
     return ExecutionStepReceipt(
         step_id=step_id,
         success=bool(result.get("success")),
@@ -397,6 +424,8 @@ def _step_receipt(
         output_truncated=truncated,
         execution_spec_digest=execution_spec_digest,
         capability_descriptor_digest=capability_descriptor_digest,
+        planned_destination_binding=planned_destination,
+        observed_destination_binding=dict(observed_destination),
     )
 
 

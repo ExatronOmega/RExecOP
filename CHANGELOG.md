@@ -6,6 +6,9 @@
   detection, auth headers cannot target transport-reserved names, and public
   projection defaults make body/before/after structured state digest-only.
 - Removes wildcard subtree publication and requires exact allowlist paths.
+- Binds normalized HTTP destination metadata and origin digests through typed
+  execution specs, GovEngine admission and execution receipts without exposing
+  raw connector hosts.
 
 - Completes the SCLite 2.0 migration by moving the builders and semantic
   verifiers themselves into RExecOp, not only their schema resources.
@@ -40,6 +43,13 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 [Releases](#releases) are newest first.
 
 ## Unreleased
+
+## [0.3.0rc2] - bounded destination-admission candidate
+
+- Pins `govengine==0.17.0rc2` and binds normalized HTTP scheme, effective port,
+  address class and origin digest through typed execution admission and runtime
+  receipts without exposing raw connector hosts.
+- Remains an unpublished source candidate; the public PyPI line is unchanged.
 
 ## [0.3.0rc1] - coordinated SCLite/GovEngine candidate
 

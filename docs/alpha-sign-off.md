@@ -1,6 +1,6 @@
 # Alpha sign-off
 
-RExecOp `0.3.0rc1` source candidate — formal operator acceptance before
+RExecOp `0.3.0rc2` source candidate — formal operator acceptance before
 production-adjacent use. This candidate is not published; `0.2.24a0` remains
 the latest PyPI alpha line.
 

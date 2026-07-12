@@ -7,6 +7,7 @@ from govengine import (
     admit_typed_execution,
     explain_typed_execution_governance,
     project_typed_execution_policy_overlay,
+    typed_execution_admission_digest,
     typed_execution_control_catalog,
 )
 from govengine.typed_execution_governance import (
@@ -36,6 +37,7 @@ EXPECTED_TYPED_EXECUTION_CONTROLS = (
     "receipt_required",
     "output_digest_required",
     "network_boundary_match",
+    "network_destination_binding_match",
     "secret_ref_requirements_met",
     "mutation_requires_approval",
 )
@@ -152,6 +154,19 @@ def build_typed_execution_governance_request(
     backend_class = str(spec.get("backend_class") or "").strip()
     if backend_class in list_registered_connector_backends():
         request_metadata["registered_plugin_backend"] = True
+    payload = spec.get("payload")
+    destination = payload.get("destination_binding") if isinstance(payload, Mapping) else None
+    destination_fields: dict[str, Any] = {}
+    if isinstance(destination, Mapping):
+        destination_fields = {
+            "destination_binding": dict(destination),
+            "allowed_network_schemes": [str(destination.get("scheme") or "")],
+            "allowed_address_classes": [str(destination.get("address_class") or "")],
+            "required_origin_binding_digest": str(
+                destination.get("origin_binding_digest") or ""
+            ),
+        }
+        request_metadata["require_destination_binding"] = True
     if not required:
         declared = capability.get("declared_capability_descriptors")
         required = list(declared) if isinstance(declared, list) else []
@@ -178,6 +193,7 @@ def build_typed_execution_governance_request(
         "allowed_network_egress": list(egress),
         "required_capability_descriptors": list(required),
         "metadata": request_metadata,
+        **destination_fields,
     }
 
 
@@ -247,7 +263,15 @@ def enforce_typed_execution_governance(
         "request_id": request["request_id"],
         "subject_ref": payload["subject_ref"],
         "signal": dict(payload.get("signal") or {}),
+        "admission_digest": typed_execution_admission_digest(admission),
+        "request_digest": str(payload.get("subject_ref") or ""),
     }
+    specs = shared_state.get("typed_execution_specs")
+    if isinstance(specs, dict):
+        binding = specs.get(step_id)
+        if isinstance(binding, dict):
+            binding["admission_digest"] = admissions[step_id]["admission_digest"]
+            binding["governance_request_digest"] = admissions[step_id]["request_digest"]
     return admissions[step_id]
 
 

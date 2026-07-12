@@ -6,6 +6,7 @@ from typing import Any
 from rexecop.catalog.digest import canonical_digest
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.connectors.fixture_loader import list_registered_connector_backends
+from rexecop.connectors.http_support import destination_binding
 from rexecop.connectors.registry import describe_connector_backend, list_builtin_connector_backends
 from rexecop.errors import RExecOpValidationError
 from rexecop.secrets.doctor import collect_secret_ref_bindings
@@ -125,13 +126,20 @@ def _live_backend_posture(backend: str, connector_config: Mapping[str, Any]) -> 
 def _network_boundary(backend: str, connector_config: Mapping[str, Any]) -> dict[str, Any]:
     if backend == "http_api":
         tls = connector_config.get("tls")
-        return {
+        boundary: dict[str, Any] = {
             "egress": "outbound_http",
             "tls_configured": isinstance(tls, Mapping) and bool(tls),
             "endpoint_declared": bool(
                 connector_config.get("base_url") or connector_config.get("base_url_secret_ref")
             ),
         }
+        base_url = str(connector_config.get("base_url") or "").strip()
+        declared_binding = connector_config.get("destination_binding")
+        if base_url:
+            boundary["destination_binding"] = destination_binding(base_url)
+        elif isinstance(declared_binding, Mapping):
+            boundary["destination_binding"] = dict(declared_binding)
+        return boundary
     if backend == "ssh_readonly":
         return {
             "egress": "outbound_ssh",

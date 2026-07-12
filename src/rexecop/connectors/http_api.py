@@ -21,6 +21,7 @@ from rexecop.connectors.base import (
 from rexecop.connectors.capability import connector_action_allowed
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.connectors.http_support import (
+    destination_binding,
     get_json_path,
     http_error_class,
     merge_paginated_items,
@@ -114,6 +115,8 @@ class HttpApiConnectorRuntime:
                 )
 
         response = self._invoke_with_retry(request, action_spec)
+        observed = destination_binding(self._resolve_base_url())
+        response.data["observed_destination_binding"] = observed
         if action_contract_digest:
             response.data["action_contract_digest"] = action_contract_digest
         return response
