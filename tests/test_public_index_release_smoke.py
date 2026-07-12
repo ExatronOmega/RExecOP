@@ -49,6 +49,18 @@ def test_public_index_release_smoke_orchestration(
             return FakeCompleted(stdout="ok\n")
         if command[:5] == [str(rexecop_bin), "--json", "--root", str(runtime_root), "doctor"]:
             return FakeCompleted(stdout=json.dumps({"status": "passed", "blockers": []}) + "\n")
+        if command[:2] == [str(venv_python), "-c"]:
+            return FakeCompleted(
+                stdout=json.dumps(
+                    {
+                        "rexecop": version,
+                        "govengine": "0.16.11",
+                        "sclite-core": "1.0.9",
+                        "tecrax": "0.3.21a0",
+                    }
+                )
+                + "\n"
+            )
         raise AssertionError(f"unexpected_command:{command}")
 
     @contextmanager
@@ -70,6 +82,7 @@ def test_public_index_release_smoke_orchestration(
     assert details["surface_marker"] == marker
     assert details["version"] == version
     assert details["doctor_status"] == "passed"
+    assert details["installed_versions"]["rexecop"] == version
 
 
 def test_public_index_release_smoke_writes_evidence(
@@ -81,6 +94,11 @@ def test_public_index_release_smoke_writes_evidence(
     version = clean_install.project_version()
     evidence_dir = tmp_path / "release-evidence"
     monkeypatch.setattr(release, "RELEASE_EVIDENCE_DIR", evidence_dir)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / f"rexecop-{version}-py3-none-any.whl").write_bytes(b"wheel")
+    (dist / f"rexecop-{version}.tar.gz").write_bytes(b"sdist")
+    public_artifacts = release.distribution_digests(dist)
 
     path = release.write_release_evidence(
         version,
@@ -88,11 +106,24 @@ def test_public_index_release_smoke_writes_evidence(
             "surface_marker": f"clean_install_smoke_ok:rexecop=={version}",
             "version": version,
             "doctor_status": "passed",
+            "installed_versions": {
+                "rexecop": version,
+                "govengine": "0.17.0rc1",
+                "sclite-core": "2.0.0",
+                "tecrax": "0.4.0rc1",
+            },
         },
+        dist_dir=dist,
+        output=evidence_dir / f"{version}.json",
+        source_commit="a" * 40,
+        workflow_run_id="123",
+        workflow_run_url="https://github.com/rozmiarD/RExecOP/actions/runs/123",
+        public_artifacts=public_artifacts,
     )
-    text = path.read_text(encoding="utf-8")
-    assert f"clean_install_smoke_ok:rexecop=={version}" in text
-    assert release.release_marker(version) in text
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["schema"] == "rexecop.release_evidence.v1"
+    assert payload["installed_versions"]["rexecop"] == version
+    assert len(payload["record_digest"]) == 64
 
 
 def test_public_index_release_smoke_cli_success(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -105,6 +136,7 @@ def test_public_index_release_smoke_cli_success(monkeypatch: pytest.MonkeyPatch)
             "surface_marker": f"clean_install_smoke_ok:rexecop=={version}",
             "version": version,
             "doctor_status": "passed",
+            "installed_versions": {},
         },
     )
     assert release.main(["--version", version]) == 0
@@ -119,6 +151,15 @@ def test_public_index_release_smoke_verify_post_publish(
     version = clean_install.project_version()
     evidence_dir = tmp_path / "release-evidence"
     monkeypatch.setattr(release, "RELEASE_EVIDENCE_DIR", evidence_dir)
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / f"rexecop-{version}-py3-none-any.whl").write_bytes(b"wheel")
+    (dist / f"rexecop-{version}.tar.gz").write_bytes(b"sdist")
+    monkeypatch.setattr(
+        release,
+        "pypi_release_digests",
+        lambda *_args: release.distribution_digests(dist),
+    )
 
     def fake_load(name: str, path: Path):
         module = _load(name, path)
@@ -134,16 +175,35 @@ def test_public_index_release_smoke_verify_post_publish(
             "surface_marker": f"clean_install_smoke_ok:rexecop=={version}",
             "version": version,
             "doctor_status": "passed",
+            "installed_versions": {
+                "rexecop": version,
+                "govengine": "0.17.0rc1",
+                "sclite-core": "2.0.0",
+                "tecrax": "0.4.0rc1",
+            },
         },
     )
 
     assert (
         release.main(
-            ["--version", version, "--write-evidence", "--verify-post-publish"],
+            [
+                "--version",
+                version,
+                "--write-evidence",
+                "--verify-post-publish",
+                "--dist-dir",
+                str(dist),
+                "--source-commit",
+                "a" * 40,
+                "--workflow-run-id",
+                "123",
+                "--workflow-run-url",
+                "https://github.com/rozmiarD/RExecOP/actions/runs/123",
+            ],
         )
         == 0
     )
-    assert (evidence_dir / f"{version}.md").is_file()
+    assert (evidence_dir / f"{version}.json").is_file()
     verified = fake_load("rexecop_validate_release_train_preflight", PREFLIGHT)
     verified._collect_sibling_repo_errors = lambda *_args, **_kwargs: None
     assert verified.collect_errors(post_publish=True, stack_repos={}) == []

@@ -338,6 +338,19 @@ def collect_errors() -> list[str]:
     _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_GOVENGINE:")
     _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_SCLITE:")
     _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_TECRAX:")
+    _require(errors, ".github/workflows/publish.yml", "--previous-evidence")
+    _require(errors, ".github/workflows/publish.yml", "actions/upload-artifact@v4")
+    _require(errors, ".github/workflows/publish.yml", "actions/attest-build-provenance@v2")
+    _require(errors, ".github/workflows/publish.yml", "gh release upload")
+    _require(errors, ".github/workflows/publish.yml", 'test "$GITHUB_REF" = "refs/heads/main"')
+    _require(errors, ".github/workflows/publish.yml", "^[0-9a-f]{40}$")
+    _require(errors, ".github/workflows/repair-release-evidence.yml", "--no-binary rexecop")
+    _require(
+        errors,
+        ".github/workflows/repair-release-evidence.yml",
+        "actions/attest-build-provenance@v2",
+    )
+    _require(errors, "docs/release-evidence/README.md", "rexecop.release_evidence.v1")
 
     init_text = _read("src/rexecop/__init__.py")
     if f'__version__ = "{version}"' not in init_text:

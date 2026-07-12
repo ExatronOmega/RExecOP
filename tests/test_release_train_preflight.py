@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -22,6 +23,43 @@ def _load_validator():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def _write_evidence(path: Path, version: str, *, supersedes: str = "") -> Path:
+    validator = _load_validator()
+    release_evidence = validator._load_module(
+        "rexecop_release_evidence_test",
+        ROOT / "scripts" / "release_evidence.py",
+    )
+    record = {
+        "schema": "rexecop.release_evidence.v1",
+        "status": "passed",
+        "version": version,
+        "recorded_at": "2026-07-12T00:00:00+00:00",
+        "source_commit": "a" * 40,
+        "workflow_run_id": "123",
+        "workflow_run_url": "https://github.com/rozmiarD/RExecOP/actions/runs/123",
+        "artifacts": {
+            f"rexecop-{version}-py3-none-any.whl": "b" * 64,
+            f"rexecop-{version}.tar.gz": "c" * 64,
+        },
+        "public_artifacts": {
+            f"rexecop-{version}-py3-none-any.whl": "b" * 64,
+            f"rexecop-{version}.tar.gz": "c" * 64,
+        },
+        "installed_versions": {
+            "rexecop": version,
+            "govengine": "0.16.11",
+            "sclite-core": "1.0.9",
+            "tecrax": "0.3.21a0",
+        },
+        "doctor_status": "passed",
+        "surface_marker": f"clean_install_smoke_ok:rexecop=={version}",
+        "supersedes": supersedes,
+    }
+    record["record_digest"] = release_evidence.record_digest(record)
+    path.write_text(json.dumps(record), encoding="utf-8")
+    return path
 
 
 def test_release_train_preflight_passes(tmp_path: Path) -> None:
@@ -138,34 +176,55 @@ def test_release_train_preflight_rejects_missing_sibling_repos() -> None:
 
 
 def test_release_train_preflight_post_publish_requires_evidence(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     validator = _load_validator()
-    monkeypatch.setattr(validator, "_has_post_publish_evidence", lambda _version: False)
+    monkeypatch.setattr(validator, "RELEASE_EVIDENCE_DIR", tmp_path)
     errors = validator.collect_errors(post_publish=True, stack_repos={})
-    assert any(error.startswith("post_publish_evidence_missing:") for error in errors)
+    assert any(error.startswith("release_evidence_missing:") for error in errors)
 
 
-def test_release_train_preflight_post_publish_accepts_changelog_marker(
+def test_release_train_preflight_post_publish_accepts_valid_record(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     validator = _load_validator()
     version = validator._validator_modules()[0].current_version()
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    marker = validator._release_evidence_marker(version)
-    if marker not in validator._changelog_section(ROOT / "CHANGELOG.md", version):
-        changelog = changelog.replace(
-            f"## [{version}]",
-            f"## [{version}]\n\n- Release evidence: `{marker}`\n",
-            1,
-        )
-
-    def fake_changelog_section(path: Path, current_version: str) -> str:
-        if path.name == "CHANGELOG.md" and current_version == version:
-            _, _, tail = changelog.partition(f"## [{version}]")
-            return tail
-        return validator._changelog_section(path, current_version)
-
-    monkeypatch.setattr(validator, "_changelog_section", fake_changelog_section)
+    monkeypatch.setattr(validator, "RELEASE_EVIDENCE_DIR", tmp_path)
+    _write_evidence(tmp_path / f"{version}.json", version)
     errors = validator.collect_errors(post_publish=True, stack_repos={})
-    assert not any(error.startswith("post_publish_evidence_missing:") for error in errors)
+    assert not any(error.startswith("release_evidence_") for error in errors)
+
+
+def test_release_preflight_rejects_missing_previous_evidence() -> None:
+    validator = _load_validator()
+    errors = validator.collect_errors(release_mode=True, stack_repos={})
+    assert any(error.startswith("previous_release_evidence_not_configured:") for error in errors)
+
+
+def test_release_preflight_rejects_digest_mismatch(tmp_path: Path) -> None:
+    validator = _load_validator()
+    version = validator._validator_modules()[0].PUBLISHED_PYPI_VERSION
+    path = _write_evidence(tmp_path / "evidence.json", version)
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["doctor_status"] = "blocker"
+    path.write_text(json.dumps(record), encoding="utf-8")
+    errors = validator.collect_errors(
+        release_mode=True,
+        previous_evidence=path,
+        stack_repos={},
+    )
+    assert any(error.startswith("release_evidence_digest_mismatch:") for error in errors)
+
+
+def test_release_preflight_accepts_superseded_repair(tmp_path: Path) -> None:
+    validator = _load_validator()
+    previous = validator._validator_modules()[0].PUBLISHED_PYPI_VERSION
+    path = _write_evidence(tmp_path / "repair.json", "0.2.25a0", supersedes=previous)
+    errors = validator.collect_errors(
+        release_mode=True,
+        previous_evidence=path,
+        stack_repos={},
+    )
+    assert not any(error.startswith("release_evidence_") for error in errors)

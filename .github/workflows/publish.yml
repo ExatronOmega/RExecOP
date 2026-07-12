@@ -17,10 +17,15 @@ on:
       tecrax_ref:
         description: Exact Tecrax commit SHA for this release train
         required: true
+      previous_version:
+        description: Previous supported public RExecOp line with green release evidence
+        required: true
+        default: "0.2.24a0"
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
+  attestations: write
 
 jobs:
   publish-rexecop:
@@ -53,15 +58,30 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Download previous-line release evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .release-train
+          gh release download "v${{ inputs.previous_version }}" \
+            --pattern "rexecop-release-evidence-${{ inputs.previous_version }}.json" \
+            --dir .release-train
+
       - name: Validate version and public truth
         env:
           GOVSTACK_REPO_GOVENGINE: ${{ github.workspace }}/.govstack/govengine
           GOVSTACK_REPO_SCLITE: ${{ github.workspace }}/.govstack/sclite
           GOVSTACK_REPO_TECRAX: ${{ github.workspace }}/.govstack/tecrax
         run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "${{ inputs.govengine_ref }}" = "$(printf '%s' '${{ inputs.govengine_ref }}' | grep -E '^[0-9a-f]{40}$')"
+          test "${{ inputs.sclite_ref }}" = "$(printf '%s' '${{ inputs.sclite_ref }}' | grep -E '^[0-9a-f]{40}$')"
+          test "${{ inputs.tecrax_ref }}" = "$(printf '%s' '${{ inputs.tecrax_ref }}' | grep -E '^[0-9a-f]{40}$')"
           python scripts/validate_public_truth.py
           python scripts/validate_stack_contracts.py
-          python scripts/validate_release_train_preflight.py
+          python scripts/validate_release_train_preflight.py \
+            --release \
+            --previous-evidence ".release-train/rexecop-release-evidence-${{ inputs.previous_version }}.json"
           python scripts/validate_stack_invariants.py
           python scripts/validate_external_review_gate.py --version "${{ inputs.version }}"
           test "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')" = "${{ inputs.version }}"
@@ -90,8 +110,39 @@ jobs:
         run: python -m twine upload dist/*
 
       - name: Public-index release smoke
+        env:
+          GOVSTACK_REPO_GOVENGINE: ${{ github.workspace }}/.govstack/govengine
+          GOVSTACK_REPO_SCLITE: ${{ github.workspace }}/.govstack/sclite
+          GOVSTACK_REPO_TECRAX: ${{ github.workspace }}/.govstack/tecrax
         run: |
           python scripts/validate_public_index_release_smoke.py \
             --version "${{ inputs.version }}" \
+            --dist-dir dist \
+            --evidence-output ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
+            --supersedes "${{ inputs.previous_version }}" \
             --write-evidence \
             --verify-post-publish
+
+      - name: Upload release evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rexecop-release-evidence-${{ inputs.version }}
+          path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+          if-no-files-found: error
+
+      - name: Attest release evidence
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+
+      - name: Publish durable release evidence asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "v${{ inputs.version }}" >/dev/null 2>&1 || \
+            gh release create "v${{ inputs.version }}" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "RExecOp ${{ inputs.version }}"
+          gh release upload "v${{ inputs.version }}" \
+            ".release-train/rexecop-release-evidence-${{ inputs.version }}.json"

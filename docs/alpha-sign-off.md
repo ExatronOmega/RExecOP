@@ -27,10 +27,11 @@ The script runs:
 9. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
 10. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
-11. Before PyPI upload: `python scripts/validate_release_train_preflight.py` (offline stack-line gate)
+11. Before PyPI upload: `python scripts/validate_release_train_preflight.py --release
+    --previous-evidence <downloaded-json>` (offline stack-line and prior-evidence gate)
 12. Post-publish: `python scripts/validate_public_index_release_smoke.py --write-evidence --verify-post-publish`
-    (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, records
-    `docs/release-evidence/<version>.md`, then `validate_release_train_preflight.py --post-publish`)
+    (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, creates
+    digest-bound `rexecop.release_evidence.v1`, then verifies it before release-asset upload)
 13. Package supply-chain: `python scripts/validate_supply_chain_gate.py dist` after `python -m build`
     (`pip-audit` + CycloneDX SBOM; exceptions in `docs/supply-chain-audit-exceptions.json`)
 14. Stack invariants: `python scripts/validate_stack_invariants.py` (`pytest -m invariant`)

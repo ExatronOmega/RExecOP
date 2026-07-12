@@ -1,0 +1,73 @@
+name: Repair release evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published RExecOp version to verify
+        required: true
+      source_commit:
+        description: Exact 40-character source commit for that publication
+        required: true
+      supersedes:
+        description: Optional prior public line superseded by this evidence
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  repair-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download exact public wheel and sdist
+        run: |
+          mkdir -p dist .release-train
+          python -m pip download --no-deps \
+            --dest dist "rexecop==${{ inputs.version }}"
+          python -m pip download --no-deps --no-binary rexecop \
+            --dest dist "rexecop==${{ inputs.version }}"
+
+      - name: Re-run public-index smoke and create evidence
+        run: |
+          python scripts/validate_public_index_release_smoke.py \
+            --version "${{ inputs.version }}" \
+            --dist-dir dist \
+            --evidence-output ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
+            --source-commit "${{ inputs.source_commit }}" \
+            --supersedes "${{ inputs.supersedes }}" \
+            --write-evidence
+
+      - name: Upload repaired evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rexecop-release-evidence-${{ inputs.version }}
+          path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+          if-no-files-found: error
+
+      - name: Attest repaired evidence
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+
+      - name: Publish repaired durable evidence asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "v${{ inputs.version }}" >/dev/null 2>&1 || \
+            gh release create "v${{ inputs.version }}" \
+              --target "${{ inputs.source_commit }}" \
+              --prerelease \
+              --title "RExecOp ${{ inputs.version }}"
+          gh release upload "v${{ inputs.version }}" \
+            ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
+            --clobber

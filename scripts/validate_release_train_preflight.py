@@ -21,8 +21,13 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+SCRIPTS = ROOT / "scripts"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from release_evidence import load_record, validate_record  # noqa: E402
 
 _STACK_REPO_ENV: dict[str, str] = {
     "govengine": "GOVSTACK_REPO_GOVENGINE",
@@ -34,7 +39,7 @@ _DEFAULT_STACK_PARENT = ROOT.parent
 _VALIDATOR_MODULES: tuple[Any, Any] | None = None
 
 RELEASE_EVIDENCE_DIR = ROOT / "docs" / "release-evidence"
-CLEAN_INSTALL_MARKER_PREFIX = "clean_install_smoke_ok:rexecop=="
+PREVIOUS_EVIDENCE_ENV = "REXECOP_PREVIOUS_RELEASE_EVIDENCE"
 
 
 def stack_repos_from_env() -> dict[str, Path]:
@@ -93,19 +98,18 @@ def _changelog_section(path: Path, version: str) -> str:
     return tail if next_heading < 0 else tail[:next_heading]
 
 
-def _release_evidence_marker(version: str) -> str:
-    return f"{CLEAN_INSTALL_MARKER_PREFIX}{version}"
-
-
-def _has_post_publish_evidence(version: str) -> bool:
-    marker = _release_evidence_marker(version)
-    changelog_section = _changelog_section(ROOT / "CHANGELOG.md", version)
-    if marker in changelog_section:
-        return True
-    evidence_file = RELEASE_EVIDENCE_DIR / f"{version}.md"
-    if evidence_file.is_file() and marker in evidence_file.read_text(encoding="utf-8"):
-        return True
-    return False
+def _evidence_errors(path: Path, *, expected_version: str, allow_supersedes: bool) -> list[str]:
+    if not path.is_file():
+        return [f"release_evidence_missing:{path}"]
+    try:
+        record = load_record(path)
+    except (OSError, ValueError) as exc:
+        return [f"release_evidence_unreadable:{path}:{exc}"]
+    version = str(record.get("version") or "")
+    supersedes = str(record.get("supersedes") or "")
+    if version != expected_version and not (allow_supersedes and supersedes == expected_version):
+        return [f"release_evidence_version_mismatch:{version}!={expected_version}"]
+    return validate_record(record, expected_version=version)
 
 
 def _validator_modules() -> tuple[Any, Any]:
@@ -196,6 +200,9 @@ def _collect_sibling_repo_errors(
 def collect_errors(
     *,
     post_publish: bool = False,
+    current_evidence: Path | None = None,
+    release_mode: bool = False,
+    previous_evidence: Path | None = None,
     stack_repos: dict[str, Path] | None = None,
 ) -> list[str]:
     errors: list[str] = []
@@ -214,12 +221,30 @@ def collect_errors(
         stack_repos=stack_repos if stack_repos is not None else stack_repos_from_env(),
     )
 
-    if post_publish and not _has_post_publish_evidence(version):
-        errors.append(
-            "post_publish_evidence_missing:"
-            f"{_release_evidence_marker(version)} "
-            f"(expected in CHANGELOG [{version}] or docs/release-evidence/{version}.md)"
+    if post_publish:
+        errors.extend(
+            _evidence_errors(
+                current_evidence or RELEASE_EVIDENCE_DIR / f"{version}.json",
+                expected_version=version,
+                allow_supersedes=False,
+            )
         )
+    if release_mode:
+        expected_previous = public_truth.PUBLISHED_PYPI_VERSION
+        evidence_path = previous_evidence
+        if evidence_path is None:
+            configured = os.environ.get(PREVIOUS_EVIDENCE_ENV, "").strip()
+            evidence_path = Path(configured) if configured else None
+        if evidence_path is None:
+            errors.append(f"previous_release_evidence_not_configured:{expected_previous}")
+        else:
+            errors.extend(
+                _evidence_errors(
+                    evidence_path,
+                    expected_version=expected_previous,
+                    allow_supersedes=True,
+                )
+            )
     return errors
 
 
@@ -246,11 +271,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Require public-index clean-install evidence marker for the current version.",
     )
+    parser.add_argument("--current-evidence", type=Path, default=None)
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="Require verified evidence for the previous supported public line.",
+    )
+    parser.add_argument("--previous-evidence", type=Path, default=None)
     args = parser.parse_args(argv)
 
     public_truth, _ = _validator_modules()
     version = public_truth.current_version()
-    errors = collect_errors(post_publish=args.post_publish)
+    errors = collect_errors(
+        post_publish=args.post_publish,
+        current_evidence=args.current_evidence,
+        release_mode=args.release,
+        previous_evidence=args.previous_evidence,
+    )
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

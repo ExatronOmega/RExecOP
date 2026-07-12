@@ -1,20 +1,35 @@
 # Release evidence
 
-Store post-publish public-index smoke output for a released line.
+Release evidence is a versioned `rexecop.release_evidence.v1` JSON record. It binds
+the published version to the exact source commit, workflow run, wheel/sdist SHA-256
+digests, installed GovEngine/SCLite/RExecOp/Tecrax versions and doctor result. The
+record carries its own canonical `record_digest`.
 
 Preferred path:
 
 ```bash
 python scripts/validate_public_index_release_smoke.py \
   --version <version> \
+  --dist-dir dist \
+  --evidence-output .release-train/rexecop-release-evidence-<version>.json \
   --write-evidence \
   --verify-post-publish
 ```
 
-This records `clean_install_smoke_ok:rexecop==<version>` and runs offline
-`validate_release_train_preflight.py --post-publish`.
+`publish.yml` uploads the record as a GitHub Actions artifact, attests it and
+publishes it as a durable asset of GitHub Release `v<version>`. Before another
+upload, release-mode preflight downloads and validates the preceding supported
+line's asset:
 
-Manual fallback: run `validate_clean_install_smoke.py`, copy the stdout marker into
-`docs/release-evidence/<version>.md`, then run preflight `--post-publish`.
+```bash
+python scripts/validate_release_train_preflight.py \
+  --release \
+  --previous-evidence .release-train/rexecop-release-evidence-<previous>.json
+```
 
-This directory stays empty until a release is published and verified on PyPI.
+Missing evidence, a mismatched version, altered record digest, absent wheel/sdist,
+non-green doctor status or incomplete installed-version inventory fails closed.
+`.github/workflows/repair-release-evidence.yml` is the bounded manual recovery path
+for an already-published line; it reruns the public-index smoke, downloads the exact
+public wheel and sdist, and publishes a replacement evidence asset. A replacement
+may explicitly name the prior line in `supersedes`.
