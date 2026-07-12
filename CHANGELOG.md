@@ -21,7 +21,7 @@
   `rexecop.release_evidence.v1` records covering source/workflow identity,
   wheel/sdist hashes, installed stack versions and doctor status.
 - Makes release-mode preflight require valid evidence for the previous public
-  line; publish uploads the new record as a release asset, Actions artifact and
+  line; publish writes the new record to a durable Git ref, Actions artifact and
   provenance attestation, with a bounded repair workflow for older lines.
 
 All notable changes to RExecOp (`rexecop`) are documented here.

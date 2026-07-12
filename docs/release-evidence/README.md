@@ -17,9 +17,9 @@ python scripts/validate_public_index_release_smoke.py \
 ```
 
 `publish.yml` uploads the record as a GitHub Actions artifact, attests it and
-publishes it as a durable asset of GitHub Release `v<version>`. Before another
+persists it on the dedicated `release-evidence` Git branch. Before another
 upload, release-mode preflight downloads and validates the preceding supported
-line's asset:
+line's record from that durable ref:
 
 ```bash
 python scripts/validate_release_train_preflight.py \
@@ -31,5 +31,5 @@ Missing evidence, a mismatched version, altered record digest, absent wheel/sdis
 non-green doctor status or incomplete installed-version inventory fails closed.
 `.github/workflows/repair-release-evidence.yml` is the bounded manual recovery path
 for an already-published line; it reruns the public-index smoke, downloads the exact
-public wheel and sdist, and publishes a replacement evidence asset. A replacement
+public wheel and sdist, and publishes a replacement evidence record. A replacement
 may explicitly name the prior line in `supersedes`.

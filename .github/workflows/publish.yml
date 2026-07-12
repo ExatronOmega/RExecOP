@@ -63,9 +63,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p .release-train
-          gh release download "v${{ inputs.previous_version }}" \
-            --pattern "rexecop-release-evidence-${{ inputs.previous_version }}.json" \
-            --dir .release-train
+          gh api \
+            "repos/$GITHUB_REPOSITORY/contents/release-evidence/rexecop-release-evidence-${{ inputs.previous_version }}.json?ref=release-evidence" \
+            --jq .content | base64 --decode \
+            > ".release-train/rexecop-release-evidence-${{ inputs.previous_version }}.json"
 
       - name: Validate version and public truth
         env:
@@ -135,14 +136,22 @@ jobs:
         with:
           subject-path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
 
-      - name: Publish durable release evidence asset
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Persist evidence on release-evidence branch
         run: |
-          gh release view "v${{ inputs.version }}" >/dev/null 2>&1 || \
-            gh release create "v${{ inputs.version }}" \
-              --target "$GITHUB_SHA" \
-              --prerelease \
-              --title "RExecOp ${{ inputs.version }}"
-          gh release upload "v${{ inputs.version }}" \
-            ".release-train/rexecop-release-evidence-${{ inputs.version }}.json"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if git ls-remote --exit-code origin refs/heads/release-evidence; then
+            git fetch origin release-evidence
+            git worktree add --detach /tmp/rexecop-release-evidence FETCH_HEAD
+          else
+            git worktree add --detach /tmp/rexecop-release-evidence "$GITHUB_SHA"
+            git -C /tmp/rexecop-release-evidence switch --orphan release-evidence
+            git -C /tmp/rexecop-release-evidence rm -rf .
+          fi
+          mkdir -p /tmp/rexecop-release-evidence/release-evidence
+          cp ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
+            /tmp/rexecop-release-evidence/release-evidence/
+          git -C /tmp/rexecop-release-evidence add release-evidence
+          git -C /tmp/rexecop-release-evidence commit \
+            -m "Record RExecOp ${{ inputs.version }} release evidence"
+          git -C /tmp/rexecop-release-evidence push origin HEAD:release-evidence
