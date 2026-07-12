@@ -103,7 +103,7 @@ def test_before_and_after_state_in_evidence(tmp_path: Path) -> None:
         and event.get("step_id") == "apply_change"
     )
     payload = change_completed["sanitized_payload"]
-    assert payload["output"]["before_state"]["changed"] is False
-    assert payload["output"]["after_state"]["changed"] is True
+    assert payload["output"]["before_state"]["projection"] == "digest_only"
+    assert payload["output"]["after_state"]["projection"] == "digest_only"
     receipt = controller.export_receipt(completed.id)
     assert receipt["sclite_refs"]["execution_receipt"]["digest"]

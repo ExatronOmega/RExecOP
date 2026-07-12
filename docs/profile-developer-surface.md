@@ -200,8 +200,10 @@ Profiles may declare `public_projection.safe_fields` under each `command_shapes`
 `action_shapes` entry. Runtime evidence, structured logs, dead-letter triage and support
 surfaces project connector/runtime payloads through that allowlist first; finite redaction
 detectors remain the second line of defense. Undeclared raw-ish fields are replaced with
-digest-only projections (`rexecop.public_projection.v0.1`). Built-in action templates ship
-starter allowlists for shell/SSH stdout/stderr and HTTP bounded error snippets.
+digest-only projections (`rexecop.public_projection.v0.1`). Paths must be exact (for example
+`output.stdout`); bare-name matching and wildcard subtrees are rejected. Structured state,
+response bodies and diagnostics are digest-only by default. Built-in action templates ship
+explicit starter allowlists for shell/SSH stdout/stderr and HTTP bounded error snippets.
 
 ## Plugin compatibility report
 

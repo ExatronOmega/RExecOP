@@ -92,7 +92,7 @@ def test_http_runtime_rejects_drift_before_backend_io(tmp_path: Path) -> None:
         profile_root=str(profile),
         mutating_allowed=False,
     )
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         response = runtime.invoke(
             ConnectorRequest(connector="api", action="read_state", target="t", mode="dry_run")
         )

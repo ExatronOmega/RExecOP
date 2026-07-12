@@ -66,7 +66,10 @@ Templates:
 3. **Read-only modes** — `dry_run`, `observe`, `emergency_readonly` refuse mutating actions.
 4. **Secrets** — use `secret_ref` / `base_url_secret_ref`; inline secrets in environment YAML
    are rejected at plan time.
-5. **Evidence** — connector responses pass through profile-declared `public_projection.safe_fields` allowlists, then `redact_payload()` before persistence.
+5. **Evidence** — connector responses pass through exact-path profile-declared
+   `public_projection.safe_fields` allowlists, then `redact_payload()` before
+   persistence. Wildcard subtrees are rejected; bodies and structured
+   before/after state are digest-only unless an exact path is declared.
 6. **HTTP failures** — `http_api` sets `error_class`, `status_code`, and a redacted `body_snippet`
    when the upstream API returns an HTTP error body.
 7. **HTTP response bounds** — successful bodies are read only up to
@@ -135,8 +138,9 @@ connectors:
     user: readonly
     port: 22
     identity_file_secret_ref: pve_ssh_key
-    known_hosts_policy: accept-new   # accept-new | strict | no
-    known_hosts_file: /path/to/known_hosts   # optional with strict
+    deployment_posture: stable       # stable | lab | fixture
+    known_hosts_policy: strict       # stable requires strict
+    known_hosts_file: /path/to/known_hosts
     allowlist:
       - action: uptime
         command: uptime
@@ -154,7 +158,8 @@ Connector-level evaluation remains plain-allow-only; connector-specific obligati
 
 | Topic | Behavior |
 | --- | --- |
-| `known_hosts_policy` | Default `accept-new` pins host keys on first connect. Use `strict` with a managed `known_hosts_file` in production-adjacent labs. `no` disables host key checking — **lab-only**. |
+| `known_hosts_policy` | Default `strict` requires an operator-managed `known_hosts_file`. `accept-new` is accepted only with explicit `lab`/`fixture` posture. `no` is unavailable in stable posture. |
+| Operator files | Identity and known-hosts paths must exist, be regular non-symlink files, have the operator owner, and pass permission checks before connector IO. |
 | Remote command quoting | Allowlisted argv is joined with `shlex.quote` before passing as the remote SSH command. |
 | Remote shell | OpenSSH still invokes the remote user shell to run the command string — keep allowlists minimal. |
 | Secrets | `identity_file_secret_ref` resolves via `REXECOP_SECRETS_FILE`; never commit key material. |

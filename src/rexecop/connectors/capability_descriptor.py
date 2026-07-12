@@ -137,7 +137,8 @@ def _network_boundary(backend: str, connector_config: Mapping[str, Any]) -> dict
             "egress": "outbound_ssh",
             "host_declared": bool(str(connector_config.get("host") or "").strip()),
             "port": int(connector_config.get("port") or 22),
-            "known_hosts_policy": str(connector_config.get("known_hosts_policy") or "accept-new"),
+            "deployment_posture": str(connector_config.get("deployment_posture") or "stable"),
+            "known_hosts_policy": str(connector_config.get("known_hosts_policy") or "strict"),
         }
     if backend == "local_shell_readonly":
         return {

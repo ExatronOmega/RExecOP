@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from helpers.staging_http_server import StagingHttpServer
 from rexecop.connectors import errors as connector_errors
@@ -14,6 +17,8 @@ from rexecop.connectors.http_support import (
     retry_delay_seconds,
 )
 from rexecop.connectors.ssh_readonly import SshReadonlyRuntime
+
+pytestmark = pytest.mark.security_regression
 
 
 def test_retry_delay_uses_configured_backoff() -> None:
@@ -182,6 +187,8 @@ def test_ssh_readonly_builds_batch_mode_command() -> None:
         config={
             "host": "pve-01.example.com",
             "user": "readonly",
+            "deployment_posture": "fixture",
+            "known_hosts_policy": "accept-new",
             "allowlist": [{"action": "uptime", "command": "uptime"}],
         },
     )
@@ -216,8 +223,11 @@ def test_ssh_readonly_builds_batch_mode_command() -> None:
     assert response.data["output_truncated"]["stdout"] is False
 
 
-def test_ssh_readonly_redacts_resolved_identity_path_from_error() -> None:
-    secret_path = "/operator/private/id_runtime"
+def test_ssh_readonly_redacts_resolved_identity_path_from_error(tmp_path: Path) -> None:
+    identity = tmp_path / "id_runtime"
+    identity.write_text("private key", encoding="utf-8")
+    identity.chmod(0o600)
+    secret_path = str(identity)
 
     class Resolver:
         def resolve(self, secret_ref: str) -> str:
@@ -229,6 +239,8 @@ def test_ssh_readonly_redacts_resolved_identity_path_from_error() -> None:
         config={
             "host": "host.example",
             "user": "readonly",
+            "deployment_posture": "fixture",
+            "known_hosts_policy": "accept-new",
             "identity_file_secret_ref": "ssh_identity",
             "allowlist": [{"action": "uptime", "command": "uptime"}],
         },
@@ -251,3 +263,71 @@ def test_ssh_readonly_redacts_resolved_identity_path_from_error() -> None:
         )
     assert secret_path not in str(response.as_dict())
     assert "[REDACTED]" in response.error
+
+
+def test_ssh_readonly_stable_rejects_accept_new_before_io() -> None:
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "host.example",
+            "user": "readonly",
+            "known_hosts_policy": "accept-new",
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+    )
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert "requires strict" in response.error
+    backend.assert_not_called()
+
+
+def test_ssh_readonly_rejects_symlinked_known_hosts_before_io(tmp_path: Path) -> None:
+    target = tmp_path / "known_hosts.real"
+    target.write_text("host key\n", encoding="utf-8")
+    link = tmp_path / "known_hosts"
+    link.symlink_to(target)
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "host.example",
+            "user": "readonly",
+            "known_hosts_file": str(link),
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+    )
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert "non-symlink" in response.error
+    backend.assert_not_called()
+
+
+def test_ssh_readonly_rejects_option_like_destination_before_io() -> None:
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "-oProxyCommand=bad",
+            "user": "readonly",
+            "deployment_posture": "fixture",
+            "known_hosts_policy": "accept-new",
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+    )
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert "host is malformed" in response.error
+    backend.assert_not_called()

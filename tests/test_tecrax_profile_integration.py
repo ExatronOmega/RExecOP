@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 
+from rexecop.connectors.ssh_readonly import SshReadonlyRuntime
 from rexecop.errors import RExecOpValidationError
 from rexecop.operation.controller import OperationController
 from rexecop.operation.state import OperationState
@@ -22,6 +23,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
 
 tecrax = pytest.importorskip("tecrax")
+
+
+@pytest.fixture(autouse=True)
+def _fixture_operator_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        SshReadonlyRuntime,
+        "_validate_operator_file",
+        lambda self, raw_path, *, identity: None,
+    )
 
 
 def _tecrax_example(path: str) -> Path:
@@ -336,7 +346,7 @@ def test_tecrax_zabbix_application_health_http_e2e(tmp_path: Path) -> None:
 
     controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
     with patch(
-        "rexecop.connectors.http_api.urllib.request.urlopen",
+        "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
         return_value=Response(),
     ):
         operation = controller.plan(
@@ -371,7 +381,7 @@ def test_tecrax_zabbix_http_action_drift_fails_before_backend_io(
         value="/api/mutate",
     )
     controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         with pytest.raises(RExecOpValidationError, match="http action shape mismatch"):
             controller.plan(
                 profile_path="tecrax",
@@ -449,7 +459,7 @@ def test_tecrax_portainer_health_https_e2e(
             return_value=object(),
         ),
         patch(
-            "rexecop.connectors.http_api.urllib.request.urlopen",
+            "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
             return_value=Response(),
         ),
     ):
@@ -498,7 +508,7 @@ def test_tecrax_portainer_http_action_drift_fails_before_backend_io(
         value="POST",
     )
     controller = OperationController(store=FileStore(tmp_path / ".rexecop"))
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         with pytest.raises(RExecOpValidationError, match="http action shape mismatch"):
             controller.plan(
                 profile_path="tecrax",
@@ -572,7 +582,7 @@ def test_tecrax_monitoring_diagnosis_preserves_partial_failure(
     with (
         patch("rexecop.connectors.ssh_readonly.subprocess.run", side_effect=run),
         patch(
-            "rexecop.connectors.http_api.urllib.request.urlopen",
+            "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
             side_effect=urllib.error.URLError("unavailable"),
         ),
         patch(
@@ -689,7 +699,7 @@ def test_tecrax_monitoring_diagnosis_auto_react_plan_only_never_starts_child(
     with (
         patch("rexecop.connectors.ssh_readonly.subprocess.run", side_effect=run),
         patch(
-            "rexecop.connectors.http_api.urllib.request.urlopen",
+            "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
             side_effect=urllib.error.URLError("unavailable"),
         ),
         patch(

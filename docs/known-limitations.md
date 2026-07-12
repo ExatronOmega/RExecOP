@@ -49,7 +49,8 @@ This document states what the current published alpha line does **not** provide 
 | Limitation | Detail |
 | --- | --- |
 | Secrets via operator config | `REXECOP_SECRETS_FILE` / env vars — no KMS/HSM integration |
-| Redaction has finite detectors | Key names, resolved values and common provider/token patterns are covered after profile-declared `public_projection.safe_fields` allowlists; arbitrary unknown plaintext still requires explicit allowlisting |
+| Redaction has finite detectors | Exact-path `public_projection.safe_fields` is the disclosure boundary and undeclared values become digest-only; any deliberately allowlisted plaintext still relies on finite key/value detectors and operator review |
+| DNS rebinding | Stable-live HTTP still depends on operator-enforced DNS/egress controls; hostname validation alone is not claimed as transport-level DNS pinning and the remaining M8.6 doctor gate is fail-closed |
 | CI secret scan is heuristic | Full tracked tree/history scan covers common providers, private keys and credential assignments; it is not a KMS or external repository audit |
 | Apply on critical targets | Requires explicit operator approval, GovEngine allow, and operational procedure — not unmanned |
 

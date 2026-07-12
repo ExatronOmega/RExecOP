@@ -237,14 +237,17 @@ def test_validator_rejects_missing_validation_rules() -> None:
         )
 
 
-def test_ssh_readonly_strict_known_hosts_and_quoting() -> None:
+def test_ssh_readonly_strict_known_hosts_and_quoting(tmp_path: Path) -> None:
+    known_hosts = tmp_path / "known_hosts"
+    known_hosts.write_text("host key\n", encoding="utf-8")
+    known_hosts.chmod(0o644)
     runtime = SshReadonlyRuntime(
         connector_name="host_ro",
         config={
             "host": "host-01.example.invalid",
             "user": "readonly",
             "known_hosts_policy": "strict",
-            "known_hosts_file": "/etc/ssh/ssh_known_hosts",
+            "known_hosts_file": str(known_hosts),
             "allowlist": [{"action": "uptime", "command": "uptime"}],
         },
     )
@@ -272,7 +275,7 @@ def test_ssh_readonly_strict_known_hosts_and_quoting() -> None:
     argv = captured["argv"]
     assert isinstance(argv, list)
     assert "StrictHostKeyChecking=yes" in argv
-    assert "UserKnownHostsFile=/etc/ssh/ssh_known_hosts" in argv
+    assert f"UserKnownHostsFile={known_hosts}" in argv
     assert argv[-1] == "uptime"
 
 

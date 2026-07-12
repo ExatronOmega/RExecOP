@@ -35,9 +35,6 @@ OUTPUT_SAFE_FIELDS = frozenset(
         "output_truncated",
         "output_sizes",
         "max_output_bytes",
-        "body_snippet",
-        "before_state",
-        "after_state",
     }
 )
 
@@ -116,14 +113,16 @@ def _safe_fields_from_shape(shape: Mapping[str, Any]) -> frozenset[str]:
     if isinstance(projection, Mapping):
         raw_fields = projection.get("safe_fields")
         if isinstance(raw_fields, list):
-            return frozenset(
-                str(item).strip()
-                for item in raw_fields
-                if str(item).strip()
-            )
+            fields = frozenset(str(item).strip() for item in raw_fields if str(item).strip())
+            if any("*" in item for item in fields):
+                return frozenset()
+            return fields
     legacy = shape.get("safe_output_fields")
     if isinstance(legacy, list):
-        return frozenset(str(item).strip() for item in legacy if str(item).strip())
+        fields = frozenset(str(item).strip() for item in legacy if str(item).strip())
+        if any("*" in item for item in fields):
+            return frozenset()
+        return fields
     return frozenset()
 
 
@@ -185,16 +184,13 @@ def _field_allowed(
     *,
     nested_parent: bool,
 ) -> bool:
-    if path in allowlist or key in allowlist:
+    if path in allowlist:
         return True
     if nested_parent and key in TOP_LEVEL_SAFE_FIELDS:
         return True
     if path.startswith("output.") and key in OUTPUT_SAFE_FIELDS:
         return True
-    return any(
-        allowed.endswith(".*") and path.startswith(allowed[:-1])
-        for allowed in allowlist
-    )
+    return False
 
 
 def _digest_projection(value: Any) -> dict[str, str]:

@@ -8,6 +8,22 @@ from rexecop.connectors import errors as connector_errors
 from rexecop.evidence.redaction import redact_payload, redact_text
 
 
+def normalized_origin(url: str) -> tuple[str, str, int]:
+    parsed = urlparse(str(url))
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if scheme not in {"http", "https"} or not host or parsed.username or parsed.password:
+        raise ValueError("unsafe_destination")
+    port = parsed.port or (443 if scheme == "https" else 80)
+    return scheme, host, port
+
+
+def require_same_origin(expected_url: str, candidate_url: str) -> str:
+    if normalized_origin(expected_url) != normalized_origin(candidate_url):
+        raise ValueError("unsafe_destination")
+    return candidate_url
+
+
 def resolve_retry_config(
     connector_retry: Any,
     action_retry: Any,

@@ -8,12 +8,22 @@ from unittest.mock import patch
 
 import pytest
 
+from rexecop.connectors.ssh_readonly import SshReadonlyRuntime
 from rexecop.operation.controller import OperationController
 from rexecop.operation.state import OperationState
 from rexecop.storage.file_store import FileStore
 from rexecop.truth_path import TRUTH_PATH_PROJECTION_SCHEMA, project_truth_path
 
 tecrax = pytest.importorskip("tecrax")
+
+
+@pytest.fixture(autouse=True)
+def _fixture_operator_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        SshReadonlyRuntime,
+        "_validate_operator_file",
+        lambda self, raw_path, *, identity: None,
+    )
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -131,7 +141,7 @@ def test_truth_path_golden_matches_tecrax_diagnosis_flow(
     with (
         patch("rexecop.connectors.ssh_readonly.subprocess.run", side_effect=run),
         patch(
-            "rexecop.connectors.http_api.urllib.request.urlopen",
+            "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
             side_effect=urllib.error.URLError("unavailable"),
         ),
         patch(

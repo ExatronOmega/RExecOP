@@ -2,6 +2,11 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Starts M8.6 security hardening: pagination is same-origin only with loop
+  detection, auth headers cannot target transport-reserved names, and public
+  projection defaults make body/before/after structured state digest-only.
+- Removes wildcard subtree publication and requires exact allowlist paths.
+
 - Completes the SCLite 2.0 migration by moving the builders and semantic
   verifiers themselves into RExecOp, not only their schema resources.
 - Removes every production import of the retired SCLite reaction, trigger,

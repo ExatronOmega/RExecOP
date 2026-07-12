@@ -25,6 +25,7 @@ from rexecop.connectors.http_support import (
     http_error_class,
     merge_paginated_items,
     read_http_error_body,
+    require_same_origin,
     resolve_next_url,
     resolve_retry_config,
     retry_delay_seconds,
@@ -34,6 +35,11 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload, redact_text, register_secret_value
 from rexecop.secrets.port import SecretResolver
 from rexecop.secrets.resolver import default_secret_resolver
+
+
+class _RejectRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        raise RExecOpValidationError("automatic http redirect blocked before next hop")
 
 
 class HttpApiConnectorRuntime:
@@ -81,7 +87,7 @@ class HttpApiConnectorRuntime:
         try:
             action_spec = self._action_spec(request.action)
             action_contract_digest = self._validate_action_shape(request.action)
-        except RExecOpValidationError as exc:
+        except (RExecOpValidationError, ValueError) as exc:
             return ConnectorResponse(
                 connector=request.connector,
                 action=request.action,
@@ -184,6 +190,7 @@ class HttpApiConnectorRuntime:
         collected: list[Any] = []
         next_url: str | None = None
         pages = 0
+        visited: set[str] = set()
         while pages < max_pages:
             response, parsed, request_url = self._fetch_json(request, action_spec, next_url)
             if not response.success:
@@ -198,6 +205,25 @@ class HttpApiConnectorRuntime:
             next_url = resolve_next_url(self._resolve_base_url(), request_url, next_value)
             if not next_url:
                 break
+            try:
+                require_same_origin(self._resolve_base_url(), next_url)
+            except ValueError:
+                return ConnectorResponse(
+                    connector=request.connector,
+                    action=request.action,
+                    success=False,
+                    error="unsafe pagination destination",
+                    data={"error_class": connector_errors.VALIDATION_FAILED},
+                )
+            if next_url in visited:
+                return ConnectorResponse(
+                    connector=request.connector,
+                    action=request.action,
+                    success=False,
+                    error="pagination loop detected",
+                    data={"error_class": connector_errors.VALIDATION_FAILED},
+                )
+            visited.add(next_url)
         payload = redact_payload(merge_paginated_items(items_path, collected))
         return ConnectorResponse(
             connector=request.connector,
@@ -240,6 +266,7 @@ class HttpApiConnectorRuntime:
     ) -> tuple[ConnectorResponse, dict[str, Any], str]:
         try:
             request_url = override_url or self._build_request_url(request, action_spec)
+            require_same_origin(self._resolve_base_url(), request_url)
             method = str(action_spec.get("method") or "GET").upper()
             headers = {"Accept": "application/json"}
             headers.update(self._auth_headers())
@@ -276,7 +303,7 @@ class HttpApiConnectorRuntime:
             tls_context = self._tls_context(request_url)
             if tls_context is not None:
                 urlopen_kwargs["context"] = tls_context
-            with urllib.request.urlopen(req, **urlopen_kwargs) as resp:
+            with self._open_url(req, **urlopen_kwargs) as resp:
                 raw_bytes = resp.read(max_response_bytes + 1)
             if len(raw_bytes) > max_response_bytes:
                 return (
@@ -308,6 +335,7 @@ class HttpApiConnectorRuntime:
                 parsed,
                 request_url,
             )
+
         except urllib.error.HTTPError as exc:
             body_snippet = read_http_error_body(exc)
             error_data: dict[str, Any] = {
@@ -369,7 +397,7 @@ class HttpApiConnectorRuntime:
                 {},
                 override_url or "",
             )
-        except RExecOpValidationError as exc:
+        except (RExecOpValidationError, ValueError) as exc:
             return (
                 ConnectorResponse(
                     connector=request.connector,
@@ -381,6 +409,16 @@ class HttpApiConnectorRuntime:
                 {},
                 override_url or "",
             )
+
+    @staticmethod
+    def _open_url(req: urllib.request.Request, **kwargs: Any) -> Any:
+        timeout = kwargs.get("timeout")
+        context = kwargs.get("context")
+        handlers: list[Any] = [_RejectRedirects()]
+        if context is not None:
+            handlers.append(urllib.request.HTTPSHandler(context=context))
+        opener = urllib.request.build_opener(*handlers)
+        return opener.open(req, timeout=timeout)
 
     def _build_request_url(self, request: ConnectorRequest, action_spec: dict[str, Any]) -> str:
         base_url = self._resolve_base_url()
@@ -448,6 +486,19 @@ class HttpApiConnectorRuntime:
         value = self.secret_resolver.resolve(secret_ref)
         register_secret_value(value)
         header = str(auth.get("header") or "Authorization")
+        reserved = {
+            "host",
+            "connection",
+            "content-length",
+            "transfer-encoding",
+            "upgrade",
+            "proxy-authorization",
+            "proxy-connection",
+            "te",
+            "trailer",
+        }
+        if header.strip().lower() in reserved:
+            raise RExecOpValidationError("http_api auth header is transport-reserved")
         prefix = str(auth.get("prefix") or "")
         return {header: f"{prefix}{value}" if prefix else value}
 

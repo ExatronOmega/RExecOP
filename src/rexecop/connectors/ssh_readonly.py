@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import shlex
+import stat
 import subprocess
+from pathlib import Path
 from typing import Any
 
 from rexecop.connectors import errors as connector_errors
@@ -163,10 +165,18 @@ class SshReadonlyRuntime:
         user = str(self.config.get("user") or "").strip()
         if not host or not user:
             raise RExecOpValidationError("ssh_readonly requires host and user")
-        policy = str(self.config.get("known_hosts_policy") or "accept-new").strip()
+        self._validate_destination(host=host, user=user)
+        posture = str(self.config.get("deployment_posture") or "stable").strip().lower()
+        policy = str(self.config.get("known_hosts_policy") or "strict").strip()
         if policy not in ALLOWED_KNOWN_HOSTS_POLICIES:
             raise RExecOpValidationError(
                 f"unsupported known_hosts_policy: {policy}"
+            )
+        if posture not in {"stable", "lab", "fixture"}:
+            raise RExecOpValidationError(f"unsupported deployment_posture: {posture}")
+        if posture == "stable" and policy != "strict":
+            raise RExecOpValidationError(
+                "stable ssh_readonly requires strict known-host verification"
             )
         ssh_policy = "yes" if policy == "strict" else policy
         argv = [
@@ -177,19 +187,54 @@ class SshReadonlyRuntime:
             f"StrictHostKeyChecking={ssh_policy}",
         ]
         known_hosts_file = str(self.config.get("known_hosts_file") or "").strip()
+        if policy == "strict" and not known_hosts_file:
+            raise RExecOpValidationError(
+                "strict ssh_readonly requires known_hosts_file"
+            )
         if known_hosts_file:
+            self._validate_operator_file(known_hosts_file, identity=False)
             argv.extend(["-o", f"UserKnownHostsFile={known_hosts_file}"])
         port = self.config.get("port")
         if port is not None:
-            argv.extend(["-p", str(port)])
+            try:
+                normalized_port = int(port)
+            except (TypeError, ValueError) as exc:
+                raise RExecOpValidationError("ssh port must be an integer") from exc
+            if not 1 <= normalized_port <= 65535:
+                raise RExecOpValidationError("ssh port is outside 1..65535")
+            argv.extend(["-p", str(normalized_port)])
         identity_ref = str(self.config.get("identity_file_secret_ref") or "").strip()
         if identity_ref:
             identity_file = self.secret_resolver.resolve(identity_ref)
             register_secret_value(identity_file)
+            self._validate_operator_file(identity_file, identity=True)
             argv.extend(["-i", identity_file])
         argv.append(f"{user}@{host}")
         argv.append(remote_command)
         return argv
+
+    @staticmethod
+    def _validate_destination(*, host: str, user: str) -> None:
+        for label, value in (("host", host), ("user", user)):
+            if value.startswith("-") or any(char.isspace() for char in value):
+                raise RExecOpValidationError(f"ssh {label} is malformed")
+            if any(char in value for char in {"@", "\x00", "/", "\\"}):
+                raise RExecOpValidationError(f"ssh {label} is malformed")
+
+    def _validate_operator_file(self, raw_path: str, *, identity: bool) -> None:
+        path = Path(raw_path)
+        try:
+            info = path.lstat()
+        except OSError as exc:
+            raise RExecOpValidationError("ssh operator file is unavailable") from exc
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+            raise RExecOpValidationError("ssh operator file must be a regular non-symlink")
+        if info.st_uid != Path.home().stat().st_uid:
+            raise RExecOpValidationError("ssh operator file has unexpected owner")
+        forbidden = 0o077 if identity else 0o022
+        if info.st_mode & forbidden:
+            kind = "identity" if identity else "known_hosts"
+            raise RExecOpValidationError(f"ssh {kind} file permissions are too broad")
 
     def _find_allowlist_entry(
         self,

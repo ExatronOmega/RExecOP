@@ -3,15 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from helpers.staging_http_server import StagingHttpServer
 from rexecop.connectors import errors as connector_errors
 from rexecop.connectors.base import ConnectorRequest
-from rexecop.connectors.http_api import HttpApiConnectorRuntime
+from rexecop.connectors.http_api import HttpApiConnectorRuntime, _RejectRedirects
 from rexecop.connectors.local_shell import LocalShellReadonlyRuntime
+from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE_ROOT = REPO_ROOT / "examples/profiles/runtime-fixture"
+pytestmark = pytest.mark.security_regression
 
 
 def test_http_api_reads_fixture_state_against_staging_server() -> None:
@@ -217,7 +221,10 @@ def test_http_api_redacts_resolved_secret_echoed_under_neutral_key() -> None:
         mutating_allowed=False,
         secret_resolver=Resolver(),
     )
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen", return_value=Response()):
+    with patch(
+        "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
+        return_value=Response(),
+    ):
         response = runtime.invoke(
             ConnectorRequest(
                 connector="api",
@@ -252,7 +259,10 @@ def test_http_api_rejects_oversized_success_payload_before_parsing() -> None:
         profile_root=None,
         mutating_allowed=False,
     )
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen", return_value=Response()):
+    with patch(
+        "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
+        return_value=Response(),
+    ):
         response = runtime.invoke(
             ConnectorRequest(
                 connector="api",
@@ -301,7 +311,7 @@ def test_http_api_uses_operator_managed_ca_file_for_verified_tls() -> None:
             return_value=context,
         ) as create_context,
         patch(
-            "rexecop.connectors.http_api.urllib.request.urlopen",
+            "rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url",
             return_value=Response(),
         ) as urlopen,
     ):
@@ -343,3 +353,67 @@ def test_http_api_rejects_insecure_or_unknown_tls_options() -> None:
     assert response.success is False
     assert response.data["error_class"] == connector_errors.VALIDATION_FAILED
     assert "unsupported fields" in str(response.error)
+
+
+def test_http_transport_rejects_automatic_redirect_hop() -> None:
+    handler = _RejectRedirects()
+    with pytest.raises(RExecOpValidationError, match="redirect blocked"):
+        handler.redirect_request(None, None, 302, "Found", {}, "https://evil.example/")
+
+
+def test_http_api_blocks_cross_origin_pagination_before_request() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://api.example",
+            "actions": {
+                "list": {
+                    "method": "GET",
+                    "path": "/items",
+                    "pagination": {"items_path": "items", "next_path": "next"},
+                }
+            },
+        },
+        profile_root=None,
+        mutating_allowed=False,
+    )
+    with patch.object(
+        runtime,
+        "_fetch_json",
+        return_value=(
+            type("Response", (), {"success": True})(),
+            {"items": [], "next": "https://evil.example/items"},
+            "https://api.example/items",
+        ),
+    ) as fetch:
+        response = runtime.invoke(
+            ConnectorRequest(connector="api", action="list", target="t", mode="dry_run")
+        )
+    assert response.success is False
+    assert "unsafe" in str(response.error)
+    assert fetch.call_count == 1
+
+
+def test_http_api_rejects_transport_reserved_auth_header_before_io() -> None:
+    class Resolver:
+        def resolve(self, _secret_ref: str) -> str:
+            return "fixture-secret"
+
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://api.example",
+            "auth": {"secret_ref": "auth", "header": "Host"},
+            "actions": {"probe": {"method": "GET", "path": "/probe"}},
+        },
+        profile_root=None,
+        mutating_allowed=False,
+        secret_resolver=Resolver(),
+    )
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(connector="api", action="probe", target="t", mode="dry_run")
+        )
+    assert response.success is False
+    assert "transport-reserved" in str(response.error)
+    backend.assert_not_called()

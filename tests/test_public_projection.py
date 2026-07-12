@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 
 from rexecop.evidence.manager import EvidenceManager
@@ -14,6 +15,8 @@ from rexecop.evidence.public_projection import (
 )
 from rexecop.evidence.redaction import REDACTED
 from rexecop.storage.file_store import FileStore
+
+pytestmark = pytest.mark.security_regression
 
 
 def test_project_public_payload_digests_unallowlisted_fields() -> None:
@@ -53,6 +56,28 @@ def test_project_public_payload_honors_declared_allowlist() -> None:
 
     assert projected["output"]["stdout"] == "bounded diagnostic text"
     assert projected["output"]["stderr"] == ""
+
+
+def test_structured_state_and_body_are_digest_only_by_default() -> None:
+    projected = project_public_payload(
+        {
+            "output": {
+                "before_state": {"hostname": "private-host"},
+                "after_state": {"address": "10.0.0.7"},
+                "body_snippet": "customer-private-detail",
+            }
+        }
+    )
+    for field in ("before_state", "after_state", "body_snippet"):
+        assert projected["output"][field]["projection"] == "digest_only"
+
+
+def test_wildcard_allowlist_does_not_publish_subtree() -> None:
+    projected = project_public_payload(
+        {"output": {"inventory": {"hostname": "private-host"}}},
+        allowlist=frozenset({"output.*"}),
+    )
+    assert projected["output"]["inventory"]["projection"] == "digest_only"
 
 
 def test_sanitize_for_public_surface_applies_redaction_second() -> None:

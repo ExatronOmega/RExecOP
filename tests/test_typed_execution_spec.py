@@ -354,7 +354,7 @@ def test_workflow_runner_binds_typed_execution_spec_for_fixture_connector() -> N
         }
     }
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         result = WorkflowRunner(executor).run(
             operation_id="op-typed-spec",
             target="fixture-target",

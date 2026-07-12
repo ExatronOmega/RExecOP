@@ -38,7 +38,7 @@ runner = CliRunner()
 
 
 def test_action_list_reports_profile_env_actions_without_backend_io() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = list_actions(profile=PROFILE, env=ENVIRONMENT)
 
     backend.assert_not_called()
@@ -77,7 +77,7 @@ def test_action_show_redacts_config_and_reports_contract_sources() -> None:
 
 
 def test_action_validate_all_passes_without_backend_io() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = validate_actions(profile=PROFILE, env=ENVIRONMENT)
 
     backend.assert_not_called()
@@ -216,7 +216,7 @@ def test_action_preview_redacts_http_effective_call_without_backend_io(tmp_path:
         encoding="utf-8",
     )
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = preview_action(
             "inspect",
             profile=profile / "profile.yaml",
@@ -338,7 +338,7 @@ def test_action_validate_reports_shape_drift_without_backend_io(tmp_path: Path) 
     env_path = tmp_path / "drift-env.yaml"
     env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = validate_actions(
             profile=PROFILE,
             env=env_path,
@@ -421,7 +421,7 @@ def test_action_validate_reports_duplicate_secret_refs_without_backend_io(
     env_path = tmp_path / "duplicate-refs-env.yaml"
     env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = validate_actions(profile=PROFILE, env=env_path, intent="inspect")
 
     backend.assert_not_called()
@@ -547,7 +547,7 @@ def test_cli_action_templates_list_emits_json() -> None:
 
 
 def test_action_policy_preview_skips_without_policy_pack() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = preview_action_policy_impact(
             "inspect",
             profile=PROFILE,
@@ -563,7 +563,7 @@ def test_action_policy_preview_skips_without_policy_pack() -> None:
 
 
 def test_action_policy_preview_simulates_redacted_govengine_explanation() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = preview_action_policy_impact(
             "inspect_fixture_state",
             profile=POLICY_PROFILE,
@@ -593,7 +593,7 @@ def test_action_policy_preview_simulates_redacted_govengine_explanation() -> Non
 
 
 def test_action_policy_preview_reports_blocked_mutation_without_backend_io() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = preview_action_policy_impact(
             "apply_fixture_change",
             profile=POLICY_PROFILE,
@@ -633,7 +633,7 @@ def test_cli_action_policy_preview_exits_on_blocked_simulation() -> None:
 
 
 def test_action_diff_reports_aligned_static_fixture_without_backend_io() -> None:
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = diff_action("inspect", profile=PROFILE, env=ENVIRONMENT)
 
     backend.assert_not_called()
@@ -659,7 +659,7 @@ def test_action_diff_reports_http_shape_drift_without_backend_io(tmp_path: Path)
     }
     env_path.write_text(yaml.safe_dump(env, sort_keys=False), encoding="utf-8")
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         payload = diff_action("inspect", profile=profile, env=env_path)
 
     backend.assert_not_called()

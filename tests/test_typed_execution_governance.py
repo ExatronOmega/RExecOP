@@ -216,7 +216,7 @@ def test_workflow_runner_enforces_typed_execution_governance_before_backend_io()
         },
     }
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         result = WorkflowRunner(executor).run(
             operation_id="op-governance-blocked",
             target="fixture-target",
@@ -260,7 +260,7 @@ def test_workflow_runner_allows_readonly_fixture_with_matching_governance() -> N
         }
     }
 
-    with patch("rexecop.connectors.http_api.urllib.request.urlopen") as backend:
+    with patch("rexecop.connectors.http_api.HttpApiConnectorRuntime._open_url") as backend:
         result = WorkflowRunner(executor).run(
             operation_id="op-governance-allowed",
             target="fixture-target",
