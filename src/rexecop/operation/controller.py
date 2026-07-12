@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import secrets
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -50,6 +52,7 @@ from rexecop.runtime_ops.idempotency import (
     plan_idempotency_key,
     start_idempotency_key,
 )
+from rexecop.runtime_ops.lease import WorkerLeaseManager
 from rexecop.runtime_ops.recovery import ensure_terminal_receipt, start_is_idempotent
 from rexecop.storage.atomic import atomic_write_text
 from rexecop.storage.factory import create_store
@@ -58,9 +61,7 @@ from rexecop.workflow.contract import validate_workflow_contract
 from rexecop.workflow.loader import load_workflow
 
 DEFAULT_MODE = "dry_run"
-SUPPORTED_MODES = frozenset(
-    {"observe", "dry_run", "apply", "emergency_readonly", "recovery"}
-)
+SUPPORTED_MODES = frozenset({"observe", "dry_run", "apply", "emergency_readonly", "recovery"})
 
 
 def generate_operation_id() -> str:
@@ -94,6 +95,26 @@ class OperationController:
             export_receipt=self.export_receipt,
             auto_reaction_handler=self._maybe_plan_auto_reaction,
         )
+        self._execution_lease: dict[str, Any] | None = None
+
+    @contextmanager
+    def execution_lease(self, *, worker_id: str = "operator") -> Iterator[dict[str, Any]]:
+        """Fence every execution entrypoint with one process-owned runtime lease."""
+        if self._execution_lease is not None:
+            yield self._execution_lease
+            return
+        manager = WorkerLeaseManager(self.store.root)
+        record = manager.acquire(worker_id=worker_id)
+        self._execution_lease = record
+        try:
+            yield record
+        finally:
+            self._execution_lease = None
+            manager.release(
+                owner_token=str(record["owner_token"]),
+                lease_epoch=int(record["lease_epoch"]),
+                process_instance_id=str(record["process_instance_id"]),
+            )
 
     def plan(
         self,
@@ -111,9 +132,7 @@ class OperationController:
             raise RExecOpValidationError(f"unsupported mode: {mode}")
         auto_react_mode = (auto_react or "").strip()
         if auto_react_mode and auto_react_mode != "plan_only":
-            raise RExecOpValidationError(
-                f"unsupported auto_react mode: {auto_react_mode}"
-            )
+            raise RExecOpValidationError(f"unsupported auto_react mode: {auto_react_mode}")
 
         catalog_resolution = None
         resolved_catalog_path: Path | None = None
@@ -132,9 +151,7 @@ class OperationController:
                 if supplied_profile.is_file():
                     supplied_profile = supplied_profile.parent
                 if supplied_profile != catalog_resolution.target.profile_path.resolve():
-                    raise RExecOpValidationError(
-                        "catalog profile does not match supplied profile"
-                    )
+                    raise RExecOpValidationError("catalog profile does not match supplied profile")
             if environment_path is not None and (
                 environment_path.expanduser().resolve()
                 != catalog_resolution.target.environment_path.resolve()
@@ -165,9 +182,7 @@ class OperationController:
         if intent_meta.get("enforce_declared_modes") is True and (
             not isinstance(intent_modes, list) or mode not in intent_modes
         ):
-            raise RExecOpValidationError(
-                f"mode {mode} not declared for intent: {intent}"
-            )
+            raise RExecOpValidationError(f"mode {mode} not declared for intent: {intent}")
         workflow_path = profile.resolve_workflow_path(intent)
         workflow = load_workflow(workflow_path)
         validate_operation_target(environment, target)
@@ -233,12 +248,8 @@ class OperationController:
             "max_concurrent_operations": int(
                 environment.safety.get("max_concurrent_operations") or 1
             ),
-            "target_lock_enabled": bool(
-                environment.safety.get("target_lock_enabled", True)
-            ),
-            "maintenance_windows": list(
-                environment.safety.get("maintenance_windows") or []
-            ),
+            "target_lock_enabled": bool(environment.safety.get("target_lock_enabled", True)),
+            "maintenance_windows": list(environment.safety.get("maintenance_windows") or []),
         }
         if environment.policy_pack:
             operation.metadata["policy_pack"] = dict(environment.policy_pack)
@@ -338,9 +349,7 @@ class OperationController:
             retry_policy_summary=dict(workflow.retry or {"max_attempts": 0}),
             rollback_available=bool(workflow.rollback),
             catalog_binding=(
-                catalog_resolution.binding.as_dict()
-                if catalog_resolution is not None
-                else {}
+                catalog_resolution.binding.as_dict() if catalog_resolution is not None else {}
             ),
         )
 
@@ -462,9 +471,7 @@ class OperationController:
         operation = self.get_operation(operation_id)
         if not is_mutating_mode(operation.mode):
             return False
-        if operation.govengine_decision_type in {
-            item.value for item in BLOCKING_DECISIONS
-        }:
+        if operation.govengine_decision_type in {item.value for item in BLOCKING_DECISIONS}:
             return False
         if operation.govengine_decision_type == GovEngineDecisionType.ALLOWED.value:
             return operation.state == OperationState.APPROVED.value
@@ -554,10 +561,12 @@ class OperationController:
         }
 
     def start(self, operation_id: str) -> Operation:
-        return self._start_operation(operation_id, drain_queue=True)
+        with self.execution_lease():
+            return self._start_operation(operation_id, drain_queue=True)
 
     def process_queue(self) -> list[str]:
-        return self._drain_queue()
+        with self.execution_lease():
+            return self._drain_queue()
 
     def rollback(self, operation_id: str) -> dict[str, object]:
         operation = self.get_operation(operation_id)
@@ -642,15 +651,18 @@ class OperationController:
         return started
 
     def advance(self, operation_id: str, *, max_steps: int = 1) -> Operation:
-        operation = self.get_operation(operation_id)
-        if operation.state == OperationState.APPROVED.value and is_mutating_mode(operation.mode):
-            self.runtime.check_maintenance_window(operation)
-            if self.runtime.admit_for_execution(operation) == "queued":
-                return self.get_operation(operation_id)
-        result = self.orchestrator.advance(operation_id, max_steps=max_steps)
-        self._release_runtime_if_terminal(result)
-        self._ensure_terminal_receipt_if_needed(operation_id)
-        return self.get_operation(operation_id)
+        with self.execution_lease():
+            operation = self.get_operation(operation_id)
+            if operation.state == OperationState.APPROVED.value and is_mutating_mode(
+                operation.mode
+            ):
+                self.runtime.check_maintenance_window(operation)
+                if self.runtime.admit_for_execution(operation) == "queued":
+                    return self.get_operation(operation_id)
+            result = self.orchestrator.advance(operation_id, max_steps=max_steps)
+            self._release_runtime_if_terminal(result)
+            self._ensure_terminal_receipt_if_needed(operation_id)
+            return self.get_operation(operation_id)
 
     def approve(self, operation_id: str, *, approved_by: str = "operator") -> Operation:
         operation = self.get_operation(operation_id)
@@ -708,16 +720,17 @@ class OperationController:
         return result
 
     def retry(self, operation_id: str) -> Operation:
-        operation = self.get_operation(operation_id)
-        if is_mutating_mode(operation.mode):
-            self.runtime.check_maintenance_window(operation)
-            if self.runtime.admit_for_execution(operation) == "queued":
-                return self.get_operation(operation_id)
-        result = self.orchestrator.retry(operation_id)
-        self._release_runtime_if_terminal(result)
-        self._ensure_terminal_receipt_if_needed(operation_id)
-        self._drain_queue()
-        return self.get_operation(operation_id)
+        with self.execution_lease():
+            operation = self.get_operation(operation_id)
+            if is_mutating_mode(operation.mode):
+                self.runtime.check_maintenance_window(operation)
+                if self.runtime.admit_for_execution(operation) == "queued":
+                    return self.get_operation(operation_id)
+            result = self.orchestrator.retry(operation_id)
+            self._release_runtime_if_terminal(result)
+            self._ensure_terminal_receipt_if_needed(operation_id)
+            self._drain_queue()
+            return self.get_operation(operation_id)
 
     def validate(self, operation_id: str) -> dict[str, object]:
         return self.orchestrator.validate(operation_id)

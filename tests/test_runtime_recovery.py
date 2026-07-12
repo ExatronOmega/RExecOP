@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import multiprocessing
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -26,6 +28,15 @@ PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
 ENVIRONMENT = REPO_ROOT / "examples/environments/runtime-fixture.example.yaml"
 NOW = datetime(2026, 7, 4, 12, 0, 0, tzinfo=UTC)
 runner = CliRunner()
+
+
+def _try_acquire_lease(root: str, worker_id: str, ready: Any) -> None:
+    try:
+        WorkerLeaseManager(Path(root)).acquire(worker_id=worker_id, now=NOW)
+    except RExecOpValidationError:
+        ready.put("conflict")
+    else:
+        ready.put("acquired")
 
 
 def _controller(tmp_path: Path) -> OperationController:
@@ -157,6 +168,37 @@ def test_worker_lease_clears_when_stale(tmp_path: Path) -> None:
     assert lease.clear_if_stale(now=NOW) is True
     renewed = lease.acquire(worker_id="worker-b", now=NOW)
     assert renewed["worker_id"] == "worker-b"
+    assert renewed["lease_epoch"] == 2
+
+
+def test_worker_lease_is_atomic_across_processes(tmp_path: Path) -> None:
+    root = tmp_path / ".rexecop"
+    context = multiprocessing.get_context("spawn")
+    results = context.Queue()
+    processes = [
+        context.Process(target=_try_acquire_lease, args=(str(root), worker, results))
+        for worker in ("worker-a", "worker-b")
+    ]
+    for process in processes:
+        process.start()
+    for process in processes:
+        process.join(timeout=10)
+        assert process.exitcode == 0
+    assert sorted(results.get(timeout=2) for _ in processes) == ["acquired", "conflict"]
+
+
+def test_stale_owner_cannot_release_new_lease_epoch(tmp_path: Path) -> None:
+    lease = WorkerLeaseManager(tmp_path / ".rexecop")
+    old = lease.acquire(worker_id="worker-a", now=NOW - timedelta(seconds=300))
+    current = lease.acquire(worker_id="worker-b", now=NOW)
+
+    with pytest.raises(RExecOpValidationError, match="ownership conflict"):
+        lease.release(
+            owner_token=str(old["owner_token"]),
+            lease_epoch=int(old["lease_epoch"]),
+            process_instance_id=str(old["process_instance_id"]),
+        )
+    assert lease.read() == current
 
 
 def test_backup_restore_round_trip(tmp_path: Path) -> None:

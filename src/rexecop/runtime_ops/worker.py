@@ -52,42 +52,44 @@ def run_worker(
     started: list[str] = []
     iterations = 0
     watchdog_service = WatchdogService(controller.store) if watchdog else None
-    lease_manager = WorkerLeaseManager(controller.store.root)
-    run_startup_recovery(controller.store, controller=controller)
-    lease_manager.acquire(worker_id=worker_id)
-    while True:
-        lease_manager.renew(worker_id=worker_id)
-        if watchdog_service is not None:
-            watchdog_service.record_heartbeat(worker_id=worker_id)
+    with controller.execution_lease(worker_id=worker_id) as lease_record:
+        lease_manager = WorkerLeaseManager(controller.store.root)
+        run_startup_recovery(controller.store, controller=controller, lease_record=lease_record)
+        while True:
+            lease_record = lease_manager.renew(
+                owner_token=str(lease_record["owner_token"]),
+                lease_epoch=int(lease_record["lease_epoch"]),
+                process_instance_id=str(lease_record["process_instance_id"]),
+            )
+            if watchdog_service is not None:
+                watchdog_service.record_heartbeat(worker_id=worker_id)
+                if watch_inbox:
+                    watchdog_service.move_stale_inbox_items(max_age_seconds=stale_inbox_seconds)
+                watchdog_service.record_stale_active_operations(
+                    max_age_seconds=stale_operation_seconds
+                )
+
             if watch_inbox:
-                watchdog_service.move_stale_inbox_items(
-                    max_age_seconds=stale_inbox_seconds
+                started.extend(
+                    _process_inbox(
+                        controller,
+                        watchdog_service=watchdog_service,
+                        inbox_retry_budget=inbox_retry_budget,
+                    )
                 )
-            watchdog_service.record_stale_active_operations(
-                max_age_seconds=stale_operation_seconds
-            )
 
-        if watch_inbox:
-            started.extend(
-                _process_inbox(
-                    controller,
-                    watchdog_service=watchdog_service,
-                    inbox_retry_budget=inbox_retry_budget,
+            started.extend(controller.process_queue())
+            if watchdog_service is not None:
+                watchdog_service.record_queue_depth(
+                    depth=len(controller.runtime.queue.list_pending())
                 )
-            )
 
-        started.extend(controller.process_queue())
-        if watchdog_service is not None:
-            watchdog_service.record_queue_depth(
-                depth=len(controller.runtime.queue.list_pending())
-            )
-
-        iterations += 1
-        if once:
-            break
-        if max_iterations is not None and iterations >= max_iterations:
-            break
-        time.sleep(poll_interval)
+            iterations += 1
+            if once:
+                break
+            if max_iterations is not None and iterations >= max_iterations:
+                break
+            time.sleep(poll_interval)
 
     return started
 
@@ -156,9 +158,7 @@ def parse_trigger_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "mode": mode,
         "auto_start": bool(payload.get("auto_start", False)),
         "auto_react": (
-            str(payload["auto_react"]).strip()
-            if payload.get("auto_react") is not None
-            else None
+            str(payload["auto_react"]).strip() if payload.get("auto_react") is not None else None
         ),
         "source": str(payload.get("source") or "stdin"),
     }

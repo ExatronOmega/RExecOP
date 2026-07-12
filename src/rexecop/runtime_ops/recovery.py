@@ -33,6 +33,7 @@ def run_startup_recovery(
     now: datetime | None = None,
     lease_ttl_seconds: float = DEFAULT_LEASE_TTL_SECONDS,
     repair_receipts: bool = True,
+    lease_record: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Reconcile runtime store after restart without re-running backend IO."""
     from rexecop.operation.controller import OperationController as _OperationController
@@ -42,7 +43,10 @@ def run_startup_recovery(
     lease = WorkerLeaseManager(store.root)
     locks = TargetLockManager(store)
 
-    cleared_lease = lease.clear_if_stale(now=observed_at, max_age_seconds=lease_ttl_seconds)
+    owned_lease = lease_record
+    if owned_lease is None:
+        owned_lease = lease.acquire(worker_id="runtime-recovery", now=observed_at)
+    cleared_lease = False
     released_locks = _release_stale_locks(locks)
     interrupted = _interrupt_active_operations(ctrl, observed_at=observed_at)
     receipt_repairs: list[dict[str, Any]] = []
@@ -50,7 +54,7 @@ def run_startup_recovery(
     if repair_receipts:
         receipt_repairs, receipt_blockers = _repair_terminal_receipts(ctrl)
 
-    return {
+    report = {
         "schema": RECOVERY_REPORT_SCHEMA,
         "runtime_root": str(store.root),
         "observed_at": observed_at.isoformat(),
@@ -75,6 +79,13 @@ def run_startup_recovery(
             "receipt_blocker_count": len(receipt_blockers),
         },
     }
+    if lease_record is None:
+        lease.release(
+            owner_token=str(owned_lease["owner_token"]),
+            lease_epoch=int(owned_lease["lease_epoch"]),
+            process_instance_id=str(owned_lease["process_instance_id"]),
+        )
+    return report
 
 
 def operation_needs_receipt(operation: Operation, store: RuntimeStore) -> bool:
