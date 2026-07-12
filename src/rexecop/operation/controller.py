@@ -52,7 +52,6 @@ from rexecop.runtime_ops.idempotency import (
     plan_idempotency_key,
     start_idempotency_key,
 )
-from rexecop.runtime_ops.lease import WorkerLeaseManager
 from rexecop.runtime_ops.projection import mark_projection_pending
 from rexecop.runtime_ops.recovery import ensure_terminal_receipt, start_is_idempotent
 from rexecop.storage.atomic import atomic_write_text
@@ -104,8 +103,7 @@ class OperationController:
         if self._execution_lease is not None:
             yield self._execution_lease
             return
-        manager = WorkerLeaseManager(self.store.root)
-        record = manager.acquire(worker_id=worker_id)
+        record = self.store.acquire_execution_lease(worker_id=worker_id)
         self._execution_lease = record
         self.orchestrator.execution_lease_record = record
         try:
@@ -113,11 +111,7 @@ class OperationController:
         finally:
             self.orchestrator.execution_lease_record = None
             self._execution_lease = None
-            manager.release(
-                owner_token=str(record["owner_token"]),
-                lease_epoch=int(record["lease_epoch"]),
-                process_instance_id=str(record["process_instance_id"]),
-            )
+            self.store.release_execution_lease(record)
 
     def plan(
         self,
@@ -481,8 +475,11 @@ class OperationController:
         if operation.govengine_decision_type in {item.value for item in WAITING_DECISIONS}:
             if operation.state != OperationState.APPROVED.value:
                 return False
-            approval_path = self.store.root / "approvals" / f"{operation_id}.json"
-            return approval_path.is_file()
+            try:
+                self.store.load_approval(operation_id)
+            except RExecOpValidationError:
+                return False
+            return True
         return False
 
     def _governance_allows_rollback(self, operation: Operation) -> bool:
@@ -649,30 +646,18 @@ class OperationController:
             lease = self._execution_lease
             if lease is None:
                 raise RExecOpConcurrencyConflict("concurrency_conflict: execution lease missing")
-            claim = self.runtime.queue.claim(
-                owner_token=str(lease["owner_token"]),
-                lease_epoch=int(lease["lease_epoch"]),
-                process_instance_id=str(lease["process_instance_id"]),
-            )
+            claim = self.runtime.queue.claim_from_lease(lease)
             if claim is None:
                 break
             next_id = str(claim["operation_id"])
             candidate = self.get_operation(next_id)
             if candidate.state != OperationState.APPROVED.value:
-                self.runtime.queue.complete_claim(
-                    next_id,
-                    owner_token=str(lease["owner_token"]),
-                    lease_epoch=int(lease["lease_epoch"]),
-                )
+                self.runtime.queue.complete_claim_from_lease(next_id, lease)
                 continue
             if self.runtime.admit_for_execution(candidate) != "admitted":
                 break
             self._start_operation(next_id, drain_queue=False)
-            self.runtime.queue.complete_claim(
-                next_id,
-                owner_token=str(lease["owner_token"]),
-                lease_epoch=int(lease["lease_epoch"]),
-            )
+            self.runtime.queue.complete_claim_from_lease(next_id, lease)
             started.append(next_id)
         return started
 
@@ -749,7 +734,7 @@ class OperationController:
 
     def retry(self, operation_id: str) -> Operation:
         with self.execution_lease():
-            if self.orchestrator.attempts.has_indeterminate_side_effect(operation_id):
+            if self.store.has_indeterminate_side_effect(operation_id):
                 raise RExecOpValidationError(
                     "outcome_indeterminate: side-effectful attempt requires explicit reconciliation"
                 )

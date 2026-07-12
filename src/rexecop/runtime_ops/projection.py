@@ -35,10 +35,7 @@ def reconcile_pending_projections(
 ) -> dict[str, list[str]]:
     projected: list[str] = []
     deferred: list[str] = []
-    for operation in controller.store.list_operations():
-        marker = operation.metadata.get("sclite_projection")
-        if not isinstance(marker, dict) or marker.get("status") != "pending":
-            continue
+    for operation in controller.store.list_pending_projection_operations():
         if operation.state not in TERMINAL_PROJECTION_STATES:
             deferred.append(operation.id)
             continue

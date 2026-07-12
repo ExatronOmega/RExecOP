@@ -7,9 +7,8 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.operation.model import Operation, StateTransitionRecord, utc_now_iso
 from rexecop.operation.state import OperationState, validate_transition
-from rexecop.runtime_ops.attempts import AttemptJournal
 from rexecop.runtime_ops.coordinator import ACTIVE_RUNTIME_STATES
-from rexecop.runtime_ops.lease import DEFAULT_LEASE_TTL_SECONDS, WorkerLeaseManager
+from rexecop.runtime_ops.lease import DEFAULT_LEASE_TTL_SECONDS
 from rexecop.runtime_ops.projection import reconcile_pending_projections
 from rexecop.runtime_ops.target_lock import TargetLockManager
 from rexecop.storage.port import RuntimeStore
@@ -42,16 +41,15 @@ def run_startup_recovery(
 
     observed_at = now or datetime.now(UTC).replace(microsecond=0)
     ctrl = controller or _OperationController(store=store)
-    lease = WorkerLeaseManager(store.root)
     locks = TargetLockManager(store)
 
     owned_lease = lease_record
     if owned_lease is None:
-        owned_lease = lease.acquire(worker_id="runtime-recovery", now=observed_at)
+        owned_lease = store.acquire_execution_lease(worker_id="runtime-recovery")
     cleared_lease = False
     released_locks = _release_stale_locks(locks)
     interrupted = _interrupt_active_operations(ctrl, observed_at=observed_at)
-    indeterminate_attempts = AttemptJournal(store.root).mark_started_indeterminate()
+    indeterminate_attempts = store.recover_started_attempts()
     receipt_repairs: list[dict[str, Any]] = []
     receipt_blockers: list[dict[str, Any]] = []
     if repair_receipts:
@@ -90,11 +88,7 @@ def run_startup_recovery(
         },
     }
     if lease_record is None:
-        lease.release(
-            owner_token=str(owned_lease["owner_token"]),
-            lease_epoch=int(owned_lease["lease_epoch"]),
-            process_instance_id=str(owned_lease["process_instance_id"]),
-        )
+        store.release_execution_lease(owned_lease)
     return report
 
 

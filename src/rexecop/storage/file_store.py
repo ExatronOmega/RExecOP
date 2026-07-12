@@ -169,3 +169,100 @@ class FileStore:
         if not path.is_file():
             raise RExecOpValidationError(f"approval not found: {operation_id}")
         return json.loads(path.read_text())
+
+    def acquire_execution_lease(self, *, worker_id: str) -> dict[str, Any]:
+        from rexecop.runtime_ops.lease import WorkerLeaseManager
+
+        return WorkerLeaseManager(self.root).acquire(worker_id=worker_id)
+
+    def renew_execution_lease(self, lease: dict[str, Any]) -> dict[str, Any]:
+        from rexecop.runtime_ops.lease import WorkerLeaseManager
+
+        return WorkerLeaseManager(self.root).renew(
+            owner_token=str(lease["owner_token"]),
+            lease_epoch=int(lease["lease_epoch"]),
+            process_instance_id=str(lease["process_instance_id"]),
+        )
+
+    def release_execution_lease(self, lease: dict[str, Any]) -> bool:
+        from rexecop.runtime_ops.lease import WorkerLeaseManager
+
+        return WorkerLeaseManager(self.root).release(
+            owner_token=str(lease["owner_token"]),
+            lease_epoch=int(lease["lease_epoch"]),
+            process_instance_id=str(lease["process_instance_id"]),
+        )
+
+    def _queue(self) -> Any:
+        from rexecop.runtime_ops.queue import RunNowQueue
+
+        return RunNowQueue(self)
+
+    def queue_list_pending(self) -> list[str]:
+        return self._queue().list_pending()
+
+    def queue_position(self, operation_id: str) -> int | None:
+        return self._queue().position(operation_id)
+
+    def queue_enqueue(self, operation_id: str) -> int:
+        return self._queue().enqueue(operation_id)
+
+    def queue_remove(self, operation_id: str) -> None:
+        self._queue().remove(operation_id)
+
+    def queue_discard_pending(self, operation_id: str) -> None:
+        self._queue().discard_pending(operation_id)
+
+    def queue_claim(self, lease: dict[str, Any]) -> dict[str, Any] | None:
+        return self._queue().claim(
+            owner_token=str(lease["owner_token"]),
+            lease_epoch=int(lease["lease_epoch"]),
+            process_instance_id=str(lease["process_instance_id"]),
+        )
+
+    def queue_complete_claim(self, operation_id: str, lease: dict[str, Any]) -> None:
+        self._queue().complete_claim(
+            operation_id,
+            owner_token=str(lease["owner_token"]),
+            lease_epoch=int(lease["lease_epoch"]),
+        )
+
+    def start_execution_attempt(self, **binding: Any) -> dict[str, Any]:
+        from rexecop.runtime_ops.attempts import AttemptJournal
+
+        return AttemptJournal(self.root).start(**binding)
+
+    def finish_execution_attempt(
+        self,
+        attempt: dict[str, Any],
+        *,
+        status: str,
+        result_digest: str = "",
+        error_class: str = "",
+    ) -> dict[str, Any]:
+        from rexecop.runtime_ops.attempts import AttemptJournal
+
+        return AttemptJournal(self.root).finish(
+            attempt,
+            status=status,
+            result_digest=result_digest,
+            error_class=error_class,
+        )
+
+    def recover_started_attempts(self) -> list[str]:
+        from rexecop.runtime_ops.attempts import AttemptJournal
+
+        return AttemptJournal(self.root).mark_started_indeterminate()
+
+    def has_indeterminate_side_effect(self, operation_id: str) -> bool:
+        from rexecop.runtime_ops.attempts import AttemptJournal
+
+        return AttemptJournal(self.root).has_indeterminate_side_effect(operation_id)
+
+    def list_pending_projection_operations(self) -> list[Operation]:
+        return [
+            operation
+            for operation in self.list_operations()
+            if isinstance(operation.metadata.get("sclite_projection"), dict)
+            and operation.metadata["sclite_projection"].get("status") == "pending"
+        ]

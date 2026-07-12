@@ -141,3 +141,31 @@ class RunNowQueue:
             operation_id = data["pending"].pop(0)
             self._save_unlocked(data)
             return operation_id
+
+
+class StoreRunNowQueue:
+    """Compatibility facade that keeps lifecycle code on the RuntimeStore port."""
+
+    def __init__(self, store: RuntimeStore) -> None:
+        self.store = store
+
+    def list_pending(self) -> list[str]:
+        return self.store.queue_list_pending()
+
+    def position(self, operation_id: str) -> int | None:
+        return self.store.queue_position(operation_id)
+
+    def enqueue(self, operation_id: str) -> int:
+        return self.store.queue_enqueue(operation_id)
+
+    def remove(self, operation_id: str) -> None:
+        self.store.queue_remove(operation_id)
+
+    def discard_pending(self, operation_id: str) -> None:
+        self.store.queue_discard_pending(operation_id)
+
+    def claim_from_lease(self, lease: dict[str, Any]) -> dict[str, Any] | None:
+        return self.store.queue_claim(lease)
+
+    def complete_claim_from_lease(self, operation_id: str, lease: dict[str, Any]) -> None:
+        self.store.queue_complete_claim(operation_id, lease)

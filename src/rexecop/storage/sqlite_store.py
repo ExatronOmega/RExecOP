@@ -113,6 +113,68 @@ class SqliteStore:
     def load_approval(self, operation_id: str) -> dict[str, Any]:
         return self._files.load_approval(operation_id)
 
+    def acquire_execution_lease(self, *, worker_id: str) -> dict[str, Any]:
+        return self._files.acquire_execution_lease(worker_id=worker_id)
+
+    def renew_execution_lease(self, lease: dict[str, Any]) -> dict[str, Any]:
+        return self._files.renew_execution_lease(lease)
+
+    def release_execution_lease(self, lease: dict[str, Any]) -> bool:
+        return self._files.release_execution_lease(lease)
+
+    def queue_list_pending(self) -> list[str]:
+        return self._files.queue_list_pending()
+
+    def queue_position(self, operation_id: str) -> int | None:
+        return self._files.queue_position(operation_id)
+
+    def queue_enqueue(self, operation_id: str) -> int:
+        return self._files.queue_enqueue(operation_id)
+
+    def queue_remove(self, operation_id: str) -> None:
+        self._files.queue_remove(operation_id)
+
+    def queue_discard_pending(self, operation_id: str) -> None:
+        self._files.queue_discard_pending(operation_id)
+
+    def queue_claim(self, lease: dict[str, Any]) -> dict[str, Any] | None:
+        return self._files.queue_claim(lease)
+
+    def queue_complete_claim(self, operation_id: str, lease: dict[str, Any]) -> None:
+        self._files.queue_complete_claim(operation_id, lease)
+
+    def start_execution_attempt(self, **binding: Any) -> dict[str, Any]:
+        return self._files.start_execution_attempt(**binding)
+
+    def finish_execution_attempt(
+        self,
+        attempt: dict[str, Any],
+        *,
+        status: str,
+        result_digest: str = "",
+        error_class: str = "",
+    ) -> dict[str, Any]:
+        return self._files.finish_execution_attempt(
+            attempt,
+            status=status,
+            result_digest=result_digest,
+            error_class=error_class,
+        )
+
+    def recover_started_attempts(self) -> list[str]:
+        return self._files.recover_started_attempts()
+
+    def has_indeterminate_side_effect(self, operation_id: str) -> bool:
+        return self._files.has_indeterminate_side_effect(operation_id)
+
+    def list_pending_projection_operations(self) -> list[Operation]:
+        return [
+            operation
+            for operation in self.list_operations()
+            if isinstance(operation.metadata.get("sclite_projection"), dict)
+            and operation.metadata["sclite_projection"].get("status") == "pending"
+        ]
+
     def save_operation(self, operation: Operation) -> None:
         with self._connection(immediate=True) as conn:
             row = conn.execute(

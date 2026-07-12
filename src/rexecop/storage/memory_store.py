@@ -24,7 +24,7 @@ class InMemoryStore:
 
     @property
     def root(self) -> Any:
-        return None
+        return self._file_store.root
 
     def save_operation(self, operation: Operation) -> None:
         current = self._operations.get(operation.id)
@@ -93,6 +93,74 @@ class InMemoryStore:
 
     def load_receipt_export(self, operation_id: str) -> dict[str, Any]:
         return self._file_store.load_receipt_export(operation_id)
+
+    def save_approval(self, operation_id: str, approval: dict[str, Any]) -> Any:
+        return self._file_store.save_approval(operation_id, approval)
+
+    def load_approval(self, operation_id: str) -> dict[str, Any]:
+        return self._file_store.load_approval(operation_id)
+
+    def acquire_execution_lease(self, *, worker_id: str) -> dict[str, Any]:
+        return self._file_store.acquire_execution_lease(worker_id=worker_id)
+
+    def renew_execution_lease(self, lease: dict[str, Any]) -> dict[str, Any]:
+        return self._file_store.renew_execution_lease(lease)
+
+    def release_execution_lease(self, lease: dict[str, Any]) -> bool:
+        return self._file_store.release_execution_lease(lease)
+
+    def queue_list_pending(self) -> list[str]:
+        return self._file_store.queue_list_pending()
+
+    def queue_position(self, operation_id: str) -> int | None:
+        return self._file_store.queue_position(operation_id)
+
+    def queue_enqueue(self, operation_id: str) -> int:
+        return self._file_store.queue_enqueue(operation_id)
+
+    def queue_remove(self, operation_id: str) -> None:
+        self._file_store.queue_remove(operation_id)
+
+    def queue_discard_pending(self, operation_id: str) -> None:
+        self._file_store.queue_discard_pending(operation_id)
+
+    def queue_claim(self, lease: dict[str, Any]) -> dict[str, Any] | None:
+        return self._file_store.queue_claim(lease)
+
+    def queue_complete_claim(self, operation_id: str, lease: dict[str, Any]) -> None:
+        self._file_store.queue_complete_claim(operation_id, lease)
+
+    def start_execution_attempt(self, **binding: Any) -> dict[str, Any]:
+        return self._file_store.start_execution_attempt(**binding)
+
+    def finish_execution_attempt(
+        self,
+        attempt: dict[str, Any],
+        *,
+        status: str,
+        result_digest: str = "",
+        error_class: str = "",
+    ) -> dict[str, Any]:
+        return self._file_store.finish_execution_attempt(
+            attempt,
+            status=status,
+            result_digest=result_digest,
+            error_class=error_class,
+        )
+
+    def recover_started_attempts(self) -> list[str]:
+        return self._file_store.recover_started_attempts()
+
+    def has_indeterminate_side_effect(self, operation_id: str) -> bool:
+        return self._file_store.has_indeterminate_side_effect(operation_id)
+
+    def list_pending_projection_operations(self) -> list[Operation]:
+        return [
+            operation
+            for operation in self.list_operations()
+            if isinstance(operation.metadata.get("sclite_projection"), dict)
+            and operation.metadata["sclite_projection"].get("status") == "pending"
+        ]
 
     def dump_state(self) -> dict[str, Any]:
         return {

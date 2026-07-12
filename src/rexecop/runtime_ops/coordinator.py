@@ -7,7 +7,7 @@ from rexecop.errors import RExecOpValidationError
 from rexecop.operation.model import Operation
 from rexecop.operation.state import OperationState
 from rexecop.runtime_ops.maintenance import maintenance_window_allows
-from rexecop.runtime_ops.queue import RunNowQueue
+from rexecop.runtime_ops.queue import StoreRunNowQueue
 from rexecop.runtime_ops.target_lock import TargetLockManager
 from rexecop.storage.port import RuntimeStore
 
@@ -28,7 +28,7 @@ class RuntimeCoordinator:
     def __init__(self, store: RuntimeStore) -> None:
         self.store = store
         self.target_lock = TargetLockManager(store)
-        self.queue = RunNowQueue(store)
+        self.queue = StoreRunNowQueue(store)
 
     def runtime_policy(self, operation: Operation) -> dict[str, Any]:
         policy = operation.metadata.get("runtime_policy")

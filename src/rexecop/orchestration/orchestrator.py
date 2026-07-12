@@ -31,7 +31,6 @@ from rexecop.policy.enforcement import (
 )
 from rexecop.policy.pack import compile_environment_policy_pack
 from rexecop.profile.loader import LoadedProfile, load_profile
-from rexecop.runtime_ops.attempts import AttemptJournal
 from rexecop.storage.port import RuntimeStore
 from rexecop.validation.validator import validate_operation_result
 from rexecop.workflow.runner import WorkflowRunner
@@ -113,7 +112,6 @@ class OperationOrchestrator:
         self._export_receipt = export_receipt
         self._auto_reaction_handler = auto_reaction_handler
         self.execution_lease_record: dict[str, Any] | None = None
-        self.attempts = AttemptJournal(store.root)
 
     def _runner_for_operation(self, operation: Operation) -> WorkflowRunner:
         connectors = operation.metadata.get("environment_connectors")
@@ -152,7 +150,7 @@ class OperationOrchestrator:
         permit_ref = ""
         if isinstance(governance, dict):
             permit_ref = str(governance.get("admission_digest") or "")
-        return self.attempts.start(
+        return self.store.start_execution_attempt(
             operation_id=operation.id,
             operation_revision=operation.operation_revision,
             step_id=str(context.step.get("id") or ""),
@@ -176,7 +174,7 @@ class OperationOrchestrator:
             if status == "indeterminate"
             else str((payload.get("output") or {}).get("error_class") or "")
         )
-        self.attempts.finish(
+        self.store.finish_execution_attempt(
             attempt,
             status=status,
             result_digest=("sha256:" + canonical_digest(payload)) if payload else "",
@@ -662,8 +660,11 @@ class OperationOrchestrator:
         if operation.govengine_decision_type == "allowed":
             return True
         if operation.govengine_decision_type in {item.value for item in WAITING_DECISIONS}:
-            approval_path = self.store.root / "approvals" / f"{operation.id}.json"
-            return approval_path.is_file()
+            try:
+                self.store.load_approval(operation.id)
+            except RExecOpValidationError:
+                return False
+            return True
         return False
 
     def _init_execution_cursor(self, operation: Operation, plan: OperationPlan) -> None:
