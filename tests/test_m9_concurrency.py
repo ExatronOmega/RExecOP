@@ -12,6 +12,8 @@ from rexecop.runtime_ops.queue import RunNowQueue
 from rexecop.storage.file_store import FileStore
 from rexecop.storage.sqlite_store import SqliteStore
 
+pytestmark = pytest.mark.m9_runtime
+
 
 def _operation(operation_id: str = "op-cas") -> Operation:
     return Operation(

@@ -43,14 +43,18 @@ rexecop --root /operator/rexecop-runtime runtime recover --json
 - clears stale worker leases;
 - releases stale advisory target locks;
 - marks interrupted active operations `failed` with a recovery transition;
-- repairs or blocks on terminal operations missing receipt artifacts.
+- converts connector attempts left `started` into deterministic `indeterminate` records;
+- repairs or blocks on terminal operations missing receipt artifacts;
+- reconciles pending terminal SCLite projections without re-running connector IO.
 
 Output schema: `rexecop.runtime_recovery.v0.1`. Recovery blockers are written
 under `<root>/recovery_blockers/` when receipt repair cannot proceed safely.
 
-Recovery does **not** re-run connector IO. Idempotency keys on plan/start/trigger
-paths prevent duplicate backend invocation after partial progress — see
-`rexecop.runtime_ops.idempotency`.
+Recovery does **not** re-run connector IO. Plan/start/trigger idempotency keys detect
+logical replay and key drift; by themselves they do **not** prevent duplicate backend
+invocation. Connector attempts are persisted before IO. A process loss after IO but before
+the durable result becomes `outcome_indeterminate`; side-effectful work is never retried
+automatically and requires explicit reconciliation.
 
 ## Runtime-store reconstruction status
 

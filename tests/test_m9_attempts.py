@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 from pathlib import Path
 
 import pytest
@@ -11,9 +12,24 @@ from rexecop.runtime_ops.attempts import AttemptJournal
 from rexecop.runtime_ops.recovery import run_startup_recovery
 from rexecop.storage.file_store import FileStore
 
+pytestmark = pytest.mark.m9_runtime
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
 ENVIRONMENT = REPO_ROOT / "examples/environments/runtime-fixture.example.yaml"
+
+
+def _leave_started_attempt(root: str, operation_id: str, plan: dict[str, object]) -> None:
+    AttemptJournal(Path(root)).start(
+        operation_id=operation_id,
+        operation_revision=3,
+        step_id="crash-after-io",
+        plan=plan,
+        execution_spec={"digest": "sha256:" + "b" * 64},
+        target="fixture-target",
+        mode="apply",
+        lease={"lease_epoch": 9, "process_instance_id": "killed-worker"},
+    )
 
 
 def test_connector_io_has_durable_completed_attempt_binding(tmp_path: Path) -> None:
@@ -76,3 +92,47 @@ def test_recovery_marks_started_attempt_indeterminate_and_blocks_effect_retry(
     assert report["summary"]["indeterminate_attempt_count"] == 1
     with pytest.raises(RExecOpValidationError, match="outcome_indeterminate"):
         controller.retry(operation.id)
+
+
+def test_process_loss_after_possible_io_recovers_deterministically(tmp_path: Path) -> None:
+    controller = OperationController(FileStore(tmp_path / ".rexecop"))
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
+    )
+    plan = controller.store.load_plan(operation.id).as_dict()
+    context = multiprocessing.get_context("spawn")
+    process = context.Process(
+        target=_leave_started_attempt,
+        args=(str(controller.store.root), operation.id, plan),
+    )
+    process.start()
+    process.join(timeout=10)
+    assert process.exitcode == 0
+
+    first = run_startup_recovery(controller.store, controller=controller)
+    second = run_startup_recovery(controller.store, controller=controller)
+
+    assert first["summary"]["indeterminate_attempt_count"] == 1
+    assert second["summary"]["indeterminate_attempt_count"] == 0
+
+
+def test_attempt_is_not_created_when_validation_blocks_before_io(tmp_path: Path) -> None:
+    controller = OperationController(FileStore(tmp_path / ".rexecop"))
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
+    )
+    operation.metadata["environment_connectors"] = {}
+    controller.store.save_operation(operation)
+
+    failed = controller.start(operation.id)
+
+    assert failed.state == "failed"
+    assert not (controller.store.root / "attempts" / operation.id).exists()

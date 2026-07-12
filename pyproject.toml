@@ -70,4 +70,5 @@ markers = [
     "signoff_script: invokes run_alpha_signoff_checks.sh (excluded from nested sign-off)",
     "package_smoke: wheel build and twine metadata check",
     "security_regression: fail-closed connector and disclosure regression tests",
+    "m9_runtime: certified single-host concurrency and crash-correctness tests",
 ]

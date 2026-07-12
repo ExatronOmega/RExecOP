@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 from rexecop.runtime.doctor import _check_executor_posture, _check_storage_backend
+
+pytestmark = pytest.mark.m9_runtime
 
 
 def test_file_store_is_stable_single_host_certified() -> None:

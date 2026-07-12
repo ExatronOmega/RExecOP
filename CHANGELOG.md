@@ -2,6 +2,15 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Completes M9 certified single-host runtime: fenced single-executor leases,
+  monotonic operation CAS, atomic FIFO queue claims, durable connector attempts,
+  deterministic `outcome_indeterminate` recovery and an operation-record outbox
+  for idempotent SCLite projection reconciliation.
+- Certifies `FileStore` for stable single-host/single-executor operation. SQLite
+  remains an alpha tier, and `doctor` blocks unsupported storage or executor posture.
+- Adds `validate_m9_runtime_gate.py` with real multiprocessing, stale-write,
+  crash-point, repeated-recovery and projection reconciliation coverage.
+
 - Starts M8.6 security hardening: pagination is same-origin only with loop
   detection, auth headers cannot target transport-reserved names, and public
   projection defaults make body/before/after structured state digest-only.

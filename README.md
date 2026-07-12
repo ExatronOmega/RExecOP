@@ -122,6 +122,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Lifecycle controls: `plan`, `approve`, `start`, `pause`/`resume`, `cancel`, `retry`,
   `rollback`, `validate`, `escalate`, `status`, `history`
 - Host-owned scheduling: `queue`, `worker run`, `trigger` (see operator scheduler pattern)
+- Certified runtime: one fenced executor per `FileStore` root, operation CAS, atomic FIFO
+  queue claims, durable connector attempts and `outcome_indeterminate` recovery
 - Advisory escalation proposal handling: validate `escalation_proposal.v0.1`,
   review without printing raw explanation text, and record `accept_for_planning`/`reject`
   decisions without planning, approval or execution

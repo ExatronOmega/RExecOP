@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from rexecop.operation.controller import OperationController
 from rexecop.runtime_ops.projection import reconcile_pending_projections
 from rexecop.storage.file_store import FileStore
+
+pytestmark = pytest.mark.m9_runtime
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PROFILE = REPO_ROOT / "examples/profiles/runtime-fixture/profile.yaml"
