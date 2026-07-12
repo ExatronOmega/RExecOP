@@ -26,6 +26,7 @@ def test_http_api_reads_fixture_state_against_staging_server() -> None:
             connector_name="fixture_source",
             config={
                 "base_url": server.base_url,
+                "deployment_posture": "fixture",
                 "actions": {
                     "read_fixture_state": {
                         "method": "GET",
@@ -361,6 +362,89 @@ def test_http_transport_rejects_automatic_redirect_hop() -> None:
     handler = _RejectRedirects()
     with pytest.raises(RExecOpValidationError, match="redirect blocked"):
         handler.redirect_request(None, None, 302, "Found", {}, "https://evil.example/")
+
+
+def test_stable_http_rejects_plaintext_before_io() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="fixture_source",
+        config={
+            "base_url": "http://api.example",
+            "actions": {
+                "read_fixture_state": {"method": "GET", "path": "/fixture/state"}
+            },
+        },
+        profile_root=str(PROFILE_ROOT),
+        mutating_allowed=False,
+    )
+    with patch.object(runtime, "_open_url") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="fixture_source",
+                action="read_fixture_state",
+                target="t",
+                mode="dry_run",
+            )
+        )
+    assert response.success is False
+    assert "requires https" in response.error
+    backend.assert_not_called()
+
+
+def test_stable_dns_http_requires_operator_egress_control_before_io() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="fixture_source",
+        config={
+            "base_url": "https://api.example",
+            "actions": {
+                "read_fixture_state": {"method": "GET", "path": "/fixture/state"}
+            },
+        },
+        profile_root=str(PROFILE_ROOT),
+        mutating_allowed=False,
+    )
+    with patch.object(runtime, "_open_url") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="fixture_source",
+                action="read_fixture_state",
+                target="t",
+                mode="dry_run",
+            )
+        )
+    assert response.success is False
+    assert "DNS rebinding controls" in response.error
+    backend.assert_not_called()
+
+
+def test_resolved_http_destination_must_match_declared_binding_before_io() -> None:
+    class Resolver:
+        def resolve(self, secret_ref: str) -> str:
+            assert secret_ref == "base"
+            return "https://actual.example"
+
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url_secret_ref": "base",
+            "destination_binding": {
+                "scheme": "https",
+                "effective_port": 443,
+                "address_class": "dns_name",
+                "origin_binding_digest": "sha256:" + "0" * 64,
+            },
+            "actions": {"probe": {"method": "GET", "path": "/probe"}},
+        },
+        profile_root=None,
+        mutating_allowed=False,
+        secret_resolver=Resolver(),
+    )
+    with patch.object(runtime, "_open_url") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(connector="api", action="probe", target="t", mode="dry_run")
+        )
+    assert response.success is False
+    assert "binding drift" in response.error
+    backend.assert_not_called()
 
 
 def test_http_api_blocks_cross_origin_pagination_before_request() -> None:

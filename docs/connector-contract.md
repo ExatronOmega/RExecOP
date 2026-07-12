@@ -25,7 +25,15 @@ connectors:
   fixture_source:
     enabled: true
     backend: http_api
+    deployment_posture: stable
     base_url_secret_ref: fixture_base_url   # or base_url for local lab stubs
+    destination_binding:
+      scheme: https
+      effective_port: 443
+      address_class: dns_name
+      origin_binding_digest: "sha256:<normalized-origin-digest>"
+    operator_egress_enforced: true
+    dns_rebinding_protection: operator_egress
     tls:
       ca_file_secret_ref: fixture_ca_file   # optional operator-managed CA path
     auth:
@@ -78,6 +86,16 @@ Templates:
 8. **TLS** — HTTPS verifies certificates and hostnames. A private/self-signed CA may be
    selected only through `tls.ca_file_secret_ref`; insecure verification flags are rejected.
    The referenced CA file and any host-specific trust material stay outside git.
+9. **Destination posture** — `deployment_posture: stable` is the live default and
+   requires HTTPS. DNS destinations additionally require
+   `operator_egress_enforced: true` plus
+   `dns_rebinding_protection: operator_egress`. Private/loopback/link-local stable
+   destinations require `network_scope: policy_bound`. Plain HTTP is available only
+   under explicit `lab` or `fixture` posture.
+10. **Secret endpoints** — when `base_url_secret_ref` hides the endpoint from plan
+    compilation, the environment must declare the bounded `destination_binding`
+    (`scheme`, `effective_port`, `address_class`, `origin_binding_digest`). Runtime
+    resolution must match it before connector IO.
 
 ## Error taxonomy
 

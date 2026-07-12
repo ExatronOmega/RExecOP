@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from ipaddress import ip_address
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from rexecop.catalog.digest import canonical_digest
 from rexecop.connectors import errors as connector_errors
+from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload, redact_text
 
 
@@ -48,6 +50,41 @@ def destination_binding(url: str) -> dict[str, Any]:
         "origin_binding_digest": "sha256:"
         + canonical_digest({"scheme": scheme, "host": host, "effective_port": port}),
     }
+
+
+def validate_destination_posture(
+    config: Mapping[str, Any],
+    url: str,
+    *,
+    default_posture: str = "stable",
+) -> dict[str, Any]:
+    binding = destination_binding(url)
+    declared = config.get("destination_binding")
+    if isinstance(declared, Mapping) and dict(declared) != binding:
+        raise RExecOpValidationError("resolved HTTP destination binding drift")
+    posture = str(config.get("deployment_posture") or default_posture).strip().lower()
+    if posture not in {"stable", "lab", "fixture"}:
+        raise RExecOpValidationError(f"unsupported http deployment_posture: {posture}")
+    if posture in {"lab", "fixture"}:
+        return binding
+    if binding["scheme"] != "https":
+        raise RExecOpValidationError("stable http_api requires https")
+    address_class = str(binding["address_class"])
+    egress_enforced = bool(config.get("operator_egress_enforced"))
+    dns_control = str(config.get("dns_rebinding_protection") or "").strip()
+    if address_class == "dns_name" and not (
+        egress_enforced and dns_control == "operator_egress"
+    ):
+        raise RExecOpValidationError(
+            "stable dns destination requires operator egress and DNS rebinding controls"
+        )
+    if address_class in {"private", "loopback", "link_local"} and not (
+        egress_enforced and str(config.get("network_scope") or "") == "policy_bound"
+    ):
+        raise RExecOpValidationError(
+            "stable private destination requires policy-bound operator egress"
+        )
+    return binding
 
 
 def resolve_retry_config(

@@ -29,6 +29,7 @@ def _health_environment(server: HealthStagingHttpServer) -> dict:
                 "health": {
                     "enabled": True,
                     "backend": "http_api",
+                    "deployment_posture": "fixture",
                     "base_url": server.base_url,
                     "actions": {
                         "ping": {

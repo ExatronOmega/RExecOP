@@ -32,9 +32,9 @@ wildcard subtrees never widen a public projection.
 
 Hostname validation alone cannot prevent DNS rebinding. Stable live deployments
 therefore require operator-enforced egress/DNS controls until RExecOP binds a
-resolved address set to the transport connection. The 1.0 doctor gate must expose
-and fail closed on that dependency; this prerelease does not claim transport-level
-DNS pinning.
+resolved address set to the transport connection. Runtime validation and `doctor`
+fail closed when that dependency is absent. This prerelease does not claim
+transport-level DNS pinning.
 
 ## Regression scope
 

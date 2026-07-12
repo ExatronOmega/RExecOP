@@ -91,6 +91,7 @@ def test_composite_routes_http_api_backend() -> None:
                 "fixture_source": {
                     "enabled": True,
                     "backend": "http_api",
+                    "deployment_posture": "fixture",
                     "base_url": server.base_url,
                     "actions": {
                         "read_fixture_state": {

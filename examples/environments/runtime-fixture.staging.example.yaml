@@ -18,6 +18,7 @@ environment:
     fixture_source:
       enabled: true
       backend: http_api
+      deployment_posture: lab
       base_url_secret_ref: fixture_base_url
       auth:
         secret_ref: fixture_api_token

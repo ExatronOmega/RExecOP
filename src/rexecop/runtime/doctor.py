@@ -6,6 +6,7 @@ from typing import Any
 
 from rexecop import __version__
 from rexecop.catalog.service import CatalogService
+from rexecop.connectors.http_support import destination_binding
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import validate_no_inline_secrets
 from rexecop.errors import RExecOpError
@@ -48,6 +49,7 @@ def run_runtime_doctor(
         _check_stack_contract_compatibility(),
         profile_check,
         _check_environment(env_path, expected_profile=expected_profile),
+        _check_network_egress_posture(env_path),
         _check_catalog(catalog_path),
     ]
     blockers = [check["id"] for check in checks if check["status"] == CHECK_BLOCKER]
@@ -340,6 +342,93 @@ def count_secret_refs(value: Any) -> int:
     if isinstance(value, list):
         return sum(count_secret_refs(item) for item in value)
     return 0
+
+
+def _check_network_egress_posture(env_path: Path | None) -> dict[str, Any]:
+    if env_path is None:
+        return _check(
+            "network_egress_posture",
+            CHECK_WARNING,
+            "network posture was not evaluated without an environment",
+            next_action="rerun doctor with --env to evaluate connector egress posture",
+        )
+    try:
+        environment = load_environment(env_path)
+    except RExecOpError as exc:
+        return _check("network_egress_posture", CHECK_BLOCKER, str(exc))
+    blockers: list[str] = []
+    checked: list[dict[str, Any]] = []
+    for name, raw in environment.connectors.items():
+        config = dict(raw) if isinstance(raw, dict) else {}
+        if str(config.get("backend") or "") != "http_api":
+            continue
+        posture = str(config.get("deployment_posture") or "stable").strip().lower()
+        binding_value = config.get("destination_binding")
+        base_url = str(config.get("base_url") or "").strip()
+        binding: dict[str, Any] = {}
+        if base_url:
+            try:
+                binding = destination_binding(base_url)
+            except ValueError:
+                blockers.append(f"{name}:unsafe_destination")
+        elif isinstance(binding_value, dict):
+            binding = dict(binding_value)
+        elif posture == "stable":
+            blockers.append(f"{name}:destination_binding_missing")
+        if posture not in {"stable", "lab", "fixture"}:
+            blockers.append(f"{name}:deployment_posture_invalid")
+        if binding:
+            digest = str(binding.get("origin_binding_digest") or "")
+            if (
+                str(binding.get("scheme") or "") not in {"http", "https"}
+                or str(binding.get("address_class") or "")
+                not in {"dns_name", "private", "loopback", "link_local", "public_ip"}
+                or not isinstance(binding.get("effective_port"), int)
+                or not digest.startswith("sha256:")
+                or len(digest) != 71
+            ):
+                blockers.append(f"{name}:destination_binding_invalid")
+        if posture == "stable" and binding:
+            if str(binding.get("scheme") or "") != "https":
+                blockers.append(f"{name}:https_required")
+            address_class = str(binding.get("address_class") or "")
+            egress = bool(config.get("operator_egress_enforced"))
+            if address_class == "dns_name" and not (
+                egress
+                and str(config.get("dns_rebinding_protection") or "")
+                == "operator_egress"
+            ):
+                blockers.append(f"{name}:dns_rebinding_control_missing")
+            if address_class in {"private", "loopback", "link_local"} and not (
+                egress and str(config.get("network_scope") or "") == "policy_bound"
+            ):
+                blockers.append(f"{name}:private_scope_not_policy_bound")
+        checked.append(
+            {
+                "connector": str(name),
+                "posture": posture,
+                "scheme": str(binding.get("scheme") or ""),
+                "address_class": str(binding.get("address_class") or ""),
+                "origin_binding_digest": str(binding.get("origin_binding_digest") or ""),
+            }
+        )
+    if blockers:
+        return _check(
+            "network_egress_posture",
+            CHECK_BLOCKER,
+            "HTTP connector network posture is not fail-closed",
+            details={"blockers": sorted(blockers), "connectors": checked},
+            next_action=(
+                "declare stable HTTPS destination binding and operator DNS/egress controls, "
+                "or use explicit lab/fixture posture"
+            ),
+        )
+    return _check(
+        "network_egress_posture",
+        CHECK_PASSED,
+        "HTTP connector network posture is bounded",
+        details={"connectors": checked},
+    )
 
 
 def _check_catalog(catalog_path: Path | None) -> dict[str, Any]:

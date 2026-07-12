@@ -30,6 +30,7 @@ def _staging_environment(server: StagingHttpServer) -> dict:
                 "fixture_source": {
                     "enabled": True,
                     "backend": "http_api",
+                    "deployment_posture": "fixture",
                     "base_url": server.base_url,
                     "actions": {
                         "read_fixture_state": {

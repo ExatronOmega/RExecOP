@@ -9,6 +9,9 @@
 - Binds normalized HTTP destination metadata and origin digests through typed
   execution specs, GovEngine admission and execution receipts without exposing
   raw connector hosts.
+- Makes stable HTTP HTTPS-only and fail-closed on undeclared DNS/private egress
+  controls; `doctor` reports the operator-owned DNS/egress dependency while
+  explicit lab/fixture posture retains bounded local HTTP support.
 
 - Completes the SCLite 2.0 migration by moving the builders and semantic
   verifiers themselves into RExecOp, not only their schema resources.

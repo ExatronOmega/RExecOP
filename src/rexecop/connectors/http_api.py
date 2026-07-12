@@ -21,7 +21,6 @@ from rexecop.connectors.base import (
 from rexecop.connectors.capability import connector_action_allowed
 from rexecop.connectors.errors import READ_ONLY_MODES
 from rexecop.connectors.http_support import (
-    destination_binding,
     get_json_path,
     http_error_class,
     merge_paginated_items,
@@ -30,6 +29,7 @@ from rexecop.connectors.http_support import (
     resolve_next_url,
     resolve_retry_config,
     retry_delay_seconds,
+    validate_destination_posture,
 )
 from rexecop.connectors.mutating import MUTATING_ACTIONS
 from rexecop.errors import RExecOpValidationError
@@ -114,9 +114,23 @@ class HttpApiConnectorRuntime:
                     data={"error_class": connector_errors.POLICY_DENIED},
                 )
 
+        try:
+            observed_destination = validate_destination_posture(
+                self.config,
+                self._resolve_base_url(),
+                default_posture="fixture" if self.profile_root is None else "stable",
+            )
+        except (RExecOpValidationError, ValueError) as exc:
+            return ConnectorResponse(
+                connector=request.connector,
+                action=request.action,
+                success=False,
+                error=redact_text(str(exc)),
+                data={"error_class": connector_errors.VALIDATION_FAILED},
+            )
+
         response = self._invoke_with_retry(request, action_spec)
-        observed = destination_binding(self._resolve_base_url())
-        response.data["observed_destination_binding"] = observed
+        response.data["observed_destination_binding"] = observed_destination
         if action_contract_digest:
             response.data["action_contract_digest"] = action_contract_digest
         return response
