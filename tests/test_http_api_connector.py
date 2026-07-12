@@ -9,6 +9,7 @@ from helpers.staging_http_server import StagingHttpServer
 from rexecop.connectors import errors as connector_errors
 from rexecop.connectors.base import ConnectorRequest
 from rexecop.connectors.http_api import HttpApiConnectorRuntime, _RejectRedirects
+from rexecop.connectors.http_support import require_same_origin
 from rexecop.connectors.local_shell import LocalShellReadonlyRuntime
 from rexecop.errors import RExecOpValidationError
 from rexecop.evidence.redaction import redact_payload
@@ -364,6 +365,19 @@ def test_http_transport_rejects_automatic_redirect_hop() -> None:
         handler.redirect_request(None, None, 302, "Found", {}, "https://evil.example/")
 
 
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        "https://api.example:8443/items",
+        "http://api.example/items",
+        "https://other.example/items",
+    ],
+)
+def test_http_origin_rejects_port_host_and_scheme_drift(candidate: str) -> None:
+    with pytest.raises(ValueError, match="unsafe_destination"):
+        require_same_origin("https://api.example/items", candidate)
+
+
 def test_stable_http_rejects_plaintext_before_io() -> None:
     runtime = HttpApiConnectorRuntime(
         connector_name="fixture_source",
@@ -478,6 +492,80 @@ def test_http_api_blocks_cross_origin_pagination_before_request() -> None:
     assert response.success is False
     assert "unsafe" in str(response.error)
     assert fetch.call_count == 1
+
+
+def test_http_api_rejects_pagination_loop() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://api.example",
+            "actions": {
+                "list": {
+                    "method": "GET",
+                    "path": "/items",
+                    "pagination": {
+                        "items_path": "items",
+                        "next_path": "next",
+                        "max_pages": 5,
+                    },
+                }
+            },
+        },
+        profile_root=None,
+        mutating_allowed=False,
+    )
+    successful = type("Response", (), {"success": True})()
+    with patch.object(
+        runtime,
+        "_fetch_json",
+        return_value=(
+            successful,
+            {"items": [], "next": "https://api.example/items?page=2"},
+            "https://api.example/items",
+        ),
+    ) as fetch:
+        response = runtime.invoke(
+            ConnectorRequest(connector="api", action="list", target="t", mode="dry_run")
+        )
+    assert response.success is False
+    assert response.error == "pagination loop detected"
+    assert fetch.call_count == 2
+
+
+def test_http_api_bounds_pagination_page_count() -> None:
+    runtime = HttpApiConnectorRuntime(
+        connector_name="api",
+        config={
+            "base_url": "https://api.example",
+            "actions": {
+                "list": {
+                    "method": "GET",
+                    "path": "/items",
+                    "pagination": {
+                        "items_path": "items",
+                        "next_path": "next",
+                        "max_pages": 2,
+                    },
+                }
+            },
+        },
+        profile_root=None,
+        mutating_allowed=False,
+    )
+    successful = type("Response", (), {"success": True})()
+    pages = iter(
+        [
+            (successful, {"items": [1], "next": "/items?page=2"}, "https://api.example/items"),
+            (successful, {"items": [2], "next": "/items?page=3"}, "https://api.example/items?page=2"),
+        ]
+    )
+    with patch.object(runtime, "_fetch_json", side_effect=lambda *_: next(pages)) as fetch:
+        response = runtime.invoke(
+            ConnectorRequest(connector="api", action="list", target="t", mode="dry_run")
+        )
+    assert response.success is True
+    assert response.data["items"] == [1, 2]
+    assert fetch.call_count == 2
 
 
 def test_http_api_rejects_transport_reserved_auth_header_before_io() -> None:

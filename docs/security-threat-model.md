@@ -47,3 +47,8 @@ transport-level DNS pinning.
 reserved-header injection, SSH posture/path/argv failures, and negative public
 projection behavior. Release qualification also requires the full test suite and
 cross-repository contract gates.
+
+`scripts/validate_m86_security_gate.py` is the executable M8.6 gate and is part of
+`run_alpha_signoff_checks.sh`. It covers port/scheme/host drift, redirect rejection,
+pagination loops/page bounds, DNS posture, unknown SSH host keys, file/argv checks,
+audience negative data, and GovEngine admission-to-receipt digest binding.

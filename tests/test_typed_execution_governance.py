@@ -28,6 +28,7 @@ from rexecop.runtime.doctor import run_runtime_doctor
 from rexecop.workflow.runner import WorkflowRunner
 
 ROOT = Path(__file__).resolve().parents[1]
+pytestmark = pytest.mark.security_regression
 FIXTURE_PROFILE = ROOT / "examples/profiles/runtime-fixture/profile.yaml"
 FIXTURE_ENV = ROOT / "examples/environments/runtime-fixture.example.yaml"
 

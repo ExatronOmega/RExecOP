@@ -15,6 +15,8 @@
 - Adds explicit local-operator, runtime-diagnostic, support-bundle and
   public-shareable audience contracts. Support/public projections never reuse
   the broader local view, with a negative-data regression corpus.
+- Adds `validate_m86_security_gate.py` to the alpha sign-off path, closing the
+  bounded HTTP/SSH/disclosure/admission-to-receipt regression matrix.
 
 - Completes the SCLite 2.0 migration by moving the builders and semantic
   verifiers themselves into RExecOp, not only their schema resources.

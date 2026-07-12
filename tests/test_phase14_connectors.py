@@ -331,3 +331,88 @@ def test_ssh_readonly_rejects_option_like_destination_before_io() -> None:
     assert not response.success
     assert "host is malformed" in response.error
     backend.assert_not_called()
+
+
+def test_ssh_readonly_strict_requires_known_hosts_before_io() -> None:
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "host.example",
+            "user": "readonly",
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+    )
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert "requires known_hosts_file" in response.error
+    backend.assert_not_called()
+
+
+def test_ssh_readonly_rejects_broad_identity_permissions_before_io(tmp_path: Path) -> None:
+    identity = tmp_path / "id_runtime"
+    identity.write_text("private key", encoding="utf-8")
+    identity.chmod(0o644)
+
+    class Resolver:
+        def resolve(self, _secret_ref: str) -> str:
+            return str(identity)
+
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "host.example",
+            "user": "readonly",
+            "deployment_posture": "fixture",
+            "known_hosts_policy": "accept-new",
+            "identity_file_secret_ref": "identity",
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+        secret_resolver=Resolver(),
+    )
+    with patch("rexecop.connectors.ssh_readonly.subprocess.run") as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert "identity file permissions are too broad" in response.error
+    backend.assert_not_called()
+
+
+def test_ssh_readonly_unknown_host_key_fails_closed(tmp_path: Path) -> None:
+    known_hosts = tmp_path / "known_hosts"
+    known_hosts.write_text("other.example ssh-ed25519 fixture-key\n", encoding="utf-8")
+    known_hosts.chmod(0o644)
+
+    class Result:
+        returncode = 255
+        stdout = ""
+        stderr = "Host key verification failed."
+
+    runtime = SshReadonlyRuntime(
+        connector_name="host_ro",
+        config={
+            "host": "host.example",
+            "user": "readonly",
+            "known_hosts_file": str(known_hosts),
+            "allowlist": [{"action": "uptime", "command": "uptime"}],
+        },
+    )
+    with patch(
+        "rexecop.connectors.ssh_readonly.subprocess.run", return_value=Result()
+    ) as backend:
+        response = runtime.invoke(
+            ConnectorRequest(
+                connector="host_ro", action="uptime", target="host", mode="dry_run"
+            )
+        )
+    assert not response.success
+    assert response.error == "Host key verification failed."
+    argv = backend.call_args.args[0]
+    assert "StrictHostKeyChecking=yes" in argv
