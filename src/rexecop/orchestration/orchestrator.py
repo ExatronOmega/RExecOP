@@ -117,9 +117,7 @@ class OperationOrchestrator:
             connectors = {}
         policy_raw = operation.metadata.get("policy_pack")
         policy_pack = (
-            compile_environment_policy_pack(policy_raw)
-            if isinstance(policy_raw, dict)
-            else None
+            compile_environment_policy_pack(policy_raw) if isinstance(policy_raw, dict) else None
         )
         target_criticality = str(operation.metadata.get("target_criticality") or "low")
         runtime = build_connector_runtime(
@@ -154,9 +152,7 @@ class OperationOrchestrator:
     def pause(self, operation_id: str) -> Operation:
         operation = self.store.load_operation(operation_id)
         if operation.state != OperationState.RUNNING.value:
-            raise RExecOpValidationError(
-                f"pause requires running operation, got {operation.state}"
-            )
+            raise RExecOpValidationError(f"pause requires running operation, got {operation.state}")
         plan = self.store.load_plan(operation_id)
         current = operation.current_step_id
         if current not in plan.pause_safe_points:
@@ -179,9 +175,7 @@ class OperationOrchestrator:
     def resume(self, operation_id: str) -> Operation:
         operation = self.store.load_operation(operation_id)
         if operation.state != OperationState.PAUSED.value:
-            raise RExecOpValidationError(
-                f"resume requires paused operation, got {operation.state}"
-            )
+            raise RExecOpValidationError(f"resume requires paused operation, got {operation.state}")
         self._transition(
             operation,
             OperationState.RESUMING,
@@ -216,16 +210,12 @@ class OperationOrchestrator:
     def retry(self, operation_id: str) -> Operation:
         operation = self.store.load_operation(operation_id)
         if operation.state != OperationState.FAILED.value:
-            raise RExecOpValidationError(
-                f"retry requires failed operation, got {operation.state}"
-            )
+            raise RExecOpValidationError(f"retry requires failed operation, got {operation.state}")
         plan = self.store.load_plan(operation_id)
         failure = dict(operation.metadata.get("last_failure") or {})
         error_class = str(failure.get("error_class") or "")
         if not self._error_retryable(plan, error_class=error_class):
-            raise RExecOpValidationError(
-                f"retry not allowed for error_class={error_class!r}"
-            )
+            raise RExecOpValidationError(f"retry not allowed for error_class={error_class!r}")
         cursor = self._execution_cursor(operation)
         step_id = str(failure.get("step_id") or "")
         attempts_by_step = dict(cursor.get("attempts_by_step") or {})
@@ -255,9 +245,7 @@ class OperationOrchestrator:
     def escalate(self, operation_id: str) -> dict[str, Any]:
         operation = self.store.load_operation(operation_id)
         if operation.state not in {OperationState.FAILED.value, OperationState.BLOCKED.value}:
-            raise RExecOpValidationError(
-                f"operation not escalatable from state: {operation.state}"
-            )
+            raise RExecOpValidationError(f"operation not escalatable from state: {operation.state}")
         package = build_escalation_package(operation=operation, store=self.store)
         self._transition(
             operation,
@@ -288,9 +276,7 @@ class OperationOrchestrator:
                 correlation_id=correlation_id,
             )
         elif operation.state == OperationState.PLANNED.value and is_mutating_mode(operation.mode):
-            raise RExecOpValidationError(
-                "mutating operation must be approved before start"
-            )
+            raise RExecOpValidationError("mutating operation must be approved before start")
 
         if operation.state == OperationState.RESUMING.value:
             self._transition(
@@ -325,9 +311,7 @@ class OperationOrchestrator:
             )
 
         if operation.state != OperationState.RUNNING.value:
-            raise RExecOpStateError(
-                f"operation must be running to execute, got {operation.state}"
-            )
+            raise RExecOpStateError(f"operation must be running to execute, got {operation.state}")
 
         if is_mutating_mode(operation.mode) and not self._allows_mutating(operation):
             raise RExecOpValidationError(
@@ -378,8 +362,8 @@ class OperationOrchestrator:
                     "profile_root": profile_root,
                     "connectors": dict(connectors),
                 }
-                shared_state["typed_execution_governance"] = (
-                    typed_execution_governance_overlay(operation.as_dict())
+                shared_state["typed_execution_governance"] = typed_execution_governance_overlay(
+                    operation.as_dict()
                 )
             sink = _WorkflowEvidenceSink(self, operation)
             policy_enforcement = self._policy_enforcement_for_operation(
@@ -398,6 +382,12 @@ class OperationOrchestrator:
                 max_steps=1,
                 policy_enforcement=policy_enforcement,
             )
+            latest = self.store.load_operation(operation_id)
+            latest.current_step_id = operation.current_step_id
+            latest.evidence_event_ids = list(
+                dict.fromkeys(latest.evidence_event_ids + operation.evidence_event_ids)
+            )
+            operation = latest
             operation.metadata["shared_state"] = run_result.shared_state
             operation.metadata["step_results"] = run_result.step_results
             cursor["next_step_index"] = run_result.next_step_index
@@ -703,7 +693,6 @@ class OperationOrchestrator:
             public_projection_allowlist=allowlist,
         )
         operation.evidence_event_ids.append(event_id)
-        self.store.save_operation(operation)
 
     def _resolve_step_projection_allowlist(
         self,

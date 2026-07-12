@@ -56,6 +56,7 @@ class Operation:
     metadata: dict[str, Any] = field(default_factory=dict)
     history: list[StateTransitionRecord] = field(default_factory=list)
     evidence_event_ids: list[str] = field(default_factory=list)
+    operation_revision: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -77,14 +78,12 @@ class Operation:
             "metadata": dict(self.metadata),
             "history": [item.as_dict() for item in self.history],
             "evidence_event_ids": list(self.evidence_event_ids),
+            "operation_revision": self.operation_revision,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Operation:
-        history = [
-            StateTransitionRecord.from_dict(item)
-            for item in data.get("history") or []
-        ]
+        history = [StateTransitionRecord.from_dict(item) for item in data.get("history") or []]
         return cls(
             id=str(data["id"]),
             profile=str(data["profile"]),
@@ -104,6 +103,7 @@ class Operation:
             metadata=dict(data.get("metadata") or {}),
             history=history,
             evidence_event_ids=[str(item) for item in data.get("evidence_event_ids") or []],
+            operation_revision=int(data.get("operation_revision") or 0),
         )
 
     @property

@@ -114,9 +114,7 @@ def _operation_status(store: RuntimeStore, entry: Mapping[str, Any]) -> dict[str
     recovery_blocker = operation.metadata.get("recovery_blocker")
     auto_reaction = operation.metadata.get("auto_reaction")
     inputs["runtime_metadata"] = {
-        "recovery_blocker": "present"
-        if isinstance(recovery_blocker, Mapping)
-        else "absent",
+        "recovery_blocker": "present" if isinstance(recovery_blocker, Mapping) else "absent",
         "auto_reaction": "present" if isinstance(auto_reaction, Mapping) else "absent",
         "idempotency": "present"
         if isinstance(operation.metadata.get("idempotency"), Mapping)
@@ -178,6 +176,8 @@ def _validate_sclite_refs(root: Path, operation: Operation, warnings: list[str])
     for role, ref in sorted(operation.sclite_refs.items()):
         if not isinstance(ref, Mapping):
             warnings.append(f"sclite_ref_invalid:{role}")
+            continue
+        if str(ref.get("status") or "") == "not_required":
             continue
         descriptor_path = str(ref.get("descriptor_path") or "").strip()
         if descriptor_path and not Path(descriptor_path).is_file():
@@ -269,8 +269,7 @@ def _safe_next_actions(
     needs_recovery: list[dict[str, Any]],
 ) -> list[str]:
     if needs_recovery or any(
-        "active_state_requires_runtime_recover" in item.get("blockers", [])
-        for item in blocked
+        "active_state_requires_runtime_recover" in item.get("blockers", []) for item in blocked
     ):
         return ["rexecop runtime recover --json", "rexecop runtime reconstruct-status --json"]
     if blocked:

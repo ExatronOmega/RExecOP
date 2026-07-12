@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpConcurrencyConflict, RExecOpValidationError
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 from rexecop.storage.atomic import FILE_MODE, secure_directory, secure_file
@@ -61,7 +61,7 @@ class SqliteStore:
             )
 
     @contextmanager
-    def _connection(self) -> Iterator[sqlite3.Connection]:
+    def _connection(self, *, immediate: bool = False) -> Iterator[sqlite3.Connection]:
         self.ensure_layout()
         if not self.db_path.exists():
             try:
@@ -79,6 +79,8 @@ class SqliteStore:
         try:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA foreign_keys=ON")
+            if immediate:
+                conn.execute("BEGIN IMMEDIATE")
             self._secure_database_files()
             yield conn
             conn.commit()
@@ -112,8 +114,20 @@ class SqliteStore:
         return self._files.load_approval(operation_id)
 
     def save_operation(self, operation: Operation) -> None:
-        payload = json.dumps(operation.as_dict(), sort_keys=True)
-        with self._connection() as conn:
+        with self._connection(immediate=True) as conn:
+            row = conn.execute(
+                "SELECT payload FROM operations WHERE id = ?", (operation.id,)
+            ).fetchone()
+            current_revision = 0
+            if row is not None:
+                current_revision = int(json.loads(str(row[0])).get("operation_revision") or 0)
+            if current_revision != operation.operation_revision:
+                raise RExecOpConcurrencyConflict(
+                    f"concurrency_conflict: operation {operation.id} expected revision "
+                    f"{operation.operation_revision}, found {current_revision}"
+                )
+            operation.operation_revision = current_revision + 1
+            payload = json.dumps(operation.as_dict(), sort_keys=True)
             conn.execute(
                 """
                 INSERT INTO operations (id, payload) VALUES (?, ?)

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import fcntl
 import json
 from pathlib import Path
 from typing import Any
 
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpConcurrencyConflict, RExecOpValidationError
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 from rexecop.storage.atomic import atomic_write_text, secure_directory
@@ -49,7 +50,25 @@ class FileStore:
     def save_operation(self, operation: Operation) -> None:
         self.ensure_layout()
         path = self.operations_dir / f"{operation.id}.json"
-        self._write_json(path, operation.as_dict())
+        lock_path = self.operations_dir / f"{operation.id}.lock"
+        with lock_path.open("a+", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            current_revision = 0
+            if path.is_file():
+                current = json.loads(path.read_text(encoding="utf-8"))
+                current_revision = int(current.get("operation_revision") or 0)
+                if current_revision != operation.operation_revision:
+                    raise RExecOpConcurrencyConflict(
+                        f"concurrency_conflict: operation {operation.id} expected revision "
+                        f"{operation.operation_revision}, found {current_revision}"
+                    )
+            elif operation.operation_revision != 0:
+                raise RExecOpConcurrencyConflict(
+                    f"concurrency_conflict: operation {operation.id} no longer exists"
+                )
+            operation.operation_revision = current_revision + 1
+            self._write_json(path, operation.as_dict())
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
     def load_operation(self, operation_id: str) -> Operation:
         path = self.operations_dir / f"{operation_id}.json"
@@ -116,8 +135,7 @@ class FileStore:
             event = json.loads(path.read_text())
             refs = event.get("refs")
             if operation_id and (
-                not isinstance(refs, dict)
-                or str(refs.get("operation_id") or "") != operation_id
+                not isinstance(refs, dict) or str(refs.get("operation_id") or "") != operation_id
             ):
                 continue
             if correlation_id and str(event.get("correlation_id") or "") != correlation_id:

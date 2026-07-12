@@ -27,7 +27,7 @@ from rexecop.connectors.action_shape import validate_http_action_shape
 from rexecop.environment.loader import load_environment
 from rexecop.environment.sanitize import sanitize_connectors_for_storage, validate_no_inline_secrets
 from rexecop.environment.targets import validate_operation_target
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpConcurrencyConflict, RExecOpValidationError
 from rexecop.evidence.event import EvidenceEventType
 from rexecop.observability.emitter import StructuredLogEmitter
 from rexecop.observability.evidence import ObservabilityEvidenceManager
@@ -637,16 +637,33 @@ class OperationController:
     def _drain_queue(self) -> list[str]:
         started: list[str] = []
         while True:
-            next_id = self.runtime.queue.peek()
-            if not next_id:
+            lease = self._execution_lease
+            if lease is None:
+                raise RExecOpConcurrencyConflict("concurrency_conflict: execution lease missing")
+            claim = self.runtime.queue.claim(
+                owner_token=str(lease["owner_token"]),
+                lease_epoch=int(lease["lease_epoch"]),
+                process_instance_id=str(lease["process_instance_id"]),
+            )
+            if claim is None:
                 break
+            next_id = str(claim["operation_id"])
             candidate = self.get_operation(next_id)
             if candidate.state != OperationState.APPROVED.value:
-                self.runtime.queue.remove(next_id)
+                self.runtime.queue.complete_claim(
+                    next_id,
+                    owner_token=str(lease["owner_token"]),
+                    lease_epoch=int(lease["lease_epoch"]),
+                )
                 continue
             if self.runtime.admit_for_execution(candidate) != "admitted":
                 break
             self._start_operation(next_id, drain_queue=False)
+            self.runtime.queue.complete_claim(
+                next_id,
+                owner_token=str(lease["owner_token"]),
+                lease_epoch=int(lease["lease_epoch"]),
+            )
             started.append(next_id)
         return started
 
@@ -700,24 +717,26 @@ class OperationController:
         return self.orchestrator.pause(operation_id)
 
     def resume(self, operation_id: str) -> Operation:
-        operation = self.get_operation(operation_id)
-        if is_mutating_mode(operation.mode):
-            self.runtime.check_maintenance_window(operation)
-            if self.runtime.admit_for_execution(operation) == "queued":
-                return self.get_operation(operation_id)
-        result = self.orchestrator.resume(operation_id)
-        self._release_runtime_if_terminal(result)
-        self._ensure_terminal_receipt_if_needed(operation_id)
-        self._drain_queue()
-        return self.get_operation(operation_id)
+        with self.execution_lease():
+            operation = self.get_operation(operation_id)
+            if is_mutating_mode(operation.mode):
+                self.runtime.check_maintenance_window(operation)
+                if self.runtime.admit_for_execution(operation) == "queued":
+                    return self.get_operation(operation_id)
+            result = self.orchestrator.resume(operation_id)
+            self._release_runtime_if_terminal(result)
+            self._ensure_terminal_receipt_if_needed(operation_id)
+            self._drain_queue()
+            return self.get_operation(operation_id)
 
     def cancel(self, operation_id: str) -> Operation:
-        operation = self.get_operation(operation_id)
-        result = self.orchestrator.cancel(operation_id)
-        self.runtime.release_operation(operation)
-        self.runtime.queue.remove(operation_id)
-        self._drain_queue()
-        return result
+        with self.execution_lease():
+            operation = self.get_operation(operation_id)
+            result = self.orchestrator.cancel(operation_id)
+            self.runtime.release_operation(operation)
+            self.runtime.queue.remove(operation_id)
+            self._drain_queue()
+            return result
 
     def retry(self, operation_id: str) -> Operation:
         with self.execution_lease():

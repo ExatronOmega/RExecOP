@@ -43,9 +43,7 @@ class RuntimeCoordinator:
             return
         allowed, reason = maintenance_window_allows(windows)
         if not allowed:
-            raise RExecOpValidationError(
-                f"apply blocked outside maintenance window ({reason})"
-            )
+            raise RExecOpValidationError(f"apply blocked outside maintenance window ({reason})")
 
     def count_active_operations(self, *, exclude_operation_id: str | None = None) -> int:
         count = 0
@@ -81,7 +79,7 @@ class RuntimeCoordinator:
             self._mark_queued(operation, reason="max_concurrent_reached")
             return "queued"
 
-        self.queue.remove(operation.id)
+        self.queue.discard_pending(operation.id)
         operation.metadata.pop("queue", None)
         self.store.save_operation(operation)
         return "admitted"
@@ -96,7 +94,7 @@ class RuntimeCoordinator:
                 target=operation.target,
                 operation_id=operation.id,
             )
-        self.queue.remove(operation.id)
+        self.queue.discard_pending(operation.id)
 
     def _mark_queued(self, operation: Operation, *, reason: str) -> None:
         position = self.queue.enqueue(operation.id)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpConcurrencyConflict, RExecOpValidationError
 from rexecop.operation.model import Operation
 from rexecop.operation.plan import OperationPlan
 from rexecop.storage.file_store import FileStore
@@ -27,16 +27,24 @@ class InMemoryStore:
         return None
 
     def save_operation(self, operation: Operation) -> None:
-        self._operations[operation.id] = operation
+        current = self._operations.get(operation.id)
+        current_revision = current.operation_revision if current is not None else 0
+        if current_revision != operation.operation_revision:
+            raise RExecOpConcurrencyConflict(
+                f"concurrency_conflict: operation {operation.id} expected revision "
+                f"{operation.operation_revision}, found {current_revision}"
+            )
+        operation.operation_revision = current_revision + 1
+        self._operations[operation.id] = Operation.from_dict(operation.as_dict())
 
     def load_operation(self, operation_id: str) -> Operation:
         operation = self._operations.get(operation_id)
         if operation is None:
             raise RExecOpValidationError(f"operation not found: {operation_id}")
-        return operation
+        return Operation.from_dict(operation.as_dict())
 
     def list_operations(self) -> list[Operation]:
-        return list(self._operations.values())
+        return [Operation.from_dict(item.as_dict()) for item in self._operations.values()]
 
     def save_plan(self, plan: OperationPlan) -> None:
         self._plans[plan.operation_id] = plan
@@ -73,9 +81,7 @@ class InMemoryStore:
             ]
         if correlation_id:
             items = [
-                item
-                for item in items
-                if str(item.get("correlation_id") or "") == correlation_id
+                item for item in items if str(item.get("correlation_id") or "") == correlation_id
             ]
         return items[-bounded_limit:]
 
