@@ -165,6 +165,7 @@ def test_public_index_release_smoke_verify_post_publish(
         module = _load(name, path)
         if path == PREFLIGHT:
             module.RELEASE_EVIDENCE_DIR = evidence_dir
+            module._collect_sibling_repo_errors = lambda *_args, **_kwargs: None
         return module
 
     monkeypatch.setattr(release, "_load_module", fake_load)
@@ -205,5 +206,4 @@ def test_public_index_release_smoke_verify_post_publish(
     )
     assert (evidence_dir / f"{version}.json").is_file()
     verified = fake_load("rexecop_validate_release_train_preflight", PREFLIGHT)
-    verified._collect_sibling_repo_errors = lambda *_args, **_kwargs: None
     assert verified.collect_errors(post_publish=True, stack_repos={}) == []
