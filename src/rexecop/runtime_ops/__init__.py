@@ -1,21 +1,33 @@
-"""Runtime operation mechanics: queue, locks, maintenance, rollback."""
+"""Runtime operation mechanics with cycle-safe lazy public exports."""
 
-from rexecop.runtime_ops.coordinator import RuntimeCoordinator
-from rexecop.runtime_ops.maintenance import maintenance_window_allows
-from rexecop.runtime_ops.monitor import OperationMonitor, StepMonitorStatus, parse_timeout_seconds
-from rexecop.runtime_ops.queue import RunNowQueue
-from rexecop.runtime_ops.rollback import RollbackExecutor
-from rexecop.runtime_ops.target_lock import TargetLockManager
-from rexecop.runtime_ops.watchdog import WatchdogService
+from __future__ import annotations
 
-__all__ = [
-    "OperationMonitor",
-    "RunNowQueue",
-    "RollbackExecutor",
-    "RuntimeCoordinator",
-    "StepMonitorStatus",
-    "TargetLockManager",
-    "WatchdogService",
-    "maintenance_window_allows",
-    "parse_timeout_seconds",
-]
+from importlib import import_module
+from typing import Any
+
+_EXPORTS = {
+    "OperationMonitor": ("rexecop.runtime_ops.monitor", "OperationMonitor"),
+    "RunNowQueue": ("rexecop.runtime_ops.queue", "RunNowQueue"),
+    "RollbackExecutor": ("rexecop.runtime_ops.rollback", "RollbackExecutor"),
+    "RuntimeCoordinator": ("rexecop.runtime_ops.coordinator", "RuntimeCoordinator"),
+    "StepMonitorStatus": ("rexecop.runtime_ops.monitor", "StepMonitorStatus"),
+    "TargetLockManager": ("rexecop.runtime_ops.target_lock", "TargetLockManager"),
+    "WatchdogService": ("rexecop.runtime_ops.watchdog", "WatchdogService"),
+    "maintenance_window_allows": (
+        "rexecop.runtime_ops.maintenance",
+        "maintenance_window_allows",
+    ),
+    "parse_timeout_seconds": ("rexecop.runtime_ops.monitor", "parse_timeout_seconds"),
+}
+
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name: str) -> Any:
+    target = _EXPORTS.get(name)
+    if target is None:
+        raise AttributeError(name)
+    module_name, attribute = target
+    value = getattr(import_module(module_name), attribute)
+    globals()[name] = value
+    return value
