@@ -146,7 +146,7 @@ jobs:
           else
             git worktree add --detach /tmp/rexecop-release-evidence "$GITHUB_SHA"
             git -C /tmp/rexecop-release-evidence switch --orphan release-evidence
-            git -C /tmp/rexecop-release-evidence rm -rf .
+            git -C /tmp/rexecop-release-evidence rm -rf . || true
           fi
           mkdir -p /tmp/rexecop-release-evidence/release-evidence
           cp ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
