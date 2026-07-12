@@ -22,7 +22,7 @@ from rexecop.runtime.contract_compatibility import (  # noqa: E402
 
 EXPECTED_REXECOP = "0.3.0rc1"
 EXPECTED_GOVENGINE = "govengine==0.17.0rc1"
-EXPECTED_SCLITE = "sclite-core==2.0.0rc1"
+EXPECTED_SCLITE = "sclite-core==2.0.0"
 EXPECTED_TECRAX = "tecrax==0.4.0rc1"
 
 ACTIVE_READINESS = (
@@ -36,7 +36,7 @@ NON_ACTIVE_READINESS = (
 )
 
 REQUIRED_DOC_MARKERS = (
-    "sclite-core==2.0.0rc1",
+    "sclite-core==2.0.0",
     "govengine==0.17.0rc1",
     "rexecop` | `0.3.0rc1`",
     "tecrax==0.4.0rc1",

@@ -29,6 +29,7 @@ _STACK_REPO_ENV: dict[str, str] = {
     "sclite": "GOVSTACK_REPO_SCLITE",
     "tecrax": "GOVSTACK_REPO_TECRAX",
 }
+_DEFAULT_STACK_PARENT = ROOT.parent
 
 _VALIDATOR_MODULES: tuple[Any, Any] | None = None
 
@@ -42,6 +43,10 @@ def stack_repos_from_env() -> dict[str, Path]:
         value = os.environ.get(env_var, "").strip()
         if value:
             repos[name] = Path(value)
+            continue
+        sibling = _DEFAULT_STACK_PARENT / name
+        if (sibling / "pyproject.toml").is_file():
+            repos[name] = sibling
     return repos
 
 
@@ -147,25 +152,32 @@ def _collect_sibling_repo_errors(
     expected_tecrax: str,
     stack_repos: dict[str, Path],
 ) -> None:
+    for name in _STACK_REPO_ENV:
+        repo = stack_repos.get(name)
+        if repo is None:
+            errors.append(f"sibling_repo_missing:{name}")
+        elif not (repo / "pyproject.toml").is_file():
+            errors.append(f"sibling_repo_invalid:{name}:{repo}")
+
     sclite_pin = expected_sclite.split("==", 1)[1]
     tecrax_pin = expected_tecrax.split("==", 1)[1]
 
     sclite_repo = stack_repos.get("sclite")
-    if sclite_repo and sclite_repo.is_dir():
+    if sclite_repo and (sclite_repo / "pyproject.toml").is_file():
         project = _read_toml_project(sclite_repo / "pyproject.toml")
         version = str(project.get("version", ""))
         if version != sclite_pin:
             errors.append(f"sclite_repo_version_mismatch:{version}!={sclite_pin}")
 
     govengine_repo = stack_repos.get("govengine")
-    if govengine_repo and govengine_repo.is_dir():
+    if govengine_repo and (govengine_repo / "pyproject.toml").is_file():
         project = _read_toml_project(govengine_repo / "pyproject.toml")
         dep = _dependency(project, "sclite-core")
         if dep != expected_sclite:
             errors.append(f"govengine_repo_sclite_pin_mismatch:{dep}!={expected_sclite}")
 
     tecrax_repo = stack_repos.get("tecrax")
-    if tecrax_repo and tecrax_repo.is_dir():
+    if tecrax_repo and (tecrax_repo / "pyproject.toml").is_file():
         project = _read_toml_project(tecrax_repo / "pyproject.toml")
         checks = (
             ("govengine", expected_govengine),

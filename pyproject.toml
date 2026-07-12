@@ -9,7 +9,7 @@ dependencies = [
     "typer>=0.12.0",
     "PyYAML>=6.0",
     "govengine==0.17.0rc1",
-    "sclite-core==2.0.0rc1",
+    "sclite-core==2.0.0",
 ]
 
 [project.urls]
@@ -25,7 +25,7 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 sclite = [
-    "sclite-core==2.0.0rc1",
+    "sclite-core==2.0.0",
 ]
 tecrax = [
     "tecrax==0.4.0rc1",

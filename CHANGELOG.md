@@ -50,7 +50,7 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
   directory with the complete operation bundle. RExecOp sidecars are not
   misrepresented as SCLite closed-world `public_export` files.
 - Pins the local candidate line to `govengine==0.17.0rc1` and
-  `sclite-core==2.0.0rc1`, with `tecrax==0.4.0rc1` retained as the matching
+  `sclite-core==2.0.0`, with `tecrax==0.4.0rc1` retained as the matching
   optional profile candidate.
 - No execution, profile, or governance semantics change: this package exists
   to validate the exact downstream candidate pair before publication. The

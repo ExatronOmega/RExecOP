@@ -13,7 +13,7 @@ if str(SRC) not in sys.path:
 import rexecop  # noqa: E402
 
 EXPECTED_GOVENGINE = "govengine==0.17.0rc1"
-EXPECTED_SCLITE = "sclite-core==2.0.0rc1"
+EXPECTED_SCLITE = "sclite-core==2.0.0"
 EXPECTED_TECRAX_EXTRA = "tecrax==0.4.0rc1"
 PUBLISHED_PYPI_VERSION = "0.2.24a0"
 
@@ -332,6 +332,12 @@ def collect_errors() -> list[str]:
     _require(errors, ".github/workflows/publish.yml", "workflow_dispatch")
     _require(errors, ".github/workflows/publish.yml", "twine upload")
     _require(errors, ".github/workflows/publish.yml", "validate_distribution.py")
+    _require(errors, ".github/workflows/publish.yml", "govengine_ref:")
+    _require(errors, ".github/workflows/publish.yml", "sclite_ref:")
+    _require(errors, ".github/workflows/publish.yml", "tecrax_ref:")
+    _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_GOVENGINE:")
+    _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_SCLITE:")
+    _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_TECRAX:")
 
     init_text = _read("src/rexecop/__init__.py")
     if f'__version__ = "{version}"' not in init_text:

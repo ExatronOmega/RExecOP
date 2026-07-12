@@ -27,7 +27,7 @@ policy engine or a parallel truth layer.
 | Delivery | Unpublished coordinated candidate; published `0.2.24a0` remains the public alpha line |
 | Tests | CI reruns the current suite; `pytest -m delivery` runs the sign-off scope |
 | Latest PyPI | [`rexecop==0.2.24a0`](https://pypi.org/project/rexecop/0.2.24a0/) |
-| Source dependencies | `govengine==0.17.0rc1`, `sclite-core==2.0.0rc1` (see `pyproject.toml`) |
+| Source dependencies | `govengine==0.17.0rc1`, `sclite-core==2.0.0` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
 | Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,16 +24,47 @@ def _load_validator():
     return module
 
 
-def test_release_train_preflight_passes() -> None:
+def test_release_train_preflight_passes(tmp_path: Path) -> None:
     validator = _load_validator()
     public_truth, _ = validator._validator_modules()
     version = public_truth.current_version()
+    projects = {
+        "govengine": f'''
+[project]
+name = "govengine"
+version = "0.17.0rc1"
+dependencies = ["{public_truth.EXPECTED_SCLITE}"]
+''',
+        "sclite": '''
+[project]
+name = "sclite-core"
+version = "2.0.0"
+dependencies = []
+''',
+        "tecrax": f'''
+[project]
+name = "tecrax"
+version = "0.4.0rc1"
+dependencies = [
+  "{public_truth.EXPECTED_GOVENGINE}",
+  "{public_truth.EXPECTED_SCLITE}",
+  "rexecop=={version}",
+]
+''',
+    }
+    env = os.environ.copy()
+    for name, content in projects.items():
+        repo = tmp_path / name
+        repo.mkdir()
+        (repo / "pyproject.toml").write_text(content, encoding="utf-8")
+        env[validator._STACK_REPO_ENV[name]] = str(repo)
     result = subprocess.run(
         [sys.executable, str(SCRIPT)],
         cwd=ROOT,
         text=True,
         capture_output=True,
         check=True,
+        env=env,
     )
     assert result.stdout.strip() == validator.success_line(
         version,
@@ -77,6 +109,32 @@ dependencies = [
     )
     errors = validator.collect_errors(stack_repos={"tecrax": tecrax_root})
     assert any("tecrax_repo_rexecop_pin_mismatch" in item for item in errors)
+
+
+def test_release_train_preflight_rejects_sclite_repo_version_drift(tmp_path: Path) -> None:
+    validator = _load_validator()
+    sclite_root = tmp_path / "sclite"
+    sclite_root.mkdir()
+    (sclite_root / "pyproject.toml").write_text(
+        '''
+[project]
+name = "sclite-core"
+version = "2.0.0rc1"
+dependencies = []
+'''.strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    errors = validator.collect_errors(stack_repos={"sclite": sclite_root})
+    assert "sclite_repo_version_mismatch:2.0.0rc1!=2.0.0" in errors
+
+
+def test_release_train_preflight_rejects_missing_sibling_repos() -> None:
+    validator = _load_validator()
+    errors = validator.collect_errors(stack_repos={})
+    assert "sibling_repo_missing:govengine" in errors
+    assert "sibling_repo_missing:sclite" in errors
+    assert "sibling_repo_missing:tecrax" in errors
 
 
 def test_release_train_preflight_post_publish_requires_evidence(

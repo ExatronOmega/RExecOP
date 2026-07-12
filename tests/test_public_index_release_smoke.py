@@ -145,4 +145,5 @@ def test_public_index_release_smoke_verify_post_publish(
     )
     assert (evidence_dir / f"{version}.md").is_file()
     verified = fake_load("rexecop_validate_release_train_preflight", PREFLIGHT)
+    verified._collect_sibling_repo_errors = lambda *_args, **_kwargs: None
     assert verified.collect_errors(post_publish=True, stack_repos={}) == []

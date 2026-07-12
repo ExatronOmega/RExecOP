@@ -7,6 +7,16 @@ on:
         description: Package version to publish (must match pyproject.toml)
         required: true
         default: "0.2.11a0"
+      govengine_ref:
+        description: Exact GovEngine commit SHA for this release train
+        required: true
+      sclite_ref:
+        description: Exact SCLite commit SHA for this release train
+        required: true
+        default: "42d6d77ab95ee793efb0cde5459aa279c5a99016"
+      tecrax_ref:
+        description: Exact Tecrax commit SHA for this release train
+        required: true
 
 permissions:
   contents: read
@@ -18,11 +28,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout exact GovEngine release-train source
+        uses: actions/checkout@v4
+        with:
+          repository: rozmiarD/GovEngine
+          ref: ${{ inputs.govengine_ref }}
+          path: .govstack/govengine
+
+      - name: Checkout exact SCLite release-train source
+        uses: actions/checkout@v4
+        with:
+          repository: rozmiarD/SCLite
+          ref: ${{ inputs.sclite_ref }}
+          path: .govstack/sclite
+
+      - name: Checkout exact Tecrax release-train source
+        uses: actions/checkout@v4
+        with:
+          repository: rozmiarD/tecrax
+          ref: ${{ inputs.tecrax_ref }}
+          path: .govstack/tecrax
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Validate version and public truth
+        env:
+          GOVSTACK_REPO_GOVENGINE: ${{ github.workspace }}/.govstack/govengine
+          GOVSTACK_REPO_SCLITE: ${{ github.workspace }}/.govstack/sclite
+          GOVSTACK_REPO_TECRAX: ${{ github.workspace }}/.govstack/tecrax
         run: |
           python scripts/validate_public_truth.py
           python scripts/validate_stack_contracts.py
