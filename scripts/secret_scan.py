@@ -45,6 +45,7 @@ PLACEHOLDER = re.compile(
     rb"(?i)^(?:example|sample|dummy|fake|test|fixture|placeholder|redacted|"
     rb"changeme|replace(?:_me)?|plaintext|value|abc|tok|token-value|"
     rb"pbs-secret|from-file|secret-value|secret-token|pbs-token-value|"
+    rb"private-plugin-exception-detail|"
     rb"user@pam!token-id=uuid|rexecop|write|\$[A-Za-z_{].*|\{[A-Za-z_{].*|<.*)"
 )
 GITHUB_OIDC_PERMISSION = re.compile(rb"(?i)id-token\s*:\s*write")
