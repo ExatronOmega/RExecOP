@@ -27,8 +27,8 @@ rexecop --root /operator/rexecop-runtime doctor
 
 | Backend | Env / CLI | Use |
 | --- | --- | --- |
-| `file` (default) | `REXECOP_STORAGE=file` or omit | Single-operator JSON files |
-| `sqlite` | `REXECOP_STORAGE=sqlite` or `--storage sqlite` | Same runtime root with operations/plans/evidence in SQLite |
+| `file` (default) | `REXECOP_STORAGE=file` or omit | Stable-certified single-host/single-executor runtime |
+| `sqlite` | `REXECOP_STORAGE=sqlite` or `--storage sqlite` | Alpha storage evaluation; not stable-runtime certified |
 
 Factory: `rexecop.storage.factory.create_store()`.
 
@@ -48,6 +48,10 @@ Factory: `rexecop.storage.factory.create_store()`.
 files to avoid torn reads on crash. Runtime directories are forced to mode `0700`; JSON,
 receipt, lock, queue and SCLite files are forced to `0600`.
 
+The stable certification is deliberately narrow: one active executor per runtime root,
+enforced by the fenced execution lease. Set `REXECOP_EXECUTOR_POSTURE=single_executor`;
+`rexecop doctor` blocks multi-worker or distributed-executor posture.
+
 Operator backup and post-crash reconciliation are documented in
 [runtime-recovery-ops.md](runtime-recovery-ops.md) (`backup create/restore`,
 `runtime recover`).
@@ -66,6 +70,10 @@ filesystem paths so review tooling and host-owned workers keep stable paths acro
 `PRAGMA journal_mode=WAL` is enabled on open.
 The database, WAL and shared-memory files are forced to mode `0600` inside a `0700`
 runtime directory.
+
+SQLite remains supported for alpha evaluation, but `rexecop doctor` reports it as a
+stable-runtime blocker. Its auxiliary queue, lease, attempt and projection paths still use
+the filesystem, so selecting SQLite does not create a fully transactional runtime backend.
 
 ## InMemoryStore (tests)
 

@@ -91,7 +91,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - GovEngine `PolicyEngine` when `environment.policy_pack` is set, plus
   `rexecop.policy_pack_lifecycle.v0.1` projections for pack status, digest and enforcement binding
 - Operator target catalog and profile-derived operation catalog with drift rejection at start
-- Storage: `FileStore` (default) or optional `SqliteStore` (`REXECOP_STORAGE` / `--storage`)
+- Storage: stable-certified single-host `FileStore` (default); `SqliteStore` remains alpha-only
+  (`REXECOP_STORAGE` / `--storage`)
 - Secrets port: `REXECOP_SECRET_*` and `REXECOP_SECRETS_FILE` (no plaintext secrets in git or `.rexecop/`)
 
 **Runtime readiness and operator UX**

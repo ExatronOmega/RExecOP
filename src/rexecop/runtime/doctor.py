@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.metadata as metadata
+import os
 from pathlib import Path
 from typing import Any
 
@@ -35,14 +36,15 @@ def run_runtime_doctor(
     profile: str | None = None,
     env_path: Path | None = None,
     catalog_path: Path | None = None,
+    executor_posture: str | None = None,
 ) -> dict[str, Any]:
     profile_check = _check_profile(profile)
-    expected_profile = str(
-        (profile_check.get("details") or {}).get("profile") or ""
-    )
+    expected_profile = str((profile_check.get("details") or {}).get("profile") or "")
+    storage_check = _check_storage_backend(storage_backend)
     checks = [
         _check_runtime_root(root),
-        _check_storage_backend(storage_backend),
+        storage_check,
+        _check_executor_posture(executor_posture or os.environ.get("REXECOP_EXECUTOR_POSTURE")),
         _check_runtime_layout(root),
         _check_stack_packages(),
         _check_typed_execution_stack_compatibility(),
@@ -55,14 +57,8 @@ def run_runtime_doctor(
     blockers = [check["id"] for check in checks if check["status"] == CHECK_BLOCKER]
     warnings = [check["id"] for check in checks if check["status"] == CHECK_WARNING]
     status = CHECK_BLOCKER if blockers else CHECK_WARNING if warnings else CHECK_PASSED
-    next_actions = [
-        str(check["next_action"])
-        for check in checks
-        if check.get("next_action")
-    ]
-    profile_version = str(
-        (profile_check.get("details") or {}).get("version") or ""
-    )
+    next_actions = [str(check["next_action"]) for check in checks if check.get("next_action")]
+    profile_version = str((profile_check.get("details") or {}).get("version") or "")
     return {
         "schema": DOCTOR_REPORT_SCHEMA,
         "status": status,
@@ -120,9 +116,49 @@ def _check_storage_backend(storage_backend: str | None) -> dict[str, Any]:
         return _check("storage_backend", CHECK_BLOCKER, str(exc))
     return _check(
         "storage_backend",
+        CHECK_PASSED if backend == "file" else CHECK_BLOCKER,
+        (
+            "storage backend is certified for stable single-host execution"
+            if backend == "file"
+            else "storage backend is supported but not stable-runtime certified"
+        ),
+        details={
+            "backend": backend,
+            "certification_tier": (
+                "stable_single_host" if backend == "file" else "alpha_single_host"
+            ),
+            "single_executor": backend == "file",
+            "multi_executor": False,
+        },
+        next_action=(
+            "set REXECOP_STORAGE=file for stable single-host execution" if backend != "file" else ""
+        ),
+    )
+
+
+def _check_executor_posture(value: str | None) -> dict[str, Any]:
+    posture = (value or "single_executor").strip().lower()
+    if posture != "single_executor":
+        return _check(
+            "executor_posture",
+            CHECK_BLOCKER,
+            "only one active executor per runtime root is certified",
+            details={
+                "requested": posture,
+                "certified": "single_executor",
+                "distributed_or_multi_worker": False,
+            },
+            next_action="set REXECOP_EXECUTOR_POSTURE=single_executor",
+        )
+    return _check(
+        "executor_posture",
         CHECK_PASSED,
-        "storage backend is supported",
-        details={"backend": backend},
+        "single-executor runtime posture is certified",
+        details={
+            "requested": posture,
+            "certified": "single_executor",
+            "lease_scope": "one runtime root",
+        },
     )
 
 
@@ -180,9 +216,7 @@ def _check_typed_execution_stack_compatibility() -> dict[str, Any]:
         "GovEngine typed execution controls cover RExecOp backend descriptors",
         details={
             "supported_backends": result["supported_backends"],
-            "control_count": len(
-                result["govengine_control_catalog"].get("controls") or []
-            ),
+            "control_count": len(result["govengine_control_catalog"].get("controls") or []),
         },
     )
 
@@ -321,7 +355,7 @@ def _check_environment(env_path: Path | None, *, expected_profile: str) -> dict[
         "profile": environment.profile,
         "target_count": len(environment.targets),
         "connector_count": len(environment.connectors),
-            "secret_ref_count": count_secret_refs(environment.as_dict()),
+        "secret_ref_count": count_secret_refs(environment.as_dict()),
     }
     if expected_profile and environment.profile and environment.profile != expected_profile:
         status = CHECK_BLOCKER
@@ -394,9 +428,7 @@ def _check_network_egress_posture(env_path: Path | None) -> dict[str, Any]:
             address_class = str(binding.get("address_class") or "")
             egress = bool(config.get("operator_egress_enforced"))
             if address_class == "dns_name" and not (
-                egress
-                and str(config.get("dns_rebinding_protection") or "")
-                == "operator_egress"
+                egress and str(config.get("dns_rebinding_protection") or "") == "operator_egress"
             ):
                 blockers.append(f"{name}:dns_rebinding_control_missing")
             if address_class in {"private", "loopback", "link_local"} and not (

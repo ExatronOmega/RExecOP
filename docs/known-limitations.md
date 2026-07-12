@@ -17,7 +17,8 @@ This document states what the current published alpha line does **not** provide 
 | --- | --- |
 | Host-owned worker only | `rexecop worker run` polls the file queue; no built-in cron/recurrence DSL |
 | Runtime root is explicit but local | CLI supports global `--root`, `REXECOP_ROOT`, named `--instance` / `REXECOP_INSTANCE`, `init`, `doctor`, `env lint`, `profile lint`, and a fixture first-run path; this is runtime isolation, not multi-tenant RBAC |
-| File storage default | `FileStore` is default; optional `SqliteStore` via `REXECOP_STORAGE=sqlite` |
+| One executor per root | Stable runtime certification covers `FileStore` with one active executor; multi-worker/distributed execution is blocked by `doctor` |
+| SQLite alpha-only | `SqliteStore` is selectable via `REXECOP_STORAGE=sqlite`, but is not stable-runtime certified |
 | No web UI | CLI (`rexecop`) only |
 | No multi-tenant RBAC | Single-operator storage model |
 | Target lock is advisory | File-based lock per `(environment, target)` — not a distributed lock service |

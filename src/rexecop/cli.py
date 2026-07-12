@@ -306,6 +306,7 @@ def doctor_cmd(
         profile=profile,
         env_path=env,
         catalog_path=catalog,
+        executor_posture=os.environ.get("REXECOP_EXECUTOR_POSTURE"),
     )
     emit_payload(result, renderers=DOCTOR_RENDERERS)
     if result["status"] == CHECK_BLOCKER:
