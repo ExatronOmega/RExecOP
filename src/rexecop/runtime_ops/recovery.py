@@ -10,6 +10,7 @@ from rexecop.operation.state import OperationState, validate_transition
 from rexecop.runtime_ops.attempts import AttemptJournal
 from rexecop.runtime_ops.coordinator import ACTIVE_RUNTIME_STATES
 from rexecop.runtime_ops.lease import DEFAULT_LEASE_TTL_SECONDS, WorkerLeaseManager
+from rexecop.runtime_ops.projection import reconcile_pending_projections
 from rexecop.runtime_ops.target_lock import TargetLockManager
 from rexecop.storage.port import RuntimeStore
 
@@ -55,6 +56,7 @@ def run_startup_recovery(
     receipt_blockers: list[dict[str, Any]] = []
     if repair_receipts:
         receipt_repairs, receipt_blockers = _repair_terminal_receipts(ctrl)
+    projection_reconciliation = reconcile_pending_projections(ctrl)
 
     report = {
         "schema": RECOVERY_REPORT_SCHEMA,
@@ -67,6 +69,7 @@ def run_startup_recovery(
             "indeterminate_attempts": indeterminate_attempts,
             "receipt_repairs": receipt_repairs,
             "receipt_blockers": receipt_blockers,
+            "projection_reconciliation": projection_reconciliation,
         },
         "summary": {
             "changed": bool(
@@ -76,12 +79,14 @@ def run_startup_recovery(
                 or indeterminate_attempts
                 or receipt_repairs
                 or receipt_blockers
+                or projection_reconciliation["projected"]
             ),
             "interrupted_count": len(interrupted),
             "indeterminate_attempt_count": len(indeterminate_attempts),
             "released_lock_count": len(released_locks),
             "receipt_repair_count": len(receipt_repairs),
             "receipt_blocker_count": len(receipt_blockers),
+            "projection_reconciled_count": len(projection_reconciliation["projected"]),
         },
     }
     if lease_record is None:

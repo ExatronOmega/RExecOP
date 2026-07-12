@@ -53,6 +53,7 @@ from rexecop.runtime_ops.idempotency import (
     start_idempotency_key,
 )
 from rexecop.runtime_ops.lease import WorkerLeaseManager
+from rexecop.runtime_ops.projection import mark_projection_pending
 from rexecop.runtime_ops.recovery import ensure_terminal_receipt, start_is_idempotent
 from rexecop.storage.atomic import atomic_write_text
 from rexecop.storage.factory import create_store
@@ -527,6 +528,12 @@ class OperationController:
             },
         )
         operation.evidence_event_ids.append(receipt_event)
+        marker = operation.metadata.get("sclite_projection")
+        if isinstance(marker, dict) and marker.get("status") == "pending":
+            marker["status"] = "projected"
+            marker["projected_revision"] = operation.operation_revision
+            marker["receipt_export_path"] = str(path)
+            operation.metadata["sclite_projection"] = marker
         self.structured_log.emit(
             event_kind="receipt_exported",
             correlation_id=operation.correlation_id,
@@ -904,6 +911,11 @@ class OperationController:
         operation.history.append(record)
         operation.state = target.value
         operation.updated_at = record.timestamp_utc
+        mark_projection_pending(
+            operation.metadata,
+            operation_revision=operation.operation_revision + 1,
+            state=target.value,
+        )
 
         event_id = self.evidence.emit(
             operation_id=operation.id,
