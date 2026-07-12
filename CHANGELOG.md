@@ -18,6 +18,8 @@
   collision guards, bounded compatibility failures and stable-doctor inventory/allowlist checks.
 - Makes declared operation, runtime-ops and storage modules cycle-safe lazy exports;
   fresh subprocess imports now succeed without relying on prior package import order.
+- Adds `validate_m95n_gate.py` to keep the bounded ports, permit, reason-code,
+  trusted-plugin and fresh-import contracts in the alpha sign-off path.
 
 - Starts M8.6 security hardening: pagination is same-origin only with loop
   detection, auth headers cannot target transport-reserved names, and public
