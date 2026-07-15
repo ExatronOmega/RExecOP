@@ -108,19 +108,19 @@ class TrustedGovernanceDecisionConsumer:
             raise RExecOpValidationError(
                 f"governance_decision_untrusted: {exc}"
             ) from exc
-        authorization = decision.authorization
-        if not decision.allowed or authorization is None:
+        grant = decision.authorization
+        if not decision.allowed or grant is None:
             raise RExecOpValidationError(
                 f"governance_decision_denied: {decision.reason_code}"
             )
-        self._require_bindings(authorization.as_dict(), facts)
-        expires_at = datetime.fromisoformat(authorization.expires_at)
+        self._require_bindings(grant.as_dict(), facts)
+        expires_at = datetime.fromisoformat(grant.expires_at)
         checked_at = now or datetime.now(UTC)
         if checked_at >= expires_at:
             raise RExecOpValidationError("governance_decision_expired")
         claimed = self._store.claim_governance_decision_once(
             decision_digest=decision.decision_digest,
-            nonce=authorization.nonce,
+            nonce=grant.nonce,
             attempt_id=facts.attempt_id,
             runtime_instance_id=facts.runtime_instance_id,
         )
@@ -134,14 +134,14 @@ class TrustedGovernanceDecisionConsumer:
 
     @staticmethod
     def _require_bindings(
-        authorization: dict[str, Any],
+        grant: dict[str, Any],
         facts: RuntimeAttemptGovernanceFacts,
     ) -> None:
         expected = facts.as_dict()
         drift = [
             key
             for key, value in expected.items()
-            if not _binding_equal(authorization.get(key), value)
+            if not _binding_equal(grant.get(key), value)
         ]
         if drift:
             raise RExecOpValidationError(

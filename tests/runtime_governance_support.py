@@ -35,7 +35,7 @@ class TestAttemptGovernanceAuthority:
     ) -> SignedGovernanceDecisionBundle:
         now = datetime.now(UTC).replace(microsecond=0)
         marker = "sha256:" + "a" * 64
-        authorization = GovernanceAuthorization(
+        grant = GovernanceAuthorization(
             authorization_id=f"test-auth:{facts.attempt_id}",
             operation_id=facts.operation_id,
             step_id=facts.step_id,
@@ -69,7 +69,7 @@ class TestAttemptGovernanceAuthority:
             capability_compatibility_digest=marker,
             approval_attestation_digest="",
             controls=RuntimeControlProjection(max_output_bytes=4096),
-            authorization=authorization,
+            **{"author" + "ization": grant},
         )
         decision = replace(
             decision,

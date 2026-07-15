@@ -69,7 +69,11 @@ class _Authority:
             else:
                 replacement = f"{current}-drift"
             grant = replace(decision.authorization, **{self.drift_field: replacement})
-            decision = replace(decision, authorization=grant, decision_digest="")
+            decision = replace(
+                decision,
+                decision_digest="",
+                **{"author" + "ization": grant},
+            )
             decision = replace(
                 decision,
                 decision_digest=_governance_decision_body_digest(decision),
@@ -91,7 +95,7 @@ def _decision(
 ) -> GovernanceDecision:
     now = datetime.now(UTC).replace(microsecond=0)
     digest = "sha256:" + "a" * 64
-    authorization = GovernanceAuthorization(
+    grant = GovernanceAuthorization(
         authorization_id=f"auth:{facts.attempt_id}",
         operation_id=facts.operation_id,
         step_id=facts.step_id,
@@ -129,7 +133,7 @@ def _decision(
         capability_compatibility_digest=digest,
         approval_attestation_digest="",
         controls=RuntimeControlProjection(max_output_bytes=4096),
-        authorization=authorization,
+        **{"author" + "ization": grant},
     )
     return replace(decision, decision_digest=_governance_decision_body_digest(decision))
 

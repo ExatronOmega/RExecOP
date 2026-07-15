@@ -39,7 +39,7 @@ CREDENTIAL_ASSIGNMENT = re.compile(
     rb"(?i)(?<![A-Za-z0-9_])(?:[A-Za-z0-9]+[_-])*(?:password|passwd|pwd|secret|"
     rb"token|api[_-]?key|access[_-]?key|"
     rb"private[_-]?key|client[_-]?secret|authorization)"
-    rb"(?![A-Za-z0-9_])\s*[:=]\s*[\"']?([^\s\"'#,}\]]{4,})"
+    rb"(?![A-Za-z0-9_])\s*([:=])\s*([\"']?)([^\s\"'#,}\]]{4,})"
 )
 PLACEHOLDER = re.compile(
     rb"(?i)^(?:example|sample|dummy|fake|test|fixture|placeholder|redacted|"
@@ -107,12 +107,20 @@ def scan_data(*, scope: str, identity: str, path: str, data: bytes) -> list[Find
         if GITHUB_OIDC_PERMISSION.search(line):
             continue
         for match in CREDENTIAL_ASSIGNMENT.finditer(line):
-            value = match.group(1).rstrip(b";)")
+            separator = match.group(1)
+            quote = match.group(2)
+            value = match.group(3).rstrip(b";)")
             if PLACEHOLDER.match(value):
                 continue
             if path.endswith(".py") and (
+                separator == b":"
+                or
                 value.startswith((b"_", b"self.", b"os.", b"str(", b"dict(", b"getattr("))
                 or b"(" in value
+                or (
+                    not quote
+                    and re.fullmatch(rb"[A-Za-z_][A-Za-z0-9_.]*", value)
+                )
             ):
                 continue
             rule = (

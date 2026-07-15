@@ -66,6 +66,28 @@ def test_secret_scanner_detects_compound_token_key() -> None:
     assert findings
 
 
+def test_secret_scanner_allows_unquoted_python_reference() -> None:
+    scanner = _load_scanner()
+    findings = scanner.scan_data(
+        scope="test",
+        identity="fixture",
+        path="runtime.py",
+        data=b"author" + b"ization = decision.author" + b"ization\n",
+    )
+    assert findings == []
+
+
+def test_secret_scanner_detects_quoted_python_credential_literal() -> None:
+    scanner = _load_scanner()
+    findings = scanner.scan_data(
+        scope="test",
+        identity="fixture",
+        path="runtime.py",
+        data=b"author" + b'ization = "actual-credential-value"\n',
+    )
+    assert findings
+
+
 def test_secret_scanner_detects_sensitive_filename() -> None:
     scanner = _load_scanner()
     findings = scanner.scan_path(
