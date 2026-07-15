@@ -6,12 +6,11 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from govengine.api import GovApiError
-from govengine.governance_decision import GovernanceDecision
+from govengine.governance_decision import DecisionClaimPort, GovernanceDecision
 from govengine.governance_decision_signing import require_trusted_governance_decision
 from govengine.signing import SignedArtifact, SigningPolicy, TrustPolicy, VerifierPort
 
 from rexecop.errors import RExecOpValidationError
-from rexecop.storage.port import RuntimeStore
 
 
 @dataclass(frozen=True)
@@ -77,7 +76,7 @@ class TrustedGovernanceDecisionConsumer:
     def __init__(
         self,
         *,
-        store: RuntimeStore,
+        store: DecisionClaimPort,
         authority: AttemptGovernanceAuthority,
         verifier: VerifierPort,
         signing_policy: SigningPolicy,

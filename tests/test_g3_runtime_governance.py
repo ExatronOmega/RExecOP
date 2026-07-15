@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from govengine.governance_decision import (
+    DecisionClaimPort,
     GovernanceAuthorization,
     GovernanceDecision,
     _governance_decision_body_digest,
@@ -392,6 +393,7 @@ def test_invalid_signed_decision_stops_before_connector_io(
 
 def test_decision_claim_is_atomic_across_processes(tmp_path: Path) -> None:
     root = tmp_path / ".rexecop"
+    assert isinstance(FileStore(root), DecisionClaimPort)
     context = multiprocessing.get_context("spawn")
     queue = context.Queue()
     processes = [

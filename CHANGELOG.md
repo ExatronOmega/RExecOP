@@ -2,6 +2,9 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Types the signed-decision consumer against GovEngine's module-scoped
+  `DecisionClaimPort`; existing RExecOp stores remain the sole implementations
+  of atomic claim persistence, locking and recovery durability.
 - Removes the remaining typed-governance compatibility fallbacks: policy
   admission digests, manual-approval summaries and legacy admission summaries
   can no longer be projected as approval evidence; host plugin-registration
