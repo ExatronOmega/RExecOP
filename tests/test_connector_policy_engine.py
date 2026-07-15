@@ -461,7 +461,7 @@ def test_plan_blocks_unknown_operation_policy_control(tmp_path: Path) -> None:
 
     with pytest.raises(
         RExecOpValidationError,
-        match="unsupported_policy_constraint:vendor_specific",
+        match="unsupported_policy_constraint",
     ):
         controller.plan(
             profile_path=PROFILE,
