@@ -230,17 +230,38 @@ def build_scoped_execution_receipt(
         runtime_receipt = shared_state.get("execution_receipt")
         if isinstance(runtime_receipt, dict):
             runtime_binding = runtime_receipt.get("typed_execution_binding")
-            if isinstance(runtime_binding, dict) and runtime_binding.get("step_digests"):
-                artifact["rexecop_runtime_binding"] = {
+            governance_bindings = runtime_receipt.get("governance_bindings")
+            if (
+                isinstance(runtime_binding, dict)
+                and runtime_binding.get("step_digests")
+            ) or isinstance(governance_bindings, dict):
+                projected_runtime_binding: dict[str, Any] = {
                     "request_digest": str(runtime_receipt.get("request_digest") or ""),
                     "receipt_digest": str(runtime_receipt.get("receipt_digest") or ""),
                     "policy_binding": dict(runtime_receipt.get("policy_binding") or {}),
-                    "typed_execution_binding": {
+                }
+                if isinstance(runtime_binding, dict) and runtime_binding.get(
+                    "step_digests"
+                ):
+                    projected_runtime_binding["typed_execution_binding"] = {
                         "schema": str(runtime_binding.get("schema") or ""),
                         "binding_digest": str(runtime_binding.get("binding_digest") or ""),
                         "step_digests": dict(runtime_binding.get("step_digests") or {}),
-                    },
-                }
+                    }
+                if isinstance(governance_bindings, dict) and governance_bindings:
+                    projected_runtime_binding["governance_bindings"] = {
+                        str(step_id): {
+                            "runtime_receipt_binding": dict(
+                                item.get("runtime_receipt_binding") or {}
+                            ),
+                            "receipt_conformance": dict(
+                                item.get("receipt_conformance") or {}
+                            ),
+                        }
+                        for step_id, item in governance_bindings.items()
+                        if isinstance(item, dict)
+                    }
+                artifact["rexecop_runtime_binding"] = projected_runtime_binding
                 artifact["non_claims"] = list(artifact["non_claims"]) + [
                     "rexecop_runtime_binding_refs_digest_only_runtime_projections",
                 ]

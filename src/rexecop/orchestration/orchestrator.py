@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import hmac
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
+
+from govengine.receipt_conformance import (
+    build_runtime_receipt_binding,
+    evaluate_receipt_conformance,
+)
 
 from rexecop.adapters.govengine_port.contracts import (
     BLOCKING_DECISIONS,
@@ -10,6 +17,7 @@ from rexecop.adapters.govengine_port.contracts import (
     is_mutating_mode,
 )
 from rexecop.adapters.govengine_port.runtime_authority import (
+    ClaimedGovernanceDecision,
     TrustedGovernanceDecisionConsumer,
 )
 from rexecop.catalog.digest import canonical_digest
@@ -50,6 +58,21 @@ TERMINAL_STATES = frozenset(
         OperationState.BLOCKED.value,
     }
 )
+
+
+def _receipt_failure(
+    result: StepExecutionResult,
+    reason_code: str,
+) -> StepExecutionResult:
+    output = dict(result.output)
+    output["error_class"] = "receipt_postcondition_failed"
+    output["receipt_reason_code"] = reason_code
+    return replace(
+        result,
+        success=False,
+        output=output,
+        error=f"runtime receipt postcondition failed: {reason_code}",
+    )
 
 
 class _WorkflowEvidenceSink:
@@ -145,6 +168,7 @@ class OperationOrchestrator:
             evidence_handler=lambda ctx: self._export_receipt(ctx.operation_id),
             attempt_start_handler=self._start_attempt,
             attempt_finish_handler=self._finish_attempt,
+            attempt_receipt_handler=self._bind_attempt_receipt,
         )
         return WorkflowRunner(executor)
 
@@ -225,7 +249,7 @@ class OperationOrchestrator:
             governance_admission_digest=governance_admission_digest,
             governance_claim=governance_claim,
         )
-        return self.store.start_execution_attempt(
+        attempt = self.store.start_execution_attempt(
             operation_id=operation.id,
             attempt_id=attempt_id,
             operation_revision=operation.operation_revision,
@@ -237,6 +261,12 @@ class OperationOrchestrator:
             lease=lease,
             execution_permit_ref=str(permit["permit_digest"]),
         )
+        if governance_claim is not None:
+            # These objects live only until the immediate post-I/O conformance
+            # check. The durable attempt and permit remain JSON-only records.
+            attempt["_governance_claim"] = governance_claim
+            attempt["_runtime_permit"] = permit
+        return attempt
 
     def _finish_attempt(
         self,
@@ -255,6 +285,79 @@ class OperationOrchestrator:
             status=status,
             result_digest=("sha256:" + canonical_digest(payload)) if payload else "",
             error_class=error_class,
+        )
+
+    def _bind_attempt_receipt(
+        self,
+        attempt: dict[str, Any],
+        result: StepExecutionResult,
+    ) -> StepExecutionResult:
+        claim = attempt.get("_governance_claim")
+        permit = attempt.get("_runtime_permit")
+        if not isinstance(claim, ClaimedGovernanceDecision) or not isinstance(
+            permit, dict
+        ):
+            return result
+        permit_digest = self.permits.record_digest(permit)
+        if not hmac.compare_digest(
+            str(permit.get("permit_digest") or ""),
+            permit_digest,
+        ):
+            return _receipt_failure(result, "runtime_permit_digest_mismatch")
+        decision = claim.decision
+        grant = decision.authorization
+        if grant is None:
+            return _receipt_failure(result, "governance_authorization_missing")
+        output_digests_raw = result.output.get("output_digests")
+        output_digests = (
+            {str(key): str(value) for key, value in output_digests_raw.items()}
+            if isinstance(output_digests_raw, dict)
+            else {}
+        )
+        output_sizes = result.output.get("output_sizes")
+        output_bytes = (
+            int(output_sizes.get("record_bytes") or 0)
+            if isinstance(output_sizes, dict)
+            else 0
+        )
+        binding = build_runtime_receipt_binding(
+            receipt_id=f"runtime-receipt:{attempt['attempt_id']}",
+            operation_id=str(attempt["operation_id"]),
+            step_id=str(attempt["step_id"]),
+            attempt_id=str(attempt["attempt_id"]),
+            runtime_instance_id=claim.facts.runtime_instance_id,
+            decision_digest=decision.decision_digest,
+            runtime_permit_digest=permit_digest,
+            lease_id=claim.facts.lease_id,
+            lease_epoch=claim.facts.lease_epoch,
+            fencing_token_digest=claim.facts.fencing_token_digest,
+            execution_spec_digest=claim.facts.execution_spec_digest,
+            payload_digest=claim.facts.payload_digest,
+            requested_scope_digest=claim.facts.requested_scope_digest,
+            capability_inventory_digest=claim.facts.capability_inventory_digest,
+            inventory_epoch=claim.facts.inventory_epoch,
+            policy_pack_digest=grant.policy_pack_digest,
+            policy_epoch=grant.policy_epoch,
+            terminal_status="completed" if result.success else "failed",
+            output_digests=output_digests,
+            output_bytes=output_bytes,
+        )
+        conformance = evaluate_receipt_conformance(
+            decision,
+            binding,
+            expected_runtime_permit_digest=permit_digest,
+        )
+        if not conformance.conformant:
+            failed = _receipt_failure(result, conformance.reason_code)
+            return replace(
+                failed,
+                runtime_receipt_binding=binding.as_dict(),
+                receipt_conformance=conformance.as_dict(),
+            )
+        return replace(
+            result,
+            runtime_receipt_binding=binding.as_dict(),
+            receipt_conformance=conformance.as_dict(),
         )
 
     def start(self, operation_id: str) -> Operation:

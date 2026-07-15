@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import multiprocessing
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -47,10 +48,14 @@ class _Authority:
         signer_id: str = "decision-signer",
         drift_field: str = "",
         expired: bool = False,
+        max_output_bytes: int = 4096,
+        output_digest_required: bool = False,
     ) -> None:
         self.signer_id = signer_id
         self.drift_field = drift_field
         self.expired = expired
+        self.max_output_bytes = max_output_bytes
+        self.output_digest_required = output_digest_required
         self.requests: list[RuntimeAttemptGovernanceFacts] = []
 
     def authorize_attempt(
@@ -58,7 +63,12 @@ class _Authority:
         facts: RuntimeAttemptGovernanceFacts,
     ) -> SignedGovernanceDecisionBundle:
         self.requests.append(facts)
-        decision = _decision(facts, expired=self.expired)
+        decision = _decision(
+            facts,
+            expired=self.expired,
+            max_output_bytes=self.max_output_bytes,
+            output_digest_required=self.output_digest_required,
+        )
         if self.drift_field:
             assert decision.authorization is not None
             current = getattr(decision.authorization, self.drift_field)
@@ -92,6 +102,8 @@ def _decision(
     facts: RuntimeAttemptGovernanceFacts,
     *,
     expired: bool = False,
+    max_output_bytes: int = 4096,
+    output_digest_required: bool = False,
 ) -> GovernanceDecision:
     now = datetime.now(UTC).replace(microsecond=0)
     digest = "sha256:" + "a" * 64
@@ -132,7 +144,10 @@ def _decision(
         scope_decision_digest=digest,
         capability_compatibility_digest=digest,
         approval_attestation_digest="",
-        controls=RuntimeControlProjection(max_output_bytes=4096),
+        controls=RuntimeControlProjection(
+            max_output_bytes=max_output_bytes,
+            output_digest_required=output_digest_required,
+        ),
         **{"author" + "ization": grant},
     )
     return replace(decision, decision_digest=_governance_decision_body_digest(decision))
@@ -182,6 +197,51 @@ def test_signed_decision_is_bound_claimed_and_projected_to_runtime_permit(
     assert attempt["governance_decision"]["inventory_epoch"] == 11
     assert attempt["governance_decision"]["decision_digest"].startswith("sha256:")
     assert len(list((controller.store.root / "governance_claims").glob("*.json"))) == 2
+    runtime_receipt = completed.metadata["shared_state"]["execution_receipt"]
+    governance = runtime_receipt["governance_bindings"]["inspect_state"]
+    assert governance["runtime_receipt_binding"]["attempt_id"] == facts.attempt_id
+    assert (
+        governance["runtime_receipt_binding"]["runtime_permit_digest"]
+        == attempt["permit_digest"]
+    )
+    assert governance["receipt_conformance"]["conformant"] is True
+    assert governance["receipt_conformance"]["reason_code"] == "receipt_conforms"
+
+    exported = controller.export_receipt(operation.id)
+    bundle = Path(str(exported["bundle_dir"]))
+    sclite_receipt = json.loads((bundle / "05_execution_receipt.json").read_text())
+    projected = sclite_receipt["rexecop_runtime_binding"]["governance_bindings"]
+    assert projected["inspect_state"]["receipt_conformance"]["conformant"] is True
+
+
+def test_governance_output_limit_is_a_postcondition_failure(tmp_path: Path) -> None:
+    controller = OperationController(
+        FileStore(tmp_path / ".rexecop"),
+        attempt_governance_authority=_Authority(max_output_bytes=1),
+        governance_decision_verifier=DemoDigestVerifier(
+            allowed_signer_ids=("decision-signer",)
+        ),
+        governance_signing_policy=SIGNING_POLICY,
+        governance_trust_policy=TrustPolicy(),
+    )
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="dry_run",
+    )
+
+    failed = controller.start(operation.id)
+
+    assert failed.state == "failed"
+    receipt = failed.metadata["shared_state"]["execution_receipt"]
+    governance = receipt["governance_bindings"]["inspect_state"]
+    assert governance["receipt_conformance"]["conformant"] is False
+    assert (
+        "receipt_output_limit_exceeded"
+        in governance["receipt_conformance"]["failures"]
+    )
 
 
 def test_consumer_rejects_reuse_and_untrusted_signer(tmp_path: Path) -> None:

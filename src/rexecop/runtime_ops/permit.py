@@ -96,7 +96,7 @@ class ExecutionPermitManager:
                 "signed_record_digest": governance_claim.signed_artifact.record_digest,
                 "decision_issuer_ref": governance_claim.signed_artifact.signer_id,
             }
-        permit["permit_digest"] = self._digest(permit)
+        permit["permit_digest"] = self.record_digest(permit)
         self.store.save_execution_permit(permit)
         return permit
 
@@ -116,7 +116,7 @@ class ExecutionPermitManager:
     ) -> None:
         if permit.get("schema") != EXECUTION_PERMIT_SCHEMA:
             raise RExecOpValidationError("execution_permit_invalid: unsupported schema")
-        expected_digest = self._digest(permit)
+        expected_digest = self.record_digest(permit)
         if not hmac.compare_digest(str(permit.get("permit_digest") or ""), expected_digest):
             raise RExecOpValidationError("execution_permit_invalid: digest mismatch")
         expires_at = datetime.fromisoformat(str(permit["expires_at"]))
@@ -186,6 +186,8 @@ class ExecutionPermitManager:
             )
 
     @staticmethod
-    def _digest(permit: dict[str, Any]) -> str:
+    def record_digest(permit: dict[str, Any]) -> str:
+        """Recompute the runtime-owned permit digest from its bounded record."""
+
         payload = {key: value for key, value in permit.items() if key != "permit_digest"}
         return "sha256:" + canonical_digest(payload)

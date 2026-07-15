@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -19,11 +19,18 @@ class StepExecutionResult:
     success: bool
     output: dict[str, Any]
     error: str = ""
+    runtime_receipt_binding: dict[str, Any] = field(default_factory=dict)
+    receipt_conformance: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "step_id": self.step_id,
             "success": self.success,
             "output": dict(self.output),
             "error": self.error,
         }
+        if self.runtime_receipt_binding:
+            payload["runtime_receipt_binding"] = dict(self.runtime_receipt_binding)
+        if self.receipt_conformance:
+            payload["receipt_conformance"] = dict(self.receipt_conformance)
+        return payload

@@ -67,6 +67,10 @@ outside the profile workflow.
 - `typed_execution_binding`: aggregate digest map (`rexecop.typed_execution_binding.v0.1`)
   for executed connector steps; binds policy/admission via existing
   `policy_binding` and per-step typed/output digests without embedding payloads
+- `governance_bindings`: per-step `RuntimeReceiptBinding v1` plus GovEngine
+  `ReceiptConformanceResult v1` for signed-decision attempts; binds decision,
+  immutable runtime permit, attempt, lease/fencing, inventory and output
+  postconditions without embedding the signed decision or authorization nonce
 - HTTP step bindings carry normalized scheme, effective port, address class and
   origin-binding digest. Per-step receipts compare the planned and observed
   destination binding and include the GovEngine admission/request digests; raw
@@ -131,7 +135,7 @@ Workflow plan (profile)
 
 SCLite `execution_receipt` may include `rexecop_runtime_binding` with digest-only
 refs to the runtime receipt (`request_digest`, `receipt_digest`, `policy_binding`,
-`typed_execution_binding`). RExecOp remains a runtime projection layer; SCLite
+`typed_execution_binding`, `governance_bindings`). RExecOp remains a runtime projection layer; SCLite
 retains truth authority.
 | GovEngine | runner request/receipt contracts | Governance — see [govengine-integration.md](govengine-integration.md) |
 

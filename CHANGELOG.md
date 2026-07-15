@@ -2,6 +2,14 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Emits a digest-bound runtime receipt per governed connector attempt and runs
+  GovEngine receipt conformance after I/O. Decision, runtime permit, attempt,
+  runtime, lease, fencing, scope, inventory and policy bindings are checked
+  together with output-digest/output-limit postconditions; nonconformance turns
+  terminal workflow success into a stable failure.
+- Projects the runtime binding and GovEngine conformance result into the
+  existing SCLite `execution_receipt.v0.2` extension point without changing
+  frozen SCLite schemas or claiming SCLite truth ownership.
 - Adds the canonical runtime consumer for signed GovEngine `GovernanceDecision`
   records. RExecOp verifies issuer trust and exact attempt/lease/fencing/spec/
   payload/scope/inventory bindings before atomically claiming the decision.

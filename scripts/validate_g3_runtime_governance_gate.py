@@ -29,7 +29,8 @@ def main() -> int:
     print(
         "g3_runtime_governance_gate_ok:attempt_preallocation=OK:"
         "trusted_decision=OK:runtime_binding=OK:atomic_claim=OK:"
-        "runtime_attempt_permit=OK:pre_io_attempt_journal=OK"
+        "runtime_attempt_permit=OK:pre_io_attempt_journal=OK:"
+        "receipt_conformance=OK:sclite_receipt_projection=OK"
     )
     return 0
 

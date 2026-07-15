@@ -21,6 +21,10 @@ from rexecop.profile.loader import load_profile
 EvidenceHandler = Callable[[StepExecutionContext], dict[str, Any]]
 AttemptStartHandler = Callable[[StepExecutionContext, dict[str, Any] | None], dict[str, Any]]
 AttemptFinishHandler = Callable[[dict[str, Any], str, StepExecutionResult | None], None]
+AttemptReceiptHandler = Callable[
+    [dict[str, Any], StepExecutionResult],
+    StepExecutionResult,
+]
 
 _EXCLUDED_OUTPUT_STATE_DELTA_KEYS = frozenset(
     {
@@ -44,12 +48,14 @@ class StepExecutor:
         evidence_handler: EvidenceHandler | None = None,
         attempt_start_handler: AttemptStartHandler | None = None,
         attempt_finish_handler: AttemptFinishHandler | None = None,
+        attempt_receipt_handler: AttemptReceiptHandler | None = None,
         internal_handlers: Mapping[str, InternalHandler] | None = None,
     ) -> None:
         self.connector_dispatcher = connector_dispatcher or ConnectorDispatcher()
         self.evidence_handler = evidence_handler
         self.attempt_start_handler = attempt_start_handler
         self.attempt_finish_handler = attempt_finish_handler
+        self.attempt_receipt_handler = attempt_receipt_handler
         self._internal_handlers = load_internal_handlers(extra=internal_handlers)
 
     def execute(self, context: StepExecutionContext) -> StepExecutionResult:
@@ -57,15 +63,18 @@ class StepExecutor:
         step_type = str(context.step.get("type") or "internal")
         action = str(context.step.get("action") or "")
         state_before = deepcopy(context.shared_state)
+        attempt: dict[str, Any] | None = None
 
         try:
             if step_type == "connector":
-                result = self._execute_connector(context, step_id, action)
+                result, attempt = self._execute_connector(context, step_id, action)
             elif step_type == "evidence":
                 result = self._execute_evidence(context, step_id, action)
             else:
                 result = self._execute_internal(context, step_id, action)
             bounded = self._apply_output_controls(context, result, state_before=state_before)
+            if attempt is not None and self.attempt_receipt_handler is not None:
+                bounded = self.attempt_receipt_handler(attempt, bounded)
             if bounded.success:
                 self._store_bounded_result(context, step_type, bounded)
             return bounded
@@ -90,18 +99,21 @@ class StepExecutor:
         context: StepExecutionContext,
         step_id: str,
         action: str,
-    ) -> StepExecutionResult:
+    ) -> tuple[StepExecutionResult, dict[str, Any] | None]:
         connector = str(context.step.get("connector") or "")
         try:
             spec = self._bind_typed_execution_spec(context, step_id=step_id)
         except RExecOpValidationError as exc:
-            return StepExecutionResult(
-                step_id=step_id,
-                success=False,
-                output={
-                    "error_class": connector_errors.VALIDATION_FAILED,
-                },
-                error=redact_text(str(exc)),
+            return (
+                StepExecutionResult(
+                    step_id=step_id,
+                    success=False,
+                    output={
+                        "error_class": connector_errors.VALIDATION_FAILED,
+                    },
+                    error=redact_text(str(exc)),
+                ),
+                None,
             )
         if spec is not None:
             admission = enforce_typed_execution_governance(
@@ -111,19 +123,22 @@ class StepExecutor:
                 shared_state=context.shared_state,
             )
             if not admission["allowed"]:
-                return StepExecutionResult(
-                    step_id=step_id,
-                    success=False,
-                    output={
-                        "error_class": connector_errors.POLICY_DENIED,
-                        "policy_reason_code": admission["reason_code"],
-                        "policy_blockers": list(admission.get("blockers") or []),
-                        "typed_execution_admission": dict(admission),
-                    },
-                    error=redact_text(
-                        "typed execution governance denied: "
-                        + str(admission.get("reason_code") or "denied")
+                return (
+                    StepExecutionResult(
+                        step_id=step_id,
+                        success=False,
+                        output={
+                            "error_class": connector_errors.POLICY_DENIED,
+                            "policy_reason_code": admission["reason_code"],
+                            "policy_blockers": list(admission.get("blockers") or []),
+                            "typed_execution_admission": dict(admission),
+                        },
+                        error=redact_text(
+                            "typed execution governance denied: "
+                            + str(admission.get("reason_code") or "denied")
+                        ),
                     ),
+                    None,
                 )
         attempt = (
             self.attempt_start_handler(context, spec)
@@ -161,7 +176,7 @@ class StepExecutor:
             )
             if attempt is not None and self.attempt_finish_handler is not None:
                 self.attempt_finish_handler(attempt, "failed", result)
-            return result
+            return result, attempt
         output = redact_payload(response.as_dict())
         before_state = response.data.get("before_state")
         after_state = response.data.get("after_state")
@@ -172,7 +187,7 @@ class StepExecutor:
         result = StepExecutionResult(step_id=step_id, success=True, output=output)
         if attempt is not None and self.attempt_finish_handler is not None:
             self.attempt_finish_handler(attempt, "completed", result)
-        return result
+        return result, attempt
 
     def _execute_internal(
         self,
@@ -250,6 +265,7 @@ class StepExecutor:
         merged = dict(digests) if isinstance(digests, Mapping) else {}
         merged["record"] = digest
         output["output_digests"] = merged
+        output["output_sizes"] = {"record_bytes": len(canonical)}
         return StepExecutionResult(
             step_id=result.step_id,
             success=result.success,

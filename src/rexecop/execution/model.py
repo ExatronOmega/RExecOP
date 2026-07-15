@@ -175,6 +175,8 @@ class ExecutionStepReceipt:
     capability_descriptor_digest: str = ""
     planned_destination_binding: Mapping[str, Any] = field(default_factory=dict)
     observed_destination_binding: Mapping[str, Any] = field(default_factory=dict)
+    runtime_receipt_binding: Mapping[str, Any] = field(default_factory=dict)
+    receipt_conformance: Mapping[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         payload = {
@@ -192,6 +194,10 @@ class ExecutionStepReceipt:
             payload["planned_destination_binding"] = dict(self.planned_destination_binding)
         if self.observed_destination_binding:
             payload["observed_destination_binding"] = dict(self.observed_destination_binding)
+        if self.runtime_receipt_binding:
+            payload["runtime_receipt_binding"] = dict(self.runtime_receipt_binding)
+        if self.receipt_conformance:
+            payload["receipt_conformance"] = dict(self.receipt_conformance)
         return payload
 
 
@@ -209,6 +215,7 @@ class ExecutionReceipt:
     executed_steps: tuple[str, ...] = field(default_factory=tuple)
     step_receipts: tuple[ExecutionStepReceipt, ...] = field(default_factory=tuple)
     typed_execution_binding: Mapping[str, Any] = field(default_factory=dict)
+    governance_bindings: Mapping[str, Any] = field(default_factory=dict)
     error: str = ""
     error_class: str = ""
 
@@ -230,6 +237,8 @@ class ExecutionReceipt:
         }
         if self.typed_execution_binding:
             payload["typed_execution_binding"] = dict(self.typed_execution_binding)
+        if self.governance_bindings:
+            payload["governance_bindings"] = dict(self.governance_bindings)
         return payload
 
 
@@ -299,6 +308,14 @@ def execution_receipt_from_results(
         executed_steps,
         typed_execution_specs,
     )
+    governance_bindings = {
+        step.step_id: {
+            "runtime_receipt_binding": dict(step.runtime_receipt_binding),
+            "receipt_conformance": dict(step.receipt_conformance),
+        }
+        for step in step_receipts
+        if step.runtime_receipt_binding and step.receipt_conformance
+    }
     enforcement_status = "enforced" if request.policy_binding.present else "not_required"
     receipt = ExecutionReceipt(
         receipt_id=f"exec-receipt:{request.operation_id}",
@@ -317,6 +334,7 @@ def execution_receipt_from_results(
         executed_steps=tuple(executed_steps),
         step_receipts=step_receipts,
         typed_execution_binding=typed_binding,
+        governance_bindings=governance_bindings,
         error=error,
         error_class=error_class,
     )
@@ -412,6 +430,12 @@ def _step_receipt(
         observed_digest = str(observed_destination.get("origin_binding_digest") or "")
         if planned_digest != observed_digest:
             raise RExecOpValidationError("observed destination binding drift")
+    runtime_receipt_binding = result.get("runtime_receipt_binding")
+    if not isinstance(runtime_receipt_binding, Mapping):
+        runtime_receipt_binding = {}
+    receipt_conformance = result.get("receipt_conformance")
+    if not isinstance(receipt_conformance, Mapping):
+        receipt_conformance = {}
     return ExecutionStepReceipt(
         step_id=step_id,
         success=bool(result.get("success")),
@@ -426,6 +450,8 @@ def _step_receipt(
         capability_descriptor_digest=capability_descriptor_digest,
         planned_destination_binding=planned_destination,
         observed_destination_binding=dict(observed_destination),
+        runtime_receipt_binding=dict(runtime_receipt_binding),
+        receipt_conformance=dict(receipt_conformance),
     )
 
 

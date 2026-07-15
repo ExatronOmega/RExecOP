@@ -64,6 +64,12 @@ SCLite   validate schemas, ticket binding, review_bundle (truth authority)
 | **GovEngine** | Governance: admission and runner request/receipt **contracts** — does not execute steps or emit SCLite files |
 | **SCLite** | Proof: auditable artifacts, scoped tickets, receipt-bounded evidence, review bundles |
 
+For a configured signed-decision authority, each connector attempt receives an
+immutable runtime permit before I/O. After I/O, RExecOp emits a bounded receipt
+binding and requires GovEngine conformance for the same decision, permit,
+attempt, lease/fencing and inventory plus output postconditions. Only digest
+projections enter the existing SCLite receipt; SCLite remains truth authority.
+
 RExecOp also owns the orchestration-specific observation, finding, reaction,
 trigger, watchdog and automation contract resources. They are exposed through
 the immutable `rexecop.contracts.orchestration` resolver under

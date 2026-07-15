@@ -81,6 +81,10 @@ an untrusted proposal shape only, and mutation/apply readiness is explicitly fal
 - GovEngine-bound operations control-plane with default `GovEngineClient` adapter
 - Profile-defined workflow execution and declarative validation
 - SCLite artifact emission on the completion path with honest execution receipt metrics
+- Signed-decision receipt conformance is active only when the host configures
+  the authority, verifier and trust policy. It validates deterministic bindings
+  and postconditions but cannot prove an already compromised runtime reported
+  honest output metrics.
 - Connectors: `mock`, `http_api`, `local_shell_readonly`, temporary `ssh_readonly` (bounded output + digests)
 - Workflow execution contracts: digest-bound `ExecutionRequest` / `ExecutionReceipt` in `shared_state` (schema `v0.2`)
 - GovEngine `PolicyEngine` when `environment.policy_pack` is configured (operation admission/control projection + connector invoke)

@@ -149,6 +149,13 @@ configuration fails before an attempt journal record is created. Existing read-o
 execution may use the explicit `legacy_read_only` compatibility binding; it is not a
 signed-decision claim.
 
+After governed connector I/O, RExecOp builds `RuntimeReceiptBinding v1` from the
+claimed decision, immutable runtime permit, exact attempt/lease/fencing/inventory
+facts and bounded output metrics. GovEngine recomputes that binding and returns
+`ReceiptConformanceResult v1`. Nonconformance fails the workflow even when the
+connector call itself succeeded. The result is a governance postcondition check,
+not a SCLite receipt or proof that a compromised runtime reported honest facts.
+
 ## Apply hard rule
 
 Mutating modes (`apply`, `recovery`) require:
@@ -171,6 +178,8 @@ operation plan. Post-execution receipt binding uses GovEngine validation helpers
 Admission metadata from `operation.metadata["govengine_admission"]` is bridged into SCLite
 `policy_decision` and scoped ticket approval fields. Policy enforcement plan, admission,
 pack, and verdict digest references are included in the SCLite execution contract and receipt.
+Governed step receipt bindings and conformance results are projected under
+`rexecop_runtime_binding.governance_bindings` without changing the frozen SCLite schema.
 SCLite computes and validates its own artifact descriptors; RExecOp does not claim SCLite
 canonicalization ownership.
 
