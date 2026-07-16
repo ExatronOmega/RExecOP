@@ -212,6 +212,11 @@ def collect_errors() -> list[str]:
 
     _require(errors, "README.md", EXPECTED_GOVENGINE)
     _require(errors, "README.md", EXPECTED_SCLITE)
+    _require(errors, "docs/distribution.md", EXPECTED_GOVENGINE)
+    _require(errors, "docs/distribution.md", EXPECTED_SCLITE)
+    _require(errors, "docs/sclite-integration.md", EXPECTED_SCLITE)
+    _forbid(errors, "docs/distribution.md", "govengine==0.17.0rc1")
+    _forbid(errors, "docs/sclite-integration.md", "sclite-core==1.0.9")
     _require(errors, "OPERATOR_RUNBOOK.md", "scripts/validate_public_truth.py")
     _require(errors, "OPERATOR_LAB_RUNBOOK.md", "scripts/validate_public_truth.py")
     _require(errors, "README.md", "docs/stack-contract-compatibility.md")

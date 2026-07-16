@@ -88,7 +88,7 @@ scoped ticket defaults appropriate for dry-run review (`approved_for_dry_run`).
 ## Dependency
 
 ```text
-sclite-core==1.0.9
+sclite-core==2.0.0
 ```
 
 Aligned with GovEngine pin strategy in `pyproject.toml`.

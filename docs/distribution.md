@@ -19,7 +19,7 @@ The published wheel contains full B2, R4c, watchdog decision truth, and manual r
 
 - Python **3.11+** (CI on `main` exercises **3.11**, **3.12**, and **3.13**)
 - Network access to install pinned dependencies:
-  - `govengine==0.17.0rc1`
+  - `govengine==1.0.0rc1`
   - `sclite-core==2.0.0`
 - Optional domain profile: [`tecrax`](https://pypi.org/project/tecrax/) or Git
 

@@ -135,6 +135,9 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
   environment-bound OIDC Trusted Publishing through the pinned official PyPA
   action, and rejects token-based upload settings in public-truth/workflow
   security gates.
+- Corrects stale installation prose to the exact train dependencies
+  `govengine==1.0.0rc1` and `sclite-core==2.0.0`, with public-truth checks that
+  reject regression to the retired candidate pins.
 - Keeps `sclite-core==2.0.0` frozen and the public PyPI line unchanged.
 
 ## [0.3.0rc2] - bounded destination-admission candidate
