@@ -40,6 +40,10 @@ The script runs:
     `solo_reviewed_alpha_risk`)
 16. Shared governance corpus: `python scripts/validate_governance_conformance.py`
     (33 wheel-shipped cases; six execute RExecOp-owned atomic claim semantics)
+17. GovEngine v1 RC behavior:
+    `python scripts/validate_g6_release_candidate_gate.py` (read-only
+    no-network positive/negative, governed HTTP positive/pre-I/O negative,
+    signed decision-to-receipt binding and final SCLite review bundle)
 
 CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
 and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the

@@ -126,6 +126,9 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 - Revalidates the shared governance corpus, signed decision claim, pre-I/O
   permit handoff and receipt-conformance boundary against the frozen
   `govengine.v1` facade.
+- Adds one G6 release-candidate gate over existing tests for read-only
+  no-network execution, governed HTTP positive/negative paths, signed
+  decision-to-receipt binding and SCLite review-bundle verification.
 - Keeps `sclite-core==2.0.0` frozen and the public PyPI line unchanged.
 
 ## [0.3.0rc2] - bounded destination-admission candidate
