@@ -20,7 +20,7 @@ Document id: `stack-contract-compatibility`.
 | `sclite-core` | `2.0.0` | `sclite-core==2.0.0` | Frozen SCLite lifecycle/evidence/review verification kernel; RExecOp owns reaction, trigger-decision, watchdog-decision and automation-chain schemas. |
 | `govengine` | `1.0.0rc1` | `govengine==1.0.0rc1` | Frozen `govengine.v1` governance facade, typed policy lifecycle, independently bound approval/scope/capabilities, signed attempt-bound decisions and receipt conformance. |
 | `rexecop` | `0.3.0rc3` | current package | Neutral runner, connectors, catalog and reaction mechanics. |
-| `tecrax` | `0.4.0rc2` | `tecrax==0.4.0rc2` via optional extra | Domain infrastructure profile. |
+| `tecrax` | `0.4.0rc3` | `tecrax==0.4.0rc3` via optional extra | Domain infrastructure profile. |
 
 ## Contract matrix
 

@@ -122,6 +122,7 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 - Pins `govengine==1.0.0rc1` and advances the RExecOp source candidate without
   changing runtime schemas or execution semantics.
+- Pins the matching optional profile candidate `tecrax==0.4.0rc3`.
 - Revalidates the shared governance corpus, signed decision claim, pre-I/O
   permit handoff and receipt-conformance boundary against the frozen
   `govengine.v1` facade.

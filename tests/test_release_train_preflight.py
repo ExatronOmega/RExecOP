@@ -82,7 +82,7 @@ dependencies = []
         "tecrax": f'''
 [project]
 name = "tecrax"
-version = "0.4.0rc2"
+version = "0.4.0rc3"
 dependencies = [
   "{public_truth.EXPECTED_GOVENGINE}",
   "{public_truth.EXPECTED_SCLITE}",
