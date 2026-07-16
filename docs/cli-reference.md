@@ -1,6 +1,6 @@
 # CLI reference
 
-Complete `rexecop` command reference for the current source candidate (`0.3.0rc2`).
+Complete `rexecop` command reference for the current source candidate (`0.3.0rc3`).
 Commands emit stable JSON unless noted. Secret values, connector endpoints and raw
 backend payloads are never printed.
 

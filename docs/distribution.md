@@ -1,6 +1,6 @@
 # Distribution and installation
 
-RExecOp `0.3.0rc2` is the current unpublished coordinated candidate; the
+RExecOp `0.3.0rc3` is the current unpublished coordinated candidate; the
 published alpha line remains `0.2.24a0` on
 [PyPI](https://pypi.org/project/rexecop/).
 The published wheel contains full B2, R4c, watchdog decision truth, and manual recovery records while retaining the maturity limits in
@@ -107,7 +107,9 @@ python -m pip install "govengine @ git+https://github.com/rozmiarD/GovEngine.git
 python -m pip install "rexecop @ git+https://github.com/rozmiarD/RExecOP.git@main"
 ```
 
-The current RExecOp source candidate requires GovEngine `0.17.0rc2` and final SCLite `2.0.0`; the published `0.2.24a0` wheel remains on the prior public line.
+The current RExecOp source candidate requires GovEngine `1.0.0rc1` and final
+SCLite `2.0.0`; the published `0.2.24a0` wheel remains on the prior public
+line.
 
 ## Private index / GitHub Packages (operator-owned)
 

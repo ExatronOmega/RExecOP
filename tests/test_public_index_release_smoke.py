@@ -108,7 +108,7 @@ def test_public_index_release_smoke_writes_evidence(
             "doctor_status": "passed",
             "installed_versions": {
                 "rexecop": version,
-                "govengine": "0.17.0rc2",
+                "govengine": "1.0.0rc1",
                 "sclite-core": "2.0.0",
                 "tecrax": "0.4.0rc2",
             },
@@ -178,7 +178,7 @@ def test_public_index_release_smoke_verify_post_publish(
             "doctor_status": "passed",
             "installed_versions": {
                 "rexecop": version,
-                "govengine": "0.17.0rc2",
+                "govengine": "1.0.0rc1",
                 "sclite-core": "2.0.0",
                 "tecrax": "0.4.0rc2",
             },

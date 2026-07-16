@@ -118,6 +118,15 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 ## Unreleased
 
+## [0.3.0rc3] - GovEngine v1 consumer candidate
+
+- Pins `govengine==1.0.0rc1` and advances the RExecOp source candidate without
+  changing runtime schemas or execution semantics.
+- Revalidates the shared governance corpus, signed decision claim, pre-I/O
+  permit handoff and receipt-conformance boundary against the frozen
+  `govengine.v1` facade.
+- Keeps `sclite-core==2.0.0` frozen and the public PyPI line unchanged.
+
 ## [0.3.0rc2] - bounded destination-admission candidate
 
 - Pins `govengine==0.17.0rc2` and binds normalized HTTP scheme, effective port,

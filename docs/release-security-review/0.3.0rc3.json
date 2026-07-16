@@ -1,0 +1,15 @@
+{
+  "schema": "rexecop.release_security_review.v0.1",
+  "version": "0.3.0rc3",
+  "review_mode": "solo_reviewed_alpha_risk",
+  "reviewed_at": "2026-07-16",
+  "reviewer_ref": "operator:stack-maintainer",
+  "surfaces": [
+    "governance_admission_binding",
+    "mutation_gates",
+    "connector_output_safety",
+    "release_train_scripts",
+    "supply_chain_workflow"
+  ],
+  "notes": "Dependency-only source candidate review for the exact govengine==1.0.0rc1 pin. Shared conformance, signed-decision claim, pre-I/O permit and receipt binding remain required. This is solo-maintainer alpha risk acceptance, not an independent GovEngine contract review, release approval or production-readiness claim."
+}
