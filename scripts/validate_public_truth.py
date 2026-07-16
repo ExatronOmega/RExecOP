@@ -339,8 +339,16 @@ def collect_errors() -> list[str]:
     _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_SCLITE:")
     _require(errors, ".github/workflows/publish.yml", "GOVSTACK_REPO_TECRAX:")
     _require(errors, ".github/workflows/publish.yml", "--previous-evidence")
-    _require(errors, ".github/workflows/publish.yml", "actions/upload-artifact@v4")
-    _require(errors, ".github/workflows/publish.yml", "actions/attest-build-provenance@v2")
+    _require(
+        errors,
+        ".github/workflows/publish.yml",
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+    )
+    _require(
+        errors,
+        ".github/workflows/publish.yml",
+        "actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a",
+    )
     _require(errors, ".github/workflows/publish.yml", "HEAD:release-evidence")
     _require(errors, ".github/workflows/publish.yml", "?ref=release-evidence")
     _require(errors, ".github/workflows/publish.yml", 'test "$GITHUB_REF" = "refs/heads/main"')
@@ -349,7 +357,7 @@ def collect_errors() -> list[str]:
     _require(
         errors,
         ".github/workflows/repair-release-evidence.yml",
-        "actions/attest-build-provenance@v2",
+        "actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a",
     )
     _require(errors, "docs/release-evidence/README.md", "rexecop.release_evidence.v1")
 

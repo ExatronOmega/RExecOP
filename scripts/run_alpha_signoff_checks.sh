@@ -32,6 +32,9 @@ echo "==> validate_operator_journeys"
 echo "==> validate_cross_repo_golden_fixture"
 "$PYTHON" scripts/validate_cross_repo_golden_fixture.py
 
+echo "==> validate_workflow_security"
+"$PYTHON" scripts/validate_workflow_security.py
+
 echo "==> validate_stack_invariants"
 "$PYTHON" scripts/validate_stack_invariants.py
 
@@ -92,5 +95,5 @@ else
 fi
 
 printf '%s\n' \
-  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK operator_journeys=OK cross_repo_golden_fixture=OK stack_invariants=OK external_review=OK m86_security=OK m9_runtime=OK m95n=OK g3_runtime_governance=OK governance_conformance=OK g6_release_candidate=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
+  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK operator_journeys=OK cross_repo_golden_fixture=OK workflow_security=OK stack_invariants=OK external_review=OK m86_security=OK m9_runtime=OK m95n=OK g3_runtime_governance=OK governance_conformance=OK g6_release_candidate=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
 echo "alpha_signoff_checks_ok"

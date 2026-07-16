@@ -129,6 +129,8 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 - Adds one G6 release-candidate gate over existing tests for read-only
   no-network execution, governed HTTP positive/negative paths, signed
   decision-to-receipt binding and SCLite review-bundle verification.
+- Pins every GitHub Action in CI, publish and release-evidence repair workflows
+  to reviewed full commit SHAs and adds a fail-closed workflow-security gate.
 - Keeps `sclite-core==2.0.0` frozen and the public PyPI line unchanged.
 
 ## [0.3.0rc2] - bounded destination-admission candidate
