@@ -1,9 +1,26 @@
 from __future__ import annotations
 
-from scripts import validate_g6_release_candidate_gate as gate
+import importlib.util
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / 'scripts' / 'validate_g6_release_candidate_gate.py'
+
+
+def _load_gate():
+    spec = importlib.util.spec_from_file_location(
+        'rexecop_validate_g6_release_candidate_gate',
+        SCRIPT,
+    )
+    assert spec is not None
+    gate = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(gate)
+    return gate
 
 
 def test_g6_gate_covers_required_release_candidate_paths() -> None:
+    gate = _load_gate()
     selected = "\n".join(gate.TESTS)
 
     assert "allows_readonly_fixture_with_matching_governance" in selected
