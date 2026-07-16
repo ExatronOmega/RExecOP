@@ -19,6 +19,23 @@ class RExecOpValidationError(RExecOpError):
     public_message = "runtime input or contract validation failed"
 
 
+class RExecOpGovernanceDecisionError(RExecOpValidationError):
+    """Stable runtime-consumer failure for one GovEngine decision."""
+
+    public_message = "runtime rejected the governance decision"
+
+    def __init__(
+        self,
+        reason_code: str,
+        *,
+        context: tuple[str, ...] = (),
+    ) -> None:
+        self.reason_code = reason_code
+        self.context = context
+        detail = f": {','.join(context)}" if context else ""
+        super().__init__(f"{reason_code}{detail}")
+
+
 class RExecOpConcurrencyConflict(RExecOpError):
     """A compare-and-swap write lost a race with another runtime process."""
 

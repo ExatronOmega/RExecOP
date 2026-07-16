@@ -38,6 +38,8 @@ The script runs:
 15. External/security review: `python scripts/validate_external_review_gate.py` with record in
     `docs/release-security-review/<version>.json` (`independent_review` or documented
     `solo_reviewed_alpha_risk`)
+16. Shared governance corpus: `python scripts/validate_governance_conformance.py`
+    (33 wheel-shipped cases; six execute RExecOp-owned atomic claim semantics)
 
 CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
 and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the

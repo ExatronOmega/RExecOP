@@ -10,7 +10,7 @@ from govengine.governance_decision import DecisionClaimPort, GovernanceDecision
 from govengine.governance_decision_signing import require_trusted_governance_decision
 from govengine.signing import SignedArtifact, SigningPolicy, TrustPolicy, VerifierPort
 
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpGovernanceDecisionError
 
 
 @dataclass(frozen=True)
@@ -104,19 +104,21 @@ class TrustedGovernanceDecisionConsumer:
                 trust_policy=self._trust_policy,
             )
         except GovApiError as exc:
-            raise RExecOpValidationError(
-                f"governance_decision_untrusted: {exc}"
+            raise RExecOpGovernanceDecisionError(
+                "governance_decision_untrusted",
+                context=(exc.reason_code,),
             ) from exc
         grant = decision.authorization
         if not decision.allowed or grant is None:
-            raise RExecOpValidationError(
-                f"governance_decision_denied: {decision.reason_code}"
+            raise RExecOpGovernanceDecisionError(
+                "governance_decision_denied",
+                context=(decision.reason_code,),
             )
         self._require_bindings(grant.as_dict(), facts)
         expires_at = datetime.fromisoformat(grant.expires_at)
         checked_at = now or datetime.now(UTC)
         if checked_at >= expires_at:
-            raise RExecOpValidationError("governance_decision_expired")
+            raise RExecOpGovernanceDecisionError("governance_decision_expired")
         claimed = self._store.claim_governance_decision_once(
             decision_digest=decision.decision_digest,
             nonce=grant.nonce,
@@ -124,7 +126,7 @@ class TrustedGovernanceDecisionConsumer:
             runtime_instance_id=facts.runtime_instance_id,
         )
         if not claimed:
-            raise RExecOpValidationError("governance_decision_reused")
+            raise RExecOpGovernanceDecisionError("governance_decision_reused")
         return ClaimedGovernanceDecision(
             decision=decision,
             signed_artifact=bundle.signed_artifact,
@@ -143,8 +145,9 @@ class TrustedGovernanceDecisionConsumer:
             if not _binding_equal(grant.get(key), value)
         ]
         if drift:
-            raise RExecOpValidationError(
-                "governance_decision_binding_drift: " + ",".join(sorted(drift))
+            raise RExecOpGovernanceDecisionError(
+                "governance_decision_binding_drift",
+                context=tuple(sorted(drift)),
             )
 
 

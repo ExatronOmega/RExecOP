@@ -2,6 +2,12 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Consumes the 33-case wheel-shipped GovEngine v1 conformance corpus. RExecOp
+  executes all GovEngine-owned cases through the shared runner and owns six
+  atomic decision-consumption cases covering valid claim, runtime/attempt/
+  lease/fencing drift and nonce reuse. Governance consumer failures now expose
+  stable reason codes with bounded context instead of requiring message
+  parsing.
 - Verifies trigger, supervisor and automation planning admissions as explicitly
   non-executable GovEngine adapters. Cross-stack G3 coverage requires the
   `planning_admission_adapter.v1` marker, rejects any authorization field and

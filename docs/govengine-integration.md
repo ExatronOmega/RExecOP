@@ -156,6 +156,19 @@ facts and bounded output metrics. GovEngine recomputes that binding and returns
 connector call itself succeeded. The result is a governance postcondition check,
 not a SCLite receipt or proof that a compromised runtime reported honest facts.
 
+## Shared v1 conformance corpus
+
+The installed GovEngine wheel ships 33 language-neutral JSON cases under
+`govengine/conformance/v1`. `scripts/validate_governance_conformance.py`
+executes every GovEngine-owned case through the shared runner and six
+RExecOp-owned `consume_decision` cases through the real signed-decision
+consumer and `FileStore` atomic claim path.
+
+Runtime binding drift and replay expose stable
+`RExecOpGovernanceDecisionError.reason_code` values. Exact drift fields remain
+bounded context, not part of the identifier. This runner does not move policy
+evaluation into RExecOp or simulate storage in GovEngine.
+
 ## Apply hard rule
 
 Mutating modes (`apply`, `recovery`) require:

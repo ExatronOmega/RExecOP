@@ -28,7 +28,7 @@ from rexecop.adapters.govengine_port.runtime_authority import (
     TrustedGovernanceDecisionConsumer,
 )
 from rexecop.connectors.static_fixture import StaticFixtureRuntime
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpGovernanceDecisionError
 from rexecop.operation.controller import OperationController
 from rexecop.storage.file_store import FileStore
 
@@ -269,8 +269,13 @@ def test_consumer_rejects_reuse_and_untrusted_signer(tmp_path: Path) -> None:
         trust_policy=TrustPolicy(),
     )
     consumer.authorize_and_claim(facts)
-    with pytest.raises(RExecOpValidationError, match="governance_decision_reused"):
+    with pytest.raises(
+        RExecOpGovernanceDecisionError,
+        match="governance_decision_reused",
+    ) as reused:
         consumer.authorize_and_claim(facts)
+    assert reused.value.reason_code == "governance_decision_reused"
+    assert reused.value.context == ()
 
     untrusted = TrustedGovernanceDecisionConsumer(
         store=FileStore(tmp_path / "other"),
@@ -279,8 +284,15 @@ def test_consumer_rejects_reuse_and_untrusted_signer(tmp_path: Path) -> None:
         signing_policy=SIGNING_POLICY,
         trust_policy=TrustPolicy(),
     )
-    with pytest.raises(RExecOpValidationError, match="governance_decision_untrusted"):
+    with pytest.raises(
+        RExecOpGovernanceDecisionError,
+        match="governance_decision_untrusted",
+    ) as untrusted_error:
         untrusted.authorize_and_claim(facts)
+    assert untrusted_error.value.reason_code == "governance_decision_untrusted"
+    assert untrusted_error.value.context == (
+        "governance_decision_signer_not_allowed",
+    )
 
 
 @pytest.mark.parametrize(
@@ -321,8 +333,13 @@ def test_trusted_decision_with_runtime_binding_drift_is_rejected(
         trust_policy=TrustPolicy(),
     )
 
-    with pytest.raises(RExecOpValidationError, match="governance_decision_binding_drift"):
+    with pytest.raises(
+        RExecOpGovernanceDecisionError,
+        match="governance_decision_binding_drift",
+    ) as drift:
         consumer.authorize_and_claim(facts)
+    assert drift.value.reason_code == "governance_decision_binding_drift"
+    assert drift.value.context == (field,)
 
 
 def test_expired_signed_decision_is_rejected_before_claim(tmp_path: Path) -> None:
@@ -349,8 +366,12 @@ def test_expired_signed_decision_is_rejected_before_claim(tmp_path: Path) -> Non
         trust_policy=TrustPolicy(),
     )
 
-    with pytest.raises(RExecOpValidationError, match="governance_decision_expired"):
+    with pytest.raises(
+        RExecOpGovernanceDecisionError,
+        match="governance_decision_expired",
+    ) as expired:
         consumer.authorize_and_claim(facts)
+    assert expired.value.reason_code == "governance_decision_expired"
     assert not list((store.root / "governance_claims").glob("*.json"))
 
 
