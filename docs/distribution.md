@@ -113,9 +113,9 @@ python -m pip install "govengine @ git+https://github.com/rozmiarD/GovEngine.git
 python -m pip install "rexecop @ git+https://github.com/rozmiarD/RExecOP.git@main"
 ```
 
-The current RExecOp source candidate requires GovEngine `1.0.0rc1` and final
-SCLite `2.0.0`; the published `0.2.24a0` wheel remains on the prior public
-line.
+The current RExecOp source candidate requires public GovEngine `1.0.0rc1` and
+final public SCLite `2.0.0`; the published RExecOp `0.2.24a0` wheel remains on
+the prior public line.
 
 ## Private index / GitHub Packages (operator-owned)
 

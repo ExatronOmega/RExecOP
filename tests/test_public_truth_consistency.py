@@ -40,6 +40,27 @@ def test_public_truth_rejects_package_version_drift(monkeypatch: pytest.MonkeyPa
     assert any("package_version_mismatch" in item for item in errors)
 
 
+def test_public_truth_rejects_stale_govengine_public_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    validator = _load_validator()
+    record = (ROOT / "docs/alpha-sign-off-record.md").read_text(encoding="utf-8")
+    stale_record = record.replace(
+        validator.EXPECTED_GOVENGINE_STATUS,
+        "`1.0.0rc1` (source candidate; published `0.16.11`)",
+    )
+
+    def fake_read(path: str) -> str:
+        if path == "docs/alpha-sign-off-record.md":
+            return stale_record
+        return (ROOT / path).read_text(encoding="utf-8")
+
+    monkeypatch.setattr(validator, "_read", fake_read)
+    errors = validator.collect_errors()
+    assert any("docs/alpha-sign-off-record.md:missing:" in item for item in errors)
+    assert any("docs/alpha-sign-off-record.md:forbidden:" in item for item in errors)
+
+
 def test_public_truth_rejects_stale_readme_operator_version(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

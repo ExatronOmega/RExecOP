@@ -122,6 +122,10 @@ PyPI alpha line is **`0.2.24a0`**. Entries under
 
 - Pins `govengine==1.0.0rc1` and advances the RExecOp source candidate without
   changing runtime schemas or execution semantics.
+- Confirms the public `govengine==1.0.0rc1` and `sclite-core==2.0.0` wheels
+  against the exact RExecOp source commit in a clean environment: dependency
+  resolution, `pip check`, imports and the G6 consumer gate pass without
+  publishing RExecOp.
 - Pins the matching optional profile candidate `tecrax==0.4.0rc3`.
 - Revalidates the shared governance corpus, signed decision claim, pre-I/O
   permit handoff and receipt-conformance boundary against the frozen

@@ -113,7 +113,8 @@ src/rexecop/
 
 ## GovEngine relationship
 
-Current source pin: `govengine==1.0.0rc1` (see `pyproject.toml`).
+Exact governance dependency: public `govengine==1.0.0rc1` (see
+`pyproject.toml`).
 
 GovEngine composes and validates `RuntimeAdmissionResult` and runner request/receipt shapes.
 RExecOp calls the GovEngine adapter before mutating execution and maps admission metadata into

@@ -15,6 +15,7 @@ import rexecop  # noqa: E402
 EXPECTED_GOVENGINE = "govengine==1.0.0rc1"
 EXPECTED_SCLITE = "sclite-core==2.0.0"
 EXPECTED_TECRAX_EXTRA = "tecrax==0.4.0rc3"
+EXPECTED_GOVENGINE_STATUS = "`1.0.0rc1` (public release candidate)"
 PUBLISHED_PYPI_VERSION = "0.2.24a0"
 
 VERSION_DOCS = (
@@ -214,6 +215,16 @@ def collect_errors() -> list[str]:
     _require(errors, "README.md", EXPECTED_SCLITE)
     _require(errors, "docs/distribution.md", EXPECTED_GOVENGINE)
     _require(errors, "docs/distribution.md", EXPECTED_SCLITE)
+    _require(
+        errors,
+        "docs/alpha-sign-off-record.md",
+        EXPECTED_GOVENGINE_STATUS,
+    )
+    _forbid(
+        errors,
+        "docs/alpha-sign-off-record.md",
+        "source candidate; published `0.16.11`",
+    )
     _require(errors, "docs/sclite-integration.md", EXPECTED_SCLITE)
     _forbid(errors, "docs/distribution.md", "govengine==0.17.0rc1")
     _forbid(errors, "docs/sclite-integration.md", "sclite-core==1.0.9")
