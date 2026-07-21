@@ -67,6 +67,7 @@ This document states what the current published alpha line does **not** provide 
 | Source alpha line | `0.3.0rc3` is the local candidate on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
 | Public API is a candidate freeze | `rexecop.public_api.v1` identifies the intended 1.x import/CLI surface, but does not override the unreleased candidate status or other M10 blockers |
 | Coordinated dependencies | Source line requires public `govengine==1.0.0rc1` and public `sclite-core==2.0.0`; the `tecrax` extra requires source candidate `tecrax==0.4.0rc3` |
+| Operational qualification | The current source candidate passed the M10 isolated clean-install, live bounded read-only, restart/recovery and public-projection disclosure journey recorded in [`release-qualification/m10-operational.json`](release-qualification/m10-operational.json). This is not the independent security review, does not certify mutation, and does not make the private runtime root publishable. |
 
 ## Stack readiness labels
 

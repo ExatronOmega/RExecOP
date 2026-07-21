@@ -1,0 +1,101 @@
+{
+  "schema": "rexecop.operational_qualification.v1",
+  "qualification_id": "m10-operational-2026-07-21",
+  "performed_at": "2026-07-21",
+  "scope": {
+    "qualified_source": {
+      "version": "0.3.0rc3",
+      "commit": "9e1d13d947351c9904afd7d10b632eac041d6941"
+    },
+    "target_release": "1.0.0rc1",
+    "python": "3.13.5",
+    "environment_class": "isolated_operator_runtime",
+    "live_infrastructure_touched": true,
+    "live_mutations_performed": false
+  },
+  "stack": {
+    "sclite-core": {
+      "version": "2.0.0",
+      "commit": "2470373c6384c284ab48df7ce763f0938797d155"
+    },
+    "govengine": {
+      "version": "1.0.0rc1",
+      "commit": "288459fd77ea2187b5affc11fdb77e526bfa4109"
+    },
+    "rexecop": {
+      "version": "0.3.0rc3",
+      "commit": "9e1d13d947351c9904afd7d10b632eac041d6941"
+    },
+    "tecrax": {
+      "version": "0.4.0rc3",
+      "commit": "a87065815e0d236b39ecc43216278bd6a5164d62"
+    }
+  },
+  "artifacts": {
+    "rexecop_wheel_sha256": "10161123927f289fd64184333dca184d83b2411849dcf0d8eefee04d3298fd41",
+    "rexecop_sdist_sha256": "387a560df825410cfdd0f5f4fce03bedfcd17deb8887103d4c36144ca704aa8d",
+    "tecrax_wheel_sha256": "c8e67f837647521b5c38a22578405e895270bf6a5253b8209c22a2e7c3dee7a6",
+    "tecrax_sdist_sha256": "65ec38fddf79a8b53442a744db147274ba30d94bf3deeda4d308f7a1481b94d4"
+  },
+  "checks": {
+    "clean_wheel_install": "passed",
+    "pip_check": "passed",
+    "stable_doctor": "passed",
+    "target_identity_cross_check": "passed",
+    "govengine_client_used": true,
+    "static_govengine_adapter_used": false,
+    "bounded_read_only_workflow": "passed",
+    "operation_validation": "passed",
+    "remote_temp_cleanup": "passed"
+  },
+  "recovery": {
+    "pre_io_failure_attempt_count": 0,
+    "post_io_crash": {
+      "durable_started_attempt": true,
+      "backend": "local_shell_readonly",
+      "backend_io_completed_before_crash": true,
+      "raw_output_retained": false,
+      "result_sha256": "7f2e1bac61a998b015bb7e5022e50c86d2a5f0488c9cbabf86ebb6d686af178e"
+    },
+    "first_recovery_indeterminate_count": 1,
+    "retry_block_reason": "outcome_indeterminate",
+    "second_recovery_indeterminate_count": 0,
+    "first_projection_reconciliation_count": 1,
+    "second_projection_reconciliation_count": 0,
+    "recovery_result_sha256": "cb5f7ef88ad78dd03ab1305eb622b41ed6d6e76c6a962f966bf53ca8c035221d",
+    "result": "passed"
+  },
+  "projections": {
+    "receipt_show": {
+      "schema": "rexecop.receipt_show.v0.1",
+      "sha256": "a486d0978006caca75cd480cc9e2e8601f1548e06a6d335dc9ba62ad183e1156"
+    },
+    "truth_path": {
+      "schema": "rexecop.truth_path_projection.v0.1",
+      "sha256": "c166817a8de2c10b6012f3af6bee102e8e6727f4a302435f105396615c837b6b"
+    },
+    "support_bundle": {
+      "schema": "rexecop.support_bundle.v0.1",
+      "sha256": "117bb8ac122baf838dc1ec2ed363939566cf2025d0f2dcbb3e9ef7e781ef81cc"
+    }
+  },
+  "disclosure": {
+    "public_projection_private_address_matches": 0,
+    "public_projection_private_hostname_matches": 0,
+    "public_projection_identity_path_matches": 0,
+    "public_projection_known_hosts_path_matches": 0,
+    "public_projection_credential_ref_matches": 0,
+    "raw_runtime_contains_operator_topology": true,
+    "raw_runtime_publication_prohibited": true,
+    "private_runtime_retained": false,
+    "result": "passed"
+  },
+  "non_claims": [
+    "This qualification is not an independent security review.",
+    "This qualification does not certify mutating execution."
+  ],
+  "independent_review": {
+    "status_at_qualification": "pending",
+    "included_in_this_record": false
+  }
+}

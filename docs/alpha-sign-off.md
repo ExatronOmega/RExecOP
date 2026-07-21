@@ -37,14 +37,17 @@ The script runs:
 16. `python scripts/validate_m10_release_gate.py` — pinned actions, OIDC workflow,
     SBOM/attestation-bound release evidence and fail-closed release regressions;
     add `--live-github` before publication to verify ref/environment protection
-17. `python scripts/validate_g3_runtime_governance_gate.py`
-18. `python scripts/validate_governance_conformance.py`
-19. `python scripts/validate_g6_release_candidate_gate.py`
-20. Core boundary greps (`tecrax` / domain strings forbidden in core) and
+17. `python scripts/validate_m10_operational_gate.py` — public-safe clean-install,
+    live read-only, recovery and disclosure qualification record; independent
+    review remains a separate gate
+18. `python scripts/validate_g3_runtime_governance_gate.py`
+19. `python scripts/validate_governance_conformance.py`
+20. `python scripts/validate_g6_release_candidate_gate.py`
+21. Core boundary greps (`tecrax` / domain strings forbidden in core) and
     `scripts/secret_scan.sh`
-21. Ruff and mypy
-22. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
-23. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
+22. Ruff and mypy
+23. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
+24. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
 
 The release workflow validates that `v<version>` resolves to the exact workflow

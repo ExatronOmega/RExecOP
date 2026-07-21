@@ -2,6 +2,14 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Records the M10 operational qualification as bounded public evidence: exact
+  source/artifact identities, a real `GovEngineClient` read-only journey,
+  deterministic indeterminate-outcome and projection recovery, and zero private
+  topology matches in public projections. A dedicated validator rejects live
+  mutation, disclosure drift, missing post-I/O proof and retained raw output;
+  independent security
+  review remains a separate release gate.
+
 - Upgrades new-publication release evidence to
   `rexecop.release_evidence.v2`. Wheel, sdist and CycloneDX SBOM digests must
   exactly match one GitHub provenance attestation; the evidence record carries
