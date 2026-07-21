@@ -8,8 +8,11 @@
   its ID/URL and fails closed on missing SBOM or subject drift. Historical v1
   evidence remains accepted only for the preceding public line.
 - The publish and bounded repair workflows now attest wheel, sdist and SBOM
-  before producing evidence, attest the evidence record itself, and persist the
-  SBOM with the record on the `release-evidence` branch.
+  before producing evidence, attest the evidence record itself, and publish the
+  SBOM and evidence as assets of the GitHub Release attached to the protected
+  version tag.
+  The first evidence-backed line no longer depends on the unused `0.2.24a0`
+  branch record; later trains may explicitly validate the preceding Release asset.
 
 - Freezes the candidate M10 public surface in `rexecop.public_api.v1`: exact
   supported Python symbols, 23 `stable_v1` CLI contracts and a complete explicit

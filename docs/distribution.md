@@ -109,6 +109,20 @@ the live state before publication:
 python scripts/validate_m10_release_gate.py --live-github
 ```
 
+Before dispatching publish, create `v<version>` at the exact green `main`
+commit. The workflow resolves the tag to `GITHUB_SHA` and fails before upload on
+missing or mismatched binding. After PyPI upload and public-index smoke it
+creates the corresponding GitHub Release and attaches:
+
+- `rexecop-release-evidence-<version>.json`;
+- `rexecop-<version>.cdx.json`.
+
+Wheel and sdist remain on PyPI. GitHub artifact attestations bind their digests
+with the SBOM and evidence. A later train may name a previous evidence-backed
+version; its record is then downloaded from `v<previous-version>` Release assets
+and validated before upload. Leave that input empty only for the first
+evidence-backed line.
+
 The official publisher action is pinned to a reviewed full commit SHA. The
 workflow carries no long-lived PyPI credential and rejects token-based upload
 settings through `scripts/validate_workflow_security.py`.

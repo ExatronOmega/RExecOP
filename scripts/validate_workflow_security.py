@@ -56,6 +56,11 @@ def validate_workflow_security() -> dict[str, int]:
         "dist/*.cdx.json",
         "steps.release_subject_attestation.outputs.attestation-id",
         "steps.release_subject_attestation.outputs.attestation-url",
+        "git check-ref-format",
+        "git rev-list -n 1",
+        "gh release download",
+        "gh release create",
+        "--verify-tag",
         'default: "0.3.0rc3"',
         'default: "2470373c6384c284ab48df7ce763f0938797d155"',
     ):
@@ -66,6 +71,9 @@ def validate_workflow_security() -> dict[str, int]:
         "TWINE_PASSWORD",
         "twine upload",
         "skip-existing:",
+        "HEAD:release-evidence",
+        "refs/heads/release-evidence",
+        "git worktree",
     ):
         if forbidden in publish:
             raise AssertionError(f"workflow_publish_unsafe_setting:{forbidden}")
@@ -76,9 +84,17 @@ def validate_workflow_security() -> dict[str, int]:
         "dist/*.cdx.json",
         "steps.release_subject_attestation.outputs.attestation-id",
         "steps.release_subject_attestation.outputs.attestation-url",
+        "git check-ref-format",
+        "git rev-list -n 1",
+        "gh release upload",
+        "--clobber",
+        "--verify-tag",
     ):
         if marker not in repair:
             raise AssertionError(f"workflow_repair_missing:{marker}")
+    for forbidden in ("HEAD:release-evidence", "refs/heads/release-evidence", "git worktree"):
+        if forbidden in repair:
+            raise AssertionError(f"workflow_repair_legacy_branch_setting:{forbidden}")
     return {"workflows": len(paths), "actions": action_count}
 
 

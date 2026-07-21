@@ -47,13 +47,15 @@ The script runs:
 23. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
 
-The release workflow additionally runs
+The release workflow validates that `v<version>` resolves to the exact workflow
+source commit. When a preceding evidence-backed version is supplied, it downloads
+that record from GitHub Release assets and additionally runs
 `python scripts/validate_release_train_preflight.py --release --previous-evidence
 <downloaded-json>` before upload. Post-publish it runs
 `python scripts/validate_public_index_release_smoke.py --write-evidence --verify-post-publish`
     (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, creates
     SBOM/attestation-bound `rexecop.release_evidence.v2`, then verifies it before
-    durable evidence persistence).
+    durable persistence as GitHub Release assets).
 Package supply-chain validation is `python scripts/validate_supply_chain_gate.py dist`
 after build (`pip-audit` + CycloneDX SBOM; exceptions in
 `docs/supply-chain-audit-exceptions.json`).

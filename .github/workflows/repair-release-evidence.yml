@@ -26,6 +26,17 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
+      - name: Validate release tag source binding
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          test "$SOURCE_COMMIT" = "$(printf '%s' "$SOURCE_COMMIT" | grep -E '^[0-9a-f]{40}$')"
+          release_tag="v${VERSION}"
+          git check-ref-format "refs/tags/${release_tag}"
+          git fetch --force origin "refs/tags/${release_tag}:refs/tags/${release_tag}"
+          test "$(git rev-list -n 1 "${release_tag}")" = "$SOURCE_COMMIT"
+
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: "3.12"
@@ -70,7 +81,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: rexecop-release-evidence-${{ inputs.version }}
-          path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+          path: |
+            .release-train/rexecop-release-evidence-${{ inputs.version }}.json
+            dist/rexecop-${{ inputs.version }}.cdx.json
           if-no-files-found: error
 
       - name: Attest repaired evidence
@@ -78,24 +91,19 @@ jobs:
         with:
           subject-path: .release-train/rexecop-release-evidence-${{ inputs.version }}.json
 
-      - name: Persist repaired evidence on release-evidence branch
+      - name: Persist repaired GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          if git ls-remote --exit-code origin refs/heads/release-evidence; then
-            git fetch origin release-evidence
-            git worktree add --detach /tmp/rexecop-release-evidence FETCH_HEAD
+          release_tag="v${VERSION}"
+          evidence=".release-train/rexecop-release-evidence-${VERSION}.json"
+          sbom="dist/rexecop-${VERSION}.cdx.json"
+          if gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release upload "$release_tag" "$evidence" "$sbom" --clobber
           else
-            git worktree add --detach /tmp/rexecop-release-evidence "$GITHUB_SHA"
-            git -C /tmp/rexecop-release-evidence switch --orphan release-evidence
-            git -C /tmp/rexecop-release-evidence rm -rf . || true
+            gh release create "$release_tag" "$evidence" "$sbom" \
+              --verify-tag \
+              --title "RExecOP ${VERSION}" \
+              --generate-notes
           fi
-          mkdir -p /tmp/rexecop-release-evidence/release-evidence
-          cp ".release-train/rexecop-release-evidence-${{ inputs.version }}.json" \
-            /tmp/rexecop-release-evidence/release-evidence/
-          cp "dist/rexecop-${{ inputs.version }}.cdx.json" \
-            /tmp/rexecop-release-evidence/release-evidence/
-          git -C /tmp/rexecop-release-evidence add release-evidence
-          git -C /tmp/rexecop-release-evidence commit \
-            -m "Repair RExecOp ${{ inputs.version }} release evidence"
-          git -C /tmp/rexecop-release-evidence push origin HEAD:release-evidence

@@ -22,13 +22,18 @@ python scripts/validate_public_index_release_smoke.py \
   --verify-post-publish
 ```
 
-`publish.yml` first generates one provenance attestation whose subjects are the
-exact wheel, sdist and SBOM. The v2 record must contain the same filenames and
-SHA-256 digests plus that attestation's GitHub ID/URL. The workflow then attests
-the record itself and persists both record and SBOM on the dedicated
-`release-evidence` Git branch. Before another
-upload, release-mode preflight downloads and validates the preceding supported
-line's record from that durable ref:
+`publish.yml` first requires the protected `v<version>` tag to resolve to the
+exact workflow source commit. It then generates one provenance attestation whose
+subjects are the exact wheel, sdist and SBOM. The v2 record must contain the same
+filenames and SHA-256 digests plus that attestation's GitHub ID/URL. The workflow
+attests the record itself and publishes the record and SBOM as GitHub Release assets
+attached to that tag.
+
+For the first evidence-backed line there is no artificial dependency on an
+older alpha record. A later train can explicitly name its preceding
+evidence-backed version; publish downloads
+`rexecop-release-evidence-<previous>.json` from the corresponding
+`v<previous>` GitHub Release before running:
 
 ```bash
 python scripts/validate_release_train_preflight.py \
@@ -36,13 +41,16 @@ python scripts/validate_release_train_preflight.py \
   --previous-evidence .release-train/rexecop-release-evidence-<previous>.json
 ```
 
-Missing evidence, a mismatched version, altered record digest, absent wheel/sdist
+When a previous version is declared, missing evidence, a mismatched version,
+altered record digest, absent wheel/sdist
 or SBOM, subject-digest drift, malformed attestation identity, non-green doctor
 status or incomplete installed-version inventory fails closed.
 `.github/workflows/repair-release-evidence.yml` is the bounded manual recovery path
 for an already-published line; it reruns the public-index smoke, downloads the exact
-public wheel and sdist, and publishes a replacement evidence record. A replacement
-may explicitly name the prior line in `supersedes`.
+public wheel and sdist, verifies that the version tag still resolves to the
+declared source commit, and replaces the Release evidence/SBOM assets only after
+fresh attestations. A replacement may explicitly name the prior line in
+`supersedes`.
 
 Verify the persisted provenance subjects after downloading them:
 
