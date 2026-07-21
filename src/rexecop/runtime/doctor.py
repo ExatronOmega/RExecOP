@@ -34,6 +34,20 @@ CHECK_PASSED = "passed"
 CHECK_WARNING = "warning"
 CHECK_BLOCKER = "blocker"
 
+_SECURITY_CHECK_IDS = frozenset(
+    {
+        "catalog",
+        "environment",
+        "mutation_posture",
+        "network_egress_posture",
+        "plugin_posture",
+        "profile_conformance",
+        "stack_contract_compatibility",
+        "stack_packages",
+        "typed_execution_stack_compatibility",
+    }
+)
+
 
 def run_runtime_doctor(
     root: Path,
@@ -76,6 +90,9 @@ def run_runtime_doctor(
         _check_catalog(catalog_path),
     ]
     blockers = [check["id"] for check in checks if check["status"] == CHECK_BLOCKER]
+    security_blockers = [
+        check_id for check_id in blockers if check_id in _SECURITY_CHECK_IDS
+    ]
     warnings = [check["id"] for check in checks if check["status"] == CHECK_WARNING]
     status = CHECK_BLOCKER if blockers else CHECK_WARNING if warnings else CHECK_PASSED
     next_actions = [str(check["next_action"]) for check in checks if check.get("next_action")]
@@ -87,6 +104,7 @@ def run_runtime_doctor(
         "instance": instance,
         "checks": checks,
         "blockers": blockers,
+        "security_blockers": security_blockers,
         "warnings": warnings,
         "next_actions": sorted(set(next_actions)),
         "contract_versions": contract_versions_summary(profile_version=profile_version),

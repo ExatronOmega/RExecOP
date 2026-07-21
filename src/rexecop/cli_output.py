@@ -128,9 +128,14 @@ def render_doctor_table(payload: dict[str, Any]) -> str:
         f"root={payload.get('root')}",
     ]
     blockers = payload.get('blockers') or []
+    security_blockers = payload.get('security_blockers') or []
     warnings = payload.get('warnings') or []
     if blockers:
         lines.append('blockers=' + ','.join(str(item) for item in blockers))
+    if security_blockers:
+        lines.append(
+            'security_blockers=' + ','.join(str(item) for item in security_blockers)
+        )
     if warnings and not active_cli_output().quiet:
         lines.append('warnings=' + ','.join(str(item) for item in warnings))
     if active_cli_output().verbose:
@@ -151,10 +156,14 @@ def render_doctor_markdown(payload: dict[str, Any]) -> str:
         f"- root: `{payload.get('root')}`",
     ]
     blockers = payload.get('blockers') or []
+    security_blockers = payload.get('security_blockers') or []
     warnings = payload.get('warnings') or []
     if blockers:
         lines.extend(['', '## Blockers', ''])
         lines.extend(f"- `{item}`" for item in blockers)
+    if security_blockers:
+        lines.extend(['', '## Security blockers', ''])
+        lines.extend(f"- `{item}`" for item in security_blockers)
     if warnings and not active_cli_output().quiet:
         lines.extend(['', '## Warnings', ''])
         lines.extend(f"- `{item}`" for item in warnings)

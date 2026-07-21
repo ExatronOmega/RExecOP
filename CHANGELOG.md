@@ -2,6 +2,12 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Completes the M10 runtime qualification surface. `rexecop doctor` now emits
+  `security_blockers` as a bounded subset of runtime-configuration blockers,
+  while storage and executor certification remain explicit non-security
+  blockers. `validate_m10_runtime_gate.py` binds this report to the existing M9
+  multiprocessing gate, stable storage, single-executor, mutation, plugin and
+  network posture tests.
 - Makes the stable runtime mechanically read-only. `REXECOP_MUTATION_POSTURE`
   defaults to `stable_read_only`; mutating modes fail with the stable
   `mutation_not_certified` reason before execution and are checked again before

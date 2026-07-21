@@ -73,7 +73,7 @@ runtime behavior change. Compatibility policy id: `unknown_major_fail_closed`.
 | Unknown major version | Fail closed before execution planning or backend IO. |
 | Unknown minor/patch within supported major | Fail closed until the host explicitly pins the version. |
 | GovEngine catalog | `govengine-policy compatibility --json` is the machine-readable supported-contract report. |
-| RExecOp doctor | `rexecop doctor` emits `rexecop.doctor_report.v0.1` with `contract_versions` and blocker `stack_contract_compatibility`. |
+| RExecOp doctor | `rexecop doctor` emits `rexecop.doctor_report.v0.1` with `contract_versions`, all `blockers`, and the runtime-configuration `security_blockers` subset; `stack_contract_compatibility` remains fail-closed. |
 | RExecOp explain | `rexecop operation explain` includes the same `contract_versions` summary for operator review. |
 | SCLite artifact refs | RExecOp pins `SCLITE_SCHEMA_REFS` to supported `v0.x` artifact versions and validates them in `scripts/validate_stack_contracts.py`. |
 | SCLite Python imports | The wheel-shipped `sclite.consumer_import_inventory.v1` allowlist is checked against `src/rexecop`; new top-level/deep imports and stale entries fail `validate_stack_contracts.py`. |

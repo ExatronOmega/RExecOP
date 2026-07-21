@@ -31,7 +31,15 @@ without a store.
 | --- | --- |
 | `version` | Print package version |
 | `init [--guided]` | Create runtime root layout; no secrets or backend IO |
-| `doctor [--profile] [--env] [--catalog]` | Runtime root, storage, single-executor and mutation posture, plugin inventory, stack compatibility and optional operator inputs |
+| `doctor [--profile] [--env] [--catalog]` | Runtime root, storage, single-executor and mutation posture, plugin inventory, stack compatibility, `security_blockers` and optional operator inputs |
+
+For stable-runtime qualification, set `REXECOP_DEPLOYMENT_POSTURE=stable` and
+allowlist every reviewed in-process plugin with `REXECOP_PLUGIN_ALLOWLIST`. JSON
+output always includes all `blockers` plus `security_blockers`, the subset caused
+by mutation/plugin/network/input/stack security checks. Storage and executor
+certification failures remain blockers but are not mislabeled as security review
+findings. This runtime classification does not replace the independent release
+security review.
 
 ## Environment and secrets
 

@@ -104,6 +104,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 **Runtime readiness and operator UX**
 
 - Runtime root: `--root` / `REXECOP_ROOT`, `--instance` / `REXECOP_INSTANCE`, `init`, `doctor`
+- Stable runtime qualification: `doctor` reports storage/executor/mutation/plugin checks and
+  a machine-readable `security_blockers` subset for configuration-level security failures
 - Input validation: `env lint`, `profile lint`, `secrets doctor`, `secrets suggest-ref`
 - Profile developer surface: `profiles list/show`, `connectors list/show`, `capabilities list`,
   `profile manifest`, `profile harness`, operator metadata projection

@@ -23,6 +23,10 @@ rexecop --root /tmp/rexecop-first-run doctor \
 
 Expected result: `status: passed`, no blockers, no warnings, and a passed
 `mutation_posture` check reporting `stable_read_only` with `apply_enabled: false`.
+The JSON report also contains an empty `security_blockers` list. Stable qualification
+with installed plugins additionally requires `REXECOP_DEPLOYMENT_POSTURE=stable`
+and an explicit `REXECOP_PLUGIN_ALLOWLIST`; the public first-run fixture remains a
+no-I/O onboarding check, not independent security review evidence.
 
 ## 3. Lint the operator inputs
 
