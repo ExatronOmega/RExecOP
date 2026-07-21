@@ -15,10 +15,20 @@ def isolate_registered_secret_values():
 
 
 @pytest.fixture
-def allow_mutation_without_governance_for_runtime_test(
+def allow_lab_mutation_runtime_test(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Keep runtime-mechanics tests independent from the still-blocked G2 approval path."""
+    """Enable mutation mechanics without claiming stable-runtime readiness."""
+
+    monkeypatch.setenv("REXECOP_MUTATION_POSTURE", "lab_only")
+
+
+@pytest.fixture
+def allow_mutation_without_governance_for_runtime_test(
+    allow_lab_mutation_runtime_test: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep runtime-mechanics tests independent from the governance approval path."""
 
     def allow_for_test(*, spec, shared_state, **_):  # type: ignore[no-untyped-def]
         step_id = str(spec.get("step_id") or "")

@@ -83,7 +83,10 @@ def test_readonly_inspect_fixture_state_against_staging_http(tmp_path: Path) -> 
         server.stop()
 
 
-def test_staging_mutation_stops_before_http_without_bound_approval(tmp_path: Path) -> None:
+def test_staging_mutation_stops_before_http_without_bound_approval(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     server = StagingHttpServer()
     server.start()
     env_path = tmp_path / "staging-apply.yaml"

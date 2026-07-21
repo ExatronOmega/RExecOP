@@ -59,6 +59,33 @@ def _planned_operation(tmp_path: Path):
     return root, operation
 
 
+def test_start_reports_stable_mutation_posture_reason(tmp_path: Path) -> None:
+    from rexecop.adapters.govengine_port.contracts import GovEngineDecisionType
+    from rexecop.adapters.govengine_port.static_adapter import StaticGovEngineAdapter
+    from rexecop.operation.controller import OperationController
+
+    root = tmp_path / ".rexecop"
+    controller = OperationController(
+        store=FileStore(root),
+        govengine_adapter=StaticGovEngineAdapter(GovEngineDecisionType.ALLOWED),
+    )
+    operation = controller.plan(
+        profile_path=PROFILE,
+        environment_path=ENVIRONMENT,
+        intent="inspect_fixture_state",
+        target="fixture-target",
+        mode="apply",
+    )
+
+    payload = _json_error(
+        _invoke(root, "--json", "start", "--operation", operation.id)
+    )
+
+    assert payload["command"] == "start"
+    assert payload["reason_code"] == "mutation_not_certified"
+    assert "stable execution" in " ".join(payload["safe_next_actions"])
+
+
 @pytest.mark.parametrize(
     ("args", "expected_command", "expected_reason"),
     [

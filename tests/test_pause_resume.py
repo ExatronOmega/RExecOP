@@ -25,7 +25,10 @@ def _controller(tmp_path: Path, decision: GovEngineDecisionType) -> OperationCon
     )
 
 
-def test_pause_only_at_pause_safe_step(tmp_path: Path) -> None:
+def test_pause_only_at_pause_safe_step(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = _controller(tmp_path, GovEngineDecisionType.ALLOWED)
     operation = controller.plan(
         profile_path=PROFILE,
@@ -63,7 +66,10 @@ def test_resume_continues_apply_workflow(
     assert completed.state == OperationState.COMPLETED.value
 
 
-def test_pause_rejected_on_non_pause_safe_step(tmp_path: Path) -> None:
+def test_pause_rejected_on_non_pause_safe_step(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = _controller(tmp_path, GovEngineDecisionType.ALLOWED)
     operation = controller.plan(
         profile_path=PROFILE,

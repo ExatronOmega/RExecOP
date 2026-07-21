@@ -68,4 +68,4 @@ def test_real_adapter_apply_allowed(tmp_path: Path) -> None:
     )
     assert operation.state == OperationState.APPROVED.value
     assert operation.govengine_decision_type == GovEngineDecisionType.ALLOWED.value
-    assert controller.allows_mutating_execution(operation.id)
+    assert not controller.allows_mutating_execution(operation.id)

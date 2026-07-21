@@ -173,10 +173,15 @@ evaluation into RExecOp or simulate storage in GovEngine.
 
 Mutating modes (`apply`, `recovery`) require:
 
-1. Positive GovEngine `allowed` decision recorded on the operation
-2. Operation in `approved` state (manual `rexecop approve` when `approval_required`)
-3. Connector-level check: `http_api` mutating actions also verify `mutating_allowed` at runtime
-4. A trusted signed canonical `GovernanceDecision`, atomically claimed for the exact attempt
+1. Explicit `REXECOP_MUTATION_POSTURE=lab_only`; the default `stable_read_only`
+   posture rejects execution with `mutation_not_certified`
+2. Positive GovEngine `allowed` decision recorded on the operation
+3. Operation in `approved` state (manual `rexecop approve` when `approval_required`)
+4. Connector-level check: `http_api` mutating actions also verify `mutating_allowed` at runtime
+5. A trusted signed canonical `GovernanceDecision`, atomically claimed for the exact attempt
+
+`lab_only` enables bounded development and test mechanics only. It does not weaken any
+governance check and is reported by `rexecop doctor` as a stable-readiness blocker.
 
 Read-only modes (`dry_run`, `observe`, `emergency_readonly`) auto-approve at start and refuse
 mutating connector actions at the connector runtime layer.

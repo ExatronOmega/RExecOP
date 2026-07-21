@@ -19,6 +19,7 @@ from rexecop.connectors.ssh_readonly import SshReadonlyRuntime
 from rexecop.connectors.static_fixture import StaticFixtureRuntime
 from rexecop.evidence.redaction import redact_payload, redact_text
 from rexecop.policy.connector import connector_policy_gate
+from rexecop.runtime.mutation_posture import require_mutation_execution_enabled
 from rexecop.secrets.port import SecretResolver
 from rexecop.secrets.resolver import default_secret_resolver
 
@@ -49,6 +50,7 @@ class CompositeConnectorRuntime:
         self._build_backends()
 
     def invoke(self, request: ConnectorRequest) -> ConnectorResponse:
+        require_mutation_execution_enabled(request.mode)
         config = self.connectors.get(request.connector)
         if not isinstance(config, dict):
             return ConnectorResponse(

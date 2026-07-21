@@ -56,7 +56,7 @@ Document id: `stack-contract-compatibility`.
 | `deterministic_plan_only` | active | Operation planning, catalog applicability, manual reaction planning and opt-in `auto_react=plan_only` are deterministic. | Does not auto-start child operations. |
 | `deterministic_execute_readonly` | active | Allowlisted `ssh_readonly`, `local_shell_readonly`, generic `http_api`, PolicyEngine gates and SCLite receipt emission. | Does not authorize mutation or unattended operations. |
 | `advisory_llm` | planned only | SCLite `escalation_proposal.v0.1` exists and Tecrax can produce bounded untrusted proposals. | No LLM provider, no LLM execution authority, no secrets to LLM. |
-| `mutation_ready` | false | Mutating controls remain blocked by policy/admission/operator gates. | No apply/restart/configuration/VLAN/firewall/DNS/NTP mutation readiness. |
+| `mutation_ready` | false | The default `stable_read_only` runtime gate rejects `apply` / `recovery` before execution and again before built-in/plugin backend I/O; `doctor` blocks `lab_only`. | No stable apply/restart/configuration/VLAN/firewall/DNS/NTP mutation readiness. |
 
 `scripts/validate_profile_conformance.py` defaults to `--track readonly`. The
 separate `--track mutation` report is allowed to discover and validate bounded

@@ -10,8 +10,10 @@ from unittest.mock import patch
 import pytest
 import yaml
 
+from rexecop.adapters.govengine_port.contracts import GovEngineDecisionType
+from rexecop.adapters.govengine_port.static_adapter import StaticGovEngineAdapter
 from rexecop.connectors.ssh_readonly import SshReadonlyRuntime
-from rexecop.errors import RExecOpValidationError
+from rexecop.errors import RExecOpMutationNotCertified, RExecOpValidationError
 from rexecop.operation.controller import OperationController
 from rexecop.operation.state import OperationState
 from rexecop.profile.loader import load_profile
@@ -45,6 +47,9 @@ def _tecrax_example(path: str) -> Path:
 
 HOST_INVENTORY_ENVIRONMENT = _tecrax_example(
     "examples/environments/ubuntu-host.readonly.example.yaml"
+)
+CHRONY_MUTATION_ENVIRONMENT = _tecrax_example(
+    "examples/environments/chrony-ntp-server.apply.example.yaml"
 )
 DOCKER_SERVICE_SHOW = (
     "systemctl show docker --property=LoadState --property=ActiveState "
@@ -223,6 +228,24 @@ def test_tecrax_basic_host_inventory_rejects_apply(tmp_path: Path) -> None:
             target="monitoring-host-01",
             mode="apply",
         )
+
+
+def test_stable_posture_blocks_tecrax_mutation_candidate(tmp_path: Path) -> None:
+    controller = OperationController(
+        store=FileStore(tmp_path / ".rexecop"),
+        govengine_adapter=StaticGovEngineAdapter(GovEngineDecisionType.ALLOWED),
+    )
+    operation = controller.plan(
+        profile_path="tecrax",
+        environment_path=CHRONY_MUTATION_ENVIRONMENT,
+        intent="configure_chrony_ntp_server",
+        target="chrony-host-01",
+        mode="apply",
+    )
+
+    assert operation.state == OperationState.APPROVED.value
+    with pytest.raises(RExecOpMutationNotCertified):
+        controller.start(operation.id)
 
 
 def test_tecrax_ntp_health_ssh_readonly_e2e(

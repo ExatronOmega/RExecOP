@@ -448,7 +448,10 @@ def test_decision_claim_is_atomic_across_processes(tmp_path: Path) -> None:
     )
 
 
-def test_mutation_without_signed_decision_fails_before_attempt(tmp_path: Path) -> None:
+def test_mutation_without_signed_decision_fails_before_attempt(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = OperationController(FileStore(tmp_path / ".rexecop"))
     operation = controller.plan(
         profile_path=PROFILE,

@@ -11,6 +11,7 @@ from rexecop.connectors.http_support import validate_destination_posture
 from rexecop.errors import (
     RExecOpConcurrencyConflict,
     RExecOpLeaseLost,
+    RExecOpMutationNotCertified,
     RExecOpOutcomeIndeterminate,
     RExecOpUnsafeDestination,
 )
@@ -29,6 +30,7 @@ def test_runtime_reason_codes_are_typed_and_stable() -> None:
     assert RExecOpUnsafeDestination.reason_code == "unsafe_destination"
     assert RExecOpConcurrencyConflict.reason_code == "concurrency_conflict"
     assert RExecOpLeaseLost.reason_code == "lease_lost"
+    assert RExecOpMutationNotCertified.reason_code == "mutation_not_certified"
     assert RExecOpOutcomeIndeterminate.reason_code == "outcome_indeterminate"
 
 

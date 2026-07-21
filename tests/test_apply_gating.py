@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from rexecop.adapters.govengine_port.contracts import GovEngineDecisionType
 from rexecop.adapters.govengine_port.static_adapter import StaticGovEngineAdapter
+from rexecop.errors import RExecOpMutationNotCertified
 from rexecop.operation.controller import OperationController
 from rexecop.operation.state import OperationState
 from rexecop.storage.file_store import FileStore
@@ -46,7 +49,7 @@ def test_apply_waits_when_adapter_returns_approval_required(tmp_path: Path) -> N
     assert operation.govengine_decision_type == "approval_required"
 
 
-def test_apply_allowed_transitions_to_approved(tmp_path: Path) -> None:
+def test_apply_allowed_is_still_blocked_by_stable_runtime_posture(tmp_path: Path) -> None:
     store = FileStore(tmp_path / ".rexecop")
     controller = OperationController(
         store=store,
@@ -60,7 +63,11 @@ def test_apply_allowed_transitions_to_approved(tmp_path: Path) -> None:
         mode="apply",
     )
     assert operation.state == OperationState.APPROVED.value
-    assert controller.allows_mutating_execution(operation.id)
+    assert not controller.allows_mutating_execution(operation.id)
+    with pytest.raises(RExecOpMutationNotCertified) as caught:
+        controller.start(operation.id)
+    assert caught.value.reason_code == "mutation_not_certified"
+    assert controller.get_operation(operation.id).state == OperationState.APPROVED.value
 
 
 def test_dry_run_does_not_call_governance_gate(tmp_path: Path) -> None:

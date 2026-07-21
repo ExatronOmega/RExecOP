@@ -50,6 +50,9 @@ echo "==> validate_m9_runtime_gate"
 echo "==> validate_m95n_gate"
 "$PYTHON" scripts/validate_m95n_gate.py
 
+echo "==> validate_m10_readonly_gate"
+"$PYTHON" scripts/validate_m10_readonly_gate.py
+
 echo "==> validate_g3_runtime_governance_gate"
 "$PYTHON" scripts/validate_g3_runtime_governance_gate.py
 
@@ -95,5 +98,5 @@ else
 fi
 
 printf '%s\n' \
-  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK operator_journeys=OK cross_repo_golden_fixture=OK workflow_security=OK stack_invariants=OK external_review=OK m86_security=OK m9_runtime=OK m95n=OK g3_runtime_governance=OK governance_conformance=OK g6_release_candidate=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
+  'GATE_REPORT: public_truth=OK stack_contracts=OK profile_conformance=OK first_run_smoke=OK operator_journeys=OK cross_repo_golden_fixture=OK workflow_security=OK stack_invariants=OK external_review=OK m86_security=OK m9_runtime=OK m95n=OK m10_readonly=OK g3_runtime_governance=OK governance_conformance=OK g6_release_candidate=OK core_boundary=OK secret_scan=OK ruff=OK mypy=OK delivery_pytest=OK'
 echo "alpha_signoff_checks_ok"

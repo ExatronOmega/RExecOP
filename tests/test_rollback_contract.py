@@ -32,7 +32,10 @@ def _controller(tmp_path: Path) -> OperationController:
     )
 
 
-def test_rollback_executes_defined_steps(tmp_path: Path) -> None:
+def test_rollback_executes_defined_steps(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     StaticFixtureRuntime.set_failures(
         "fixture_source",
         "apply_fixture_change",

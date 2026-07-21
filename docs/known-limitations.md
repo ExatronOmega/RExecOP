@@ -8,6 +8,7 @@ This document states what the current published alpha line does **not** provide 
 | Limitation | Detail |
 | --- | --- |
 | GovEngine is authority | RExecOp does not interpret organizational policy; `StaticGovEngineAdapter` is test-only |
+| Stable runtime is read-only | `REXECOP_MUTATION_POSTURE` defaults to `stable_read_only`; `apply` and `recovery` fail with `mutation_not_certified` before execution and are rechecked before connector IO, regardless of a positive GovEngine decision |
 | Signed-decision host adapter required for mutation | Source supports the canonical verify/bind/claim path programmatically; the CLI does not yet configure production signer/verifier/trust adapters, so mutating connector IO fails closed |
 | SCLite is truth | Receipt exports under `<root>/receipts/` are summaries; bundles under `<root>/sclite/` are authoritative |
 | No second policy engine | Configured policy packs and all mutating admission go through GovEngine — no bypass API |
@@ -54,7 +55,7 @@ This document states what the current published alpha line does **not** provide 
 | Redaction has finite detectors | Exact-path `public_projection.safe_fields` is the disclosure boundary and undeclared values become digest-only; any deliberately allowlisted plaintext still relies on finite key/value detectors and operator review |
 | DNS rebinding | Stable-live HTTP depends on operator-enforced DNS/egress controls; runtime and `doctor` fail closed when the dependency is undeclared, but transport-level DNS pinning is not claimed |
 | CI secret scan is heuristic | Full tracked tree/history scan covers common providers, private keys and credential assignments; it is not a KMS or external repository audit |
-| Apply on critical targets | Requires explicit operator approval, GovEngine allow, trusted signed decision, atomic attempt claim, and operational procedure — not unmanned |
+| Apply on critical targets | Not stable-certified. The `lab_only` mechanics posture still requires explicit operator approval, GovEngine allow, trusted signed decision, atomic attempt claim, and operational procedure |
 
 ## Distribution
 
@@ -74,7 +75,8 @@ The current public stack baseline is recorded in
 - `deterministic_execute_readonly`
 
 The labels `advisory_llm` and `mutation_ready` are not active. LLM output remains
-an untrusted proposal shape only, and mutation/apply readiness is explicitly false.
+an untrusted proposal shape only. Mutation readiness is explicitly false and enforced
+by the default runtime posture, not merely documented as an operator expectation.
 
 ## What alpha **does** provide (allowed claims)
 

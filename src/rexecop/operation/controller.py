@@ -56,6 +56,10 @@ from rexecop.policy.pack import compile_environment_policy_pack, policy_decision
 from rexecop.profile.loader import load_profile
 from rexecop.profile.resolver import resolve_profile_path
 from rexecop.reaction.model import ReactionContext
+from rexecop.runtime.mutation_posture import (
+    mutation_execution_enabled,
+    require_mutation_execution_enabled,
+)
 from rexecop.runtime_ops.idempotency import (
     attach_operation_idempotency,
     plan_idempotency_key,
@@ -508,6 +512,8 @@ class OperationController:
         operation = self.get_operation(operation_id)
         if not is_mutating_mode(operation.mode):
             return False
+        if not mutation_execution_enabled():
+            return False
         if operation.govengine_decision_type in {item.value for item in BLOCKING_DECISIONS}:
             return False
         if operation.govengine_decision_type == GovEngineDecisionType.ALLOWED.value:
@@ -616,6 +622,7 @@ class OperationController:
 
     def rollback(self, operation_id: str) -> dict[str, object]:
         operation = self.get_operation(operation_id)
+        require_mutation_execution_enabled(operation.mode)
         plan = self.store.load_plan(operation_id)
         result = self.rollback_executor.execute(
             operation=operation,
@@ -630,6 +637,7 @@ class OperationController:
         operation = self.get_operation(operation_id)
         if start_is_idempotent(operation):
             return operation
+        require_mutation_execution_enabled(operation.mode)
         plan = self.store.load_plan(operation_id)
         self._verify_catalog_binding(operation, plan)
         if operation.state == OperationState.APPROVED.value and is_mutating_mode(operation.mode):
@@ -704,6 +712,7 @@ class OperationController:
     def advance(self, operation_id: str, *, max_steps: int = 1) -> Operation:
         with self.execution_lease():
             operation = self.get_operation(operation_id)
+            require_mutation_execution_enabled(operation.mode)
             if operation.state == OperationState.APPROVED.value and is_mutating_mode(
                 operation.mode
             ):
@@ -753,6 +762,7 @@ class OperationController:
     def resume(self, operation_id: str) -> Operation:
         with self.execution_lease():
             operation = self.get_operation(operation_id)
+            require_mutation_execution_enabled(operation.mode)
             if is_mutating_mode(operation.mode):
                 self.runtime.check_maintenance_window(operation)
                 if self.runtime.admit_for_execution(operation) == "queued":
@@ -779,6 +789,7 @@ class OperationController:
                     "side-effectful attempt requires explicit reconciliation"
                 )
             operation = self.get_operation(operation_id)
+            require_mutation_execution_enabled(operation.mode)
             if is_mutating_mode(operation.mode):
                 self.runtime.check_maintenance_window(operation)
                 if self.runtime.admit_for_execution(operation) == "queued":

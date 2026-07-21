@@ -247,6 +247,7 @@ def _lifecycle_lookup_failure(command: tuple[str, ...], exc: RExecOpError) -> No
         "unsafe_destination",
         "concurrency_conflict",
         "lease_lost",
+        "mutation_not_certified",
         "outcome_indeterminate",
     }
     code = str(getattr(exc, "reason_code", "runtime_error"))
@@ -256,11 +257,17 @@ def _lifecycle_lookup_failure(command: tuple[str, ...], exc: RExecOpError) -> No
         if code in stable_runtime_codes
         else str(exc)
     )
+    safe_next_actions = _LIFECYCLE_LOOKUP_ACTIONS
+    if code == "mutation_not_certified":
+        safe_next_actions = (
+            "Use dry_run, observe, or emergency_readonly for stable execution.",
+            "Use REXECOP_MUTATION_POSTURE=lab_only only for bounded development tests.",
+        )
     emit_failure(
         command=command,
         message=message,
         reason_code=reason_code,
-        safe_next_actions=_LIFECYCLE_LOOKUP_ACTIONS,
+        safe_next_actions=safe_next_actions,
     )
 
 
@@ -311,7 +318,7 @@ def doctor_cmd(
     env: Path | None = typer.Option(None, "--env", help="Optional environment YAML."),
     catalog: Path | None = typer.Option(None, "--catalog", help="Optional target catalog YAML."),
 ) -> None:
-    """Check runtime root, stack compatibility and optional operator inputs."""
+    """Check runtime posture, stack compatibility and optional operator inputs."""
     result = run_runtime_doctor(
         runtime_root(),
         storage_backend=os.environ.get("REXECOP_STORAGE"),
@@ -1669,7 +1676,7 @@ def trigger_cmd(
 def start_cmd(
     operation: str = typer.Option(..., "--operation", help="Operation id."),
 ) -> None:
-    """Start an approved operation (read-only auto-approves; apply requires approval)."""
+    """Start an operation; stable runtime blocks mutating modes."""
     try:
         item = _controller().start(operation)
     except RExecOpError as exc:

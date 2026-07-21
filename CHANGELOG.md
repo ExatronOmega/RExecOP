@@ -2,6 +2,14 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Makes the stable runtime mechanically read-only. `REXECOP_MUTATION_POSTURE`
+  defaults to `stable_read_only`; mutating modes fail with the stable
+  `mutation_not_certified` reason before execution and are checked again before
+  connector backend I/O. The explicit `lab_only` posture remains available for
+  bounded mutation-mechanics tests, and `doctor` reports it as a release blocker.
+- Adds `validate_m10_readonly_gate.py` to prove positive GovEngine admission,
+  direct composite/plugin dispatch and the Tecrax mutation candidate all remain
+  blocked by the stable posture.
 - Moves allowlisted argv normalization into RExecOp's connector boundary and
   removes the deep import of GovEngine's legacy command-shape helper. Tool
   normalization and restricted command-pattern enforcement now have one runtime

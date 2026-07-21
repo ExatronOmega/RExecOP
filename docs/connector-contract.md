@@ -69,30 +69,33 @@ Templates:
 
 1. **Profile capabilities** — `http_api` may invoke only actions listed in
    `profile/connectors/<name>.yaml` `capabilities`.
-2. **Governance** — mutating actions require GovEngine `allowed`, apply mode, and runtime
-   `mutating_allowed` on the connector runtime.
-3. **Read-only modes** — `dry_run`, `observe`, `emergency_readonly` refuse mutating actions.
-4. **Secrets** — use `secret_ref` / `base_url_secret_ref`; inline secrets in environment YAML
+2. **Stable mutation gate** — `stable_read_only` rejects mutating modes at the composite
+   runtime before built-in or plugin backend I/O. `lab_only` enables mechanics but is a
+   `doctor` blocker.
+3. **Governance** — under `lab_only`, mutating actions still require GovEngine `allowed`,
+   apply mode, and runtime `mutating_allowed` on the connector runtime.
+4. **Read-only modes** — `dry_run`, `observe`, `emergency_readonly` refuse mutating actions.
+5. **Secrets** — use `secret_ref` / `base_url_secret_ref`; inline secrets in environment YAML
    are rejected at plan time.
-5. **Evidence** — connector responses pass through exact-path profile-declared
+6. **Evidence** — connector responses pass through exact-path profile-declared
    `public_projection.safe_fields` allowlists, then `redact_payload()` before
    persistence. Wildcard subtrees are rejected; bodies and structured
    before/after state are digest-only unless an exact path is declared.
-6. **HTTP failures** — `http_api` sets `error_class`, `status_code`, and a redacted `body_snippet`
+7. **HTTP failures** — `http_api` sets `error_class`, `status_code`, and a redacted `body_snippet`
    when the upstream API returns an HTTP error body.
-7. **HTTP response bounds** — successful bodies are read only up to
+8. **HTTP response bounds** — successful bodies are read only up to
    `max_response_bytes + 1` (default `65536`); oversized responses fail before JSON parsing
    and are not persisted.
-8. **TLS** — HTTPS verifies certificates and hostnames. A private/self-signed CA may be
+9. **TLS** — HTTPS verifies certificates and hostnames. A private/self-signed CA may be
    selected only through `tls.ca_file_secret_ref`; insecure verification flags are rejected.
    The referenced CA file and any host-specific trust material stay outside git.
-9. **Destination posture** — `deployment_posture: stable` is the live default and
+10. **Destination posture** — `deployment_posture: stable` is the live default and
    requires HTTPS. DNS destinations additionally require
    `operator_egress_enforced: true` plus
    `dns_rebinding_protection: operator_egress`. Private/loopback/link-local stable
    destinations require `network_scope: policy_bound`. Plain HTTP is available only
    under explicit `lab` or `fixture` posture.
-10. **Secret endpoints** — when `base_url_secret_ref` hides the endpoint from plan
+11. **Secret endpoints** — when `base_url_secret_ref` hides the endpoint from plan
     compilation, the environment must declare the bounded `destination_binding`
     (`scheme`, `effective_port`, `address_class`, `origin_binding_digest`). Runtime
     resolution must match it before connector IO.

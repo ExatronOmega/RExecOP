@@ -63,3 +63,10 @@ class RExecOpOutcomeIndeterminate(RExecOpValidationError):
 
     reason_code = "outcome_indeterminate"
     public_message = "connector outcome is indeterminate and requires reconciliation"
+
+
+class RExecOpMutationNotCertified(RExecOpValidationError):
+    """Mutating execution is disabled by the runtime release posture."""
+
+    reason_code = "mutation_not_certified"
+    public_message = "mutating execution is not certified by this runtime posture"

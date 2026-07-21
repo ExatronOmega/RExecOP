@@ -22,7 +22,10 @@ def _controller(tmp_path: Path) -> OperationController:
     )
 
 
-def test_target_lock_blocks_second_apply_on_same_target(tmp_path: Path) -> None:
+def test_target_lock_blocks_second_apply_on_same_target(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = _controller(tmp_path)
     first = controller.plan(
         profile_path=PROFILE,

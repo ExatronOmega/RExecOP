@@ -19,6 +19,12 @@ from rexecop.runtime.contract_compatibility import (
     evaluate_stack_contract_compatibility,
 )
 from rexecop.runtime.init import RUNTIME_DIRECTORIES, RUNTIME_MANIFEST
+from rexecop.runtime.mutation_posture import (
+    LAB_ONLY_POSTURE,
+    MUTATION_POSTURE_ENV,
+    STABLE_READ_ONLY_POSTURE,
+    resolve_mutation_posture,
+)
 from rexecop.storage.factory import resolve_storage_backend
 
 EXPECTED_GOVENGINE = "1.0.0rc1"
@@ -38,6 +44,7 @@ def run_runtime_doctor(
     env_path: Path | None = None,
     catalog_path: Path | None = None,
     executor_posture: str | None = None,
+    mutation_posture: str | None = None,
     deployment_posture: str | None = None,
     plugin_allowlist: str | None = None,
 ) -> dict[str, Any]:
@@ -48,6 +55,11 @@ def run_runtime_doctor(
         _check_runtime_root(root),
         storage_check,
         _check_executor_posture(executor_posture or os.environ.get("REXECOP_EXECUTOR_POSTURE")),
+        _check_mutation_posture(
+            mutation_posture
+            if mutation_posture is not None
+            else os.environ.get(MUTATION_POSTURE_ENV)
+        ),
         _check_plugin_posture(
             deployment_posture or os.environ.get("REXECOP_DEPLOYMENT_POSTURE") or "alpha",
             plugin_allowlist
@@ -167,6 +179,43 @@ def _check_executor_posture(value: str | None) -> dict[str, Any]:
             "requested": posture,
             "certified": "single_executor",
             "lease_scope": "one runtime root",
+        },
+    )
+
+
+def _check_mutation_posture(value: str | None) -> dict[str, Any]:
+    try:
+        posture = resolve_mutation_posture(value)
+    except RExecOpError:
+        return _check(
+            "mutation_posture",
+            CHECK_BLOCKER,
+            "mutation posture is invalid and fails closed",
+            details={"requested": (value or "").strip().lower()},
+            next_action=f"set {MUTATION_POSTURE_ENV}={STABLE_READ_ONLY_POSTURE}",
+        )
+    if posture == LAB_ONLY_POSTURE:
+        return _check(
+            "mutation_posture",
+            CHECK_BLOCKER,
+            "lab-only mutation mechanics are not stable-runtime certified",
+            details={
+                "requested": posture,
+                "certified": STABLE_READ_ONLY_POSTURE,
+                "apply_enabled": True,
+                "stable_runtime_ready": False,
+            },
+            next_action=f"set {MUTATION_POSTURE_ENV}={STABLE_READ_ONLY_POSTURE}",
+        )
+    return _check(
+        "mutation_posture",
+        CHECK_PASSED,
+        "stable runtime posture is read-only",
+        details={
+            "requested": posture,
+            "certified": STABLE_READ_ONLY_POSTURE,
+            "apply_enabled": False,
+            "stable_runtime_ready": True,
         },
     )
 

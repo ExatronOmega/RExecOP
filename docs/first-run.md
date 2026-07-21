@@ -21,7 +21,8 @@ rexecop --root /tmp/rexecop-first-run doctor \
   --catalog examples/first-run-demo/catalog.yaml
 ```
 
-Expected result: `status: passed`, no blockers, and no warnings.
+Expected result: `status: passed`, no blockers, no warnings, and a passed
+`mutation_posture` check reporting `stable_read_only` with `apply_enabled: false`.
 
 ## 3. Lint the operator inputs
 

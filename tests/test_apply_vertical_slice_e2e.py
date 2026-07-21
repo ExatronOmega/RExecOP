@@ -54,7 +54,10 @@ def test_approval_required_stops_before_mutation(tmp_path: Path) -> None:
         controller.start(operation.id)
 
 
-def test_operation_admission_is_not_mutation_approval(tmp_path: Path) -> None:
+def test_operation_admission_is_not_mutation_approval(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = _controller(tmp_path, GovEngineDecisionType.ALLOWED)
     operation = controller.plan(
         profile_path=PROFILE,
@@ -72,7 +75,10 @@ def test_operation_admission_is_not_mutation_approval(tmp_path: Path) -> None:
     assert "mutation_states" not in shared
 
 
-def test_legacy_manual_approval_is_not_bound_attestation(tmp_path: Path) -> None:
+def test_legacy_manual_approval_is_not_bound_attestation(
+    tmp_path: Path,
+    allow_lab_mutation_runtime_test: None,
+) -> None:
     controller = _controller(tmp_path, GovEngineDecisionType.APPROVAL_REQUIRED)
     operation = controller.plan(
         profile_path=PROFILE,

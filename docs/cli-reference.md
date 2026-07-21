@@ -31,7 +31,7 @@ without a store.
 | --- | --- |
 | `version` | Print package version |
 | `init [--guided]` | Create runtime root layout; no secrets or backend IO |
-| `doctor [--profile] [--env] [--catalog]` | Runtime root, storage, stack compatibility and optional operator inputs |
+| `doctor [--profile] [--env] [--catalog]` | Runtime root, storage, single-executor and mutation posture, plugin inventory, stack compatibility and optional operator inputs |
 
 ## Environment and secrets
 

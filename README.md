@@ -29,7 +29,7 @@ policy engine or a parallel truth layer.
 | Latest PyPI | [`rexecop==0.2.24a0`](https://pypi.org/project/rexecop/0.2.24a0/) |
 | Exact dependencies | Public `govengine==1.0.0rc1`, public `sclite-core==2.0.0` (see `pyproject.toml`) |
 | Stack compatibility | [`docs/stack-contract-compatibility.md`](docs/stack-contract-compatibility.md) |
-| Default posture | `dry_run` / read-only first; `apply` requires GovEngine allow |
+| Default posture | `stable_read_only`; `apply` / `recovery` execution is mechanically blocked even after GovEngine allow |
 
 ## Project sentence
 
@@ -130,6 +130,9 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Host-owned scheduling: `queue`, `worker run`, `trigger` (see operator scheduler pattern)
 - Certified runtime: one fenced executor per `FileStore` root, operation CAS, atomic FIFO
   queue claims, durable connector attempts and `outcome_indeterminate` recovery
+- Stable mutation posture: `REXECOP_MUTATION_POSTURE` defaults to `stable_read_only` and
+  is rechecked before operation execution and connector I/O; `doctor` blocks the explicit
+  `lab_only` mechanics posture
 - Execution-kernel stabilization: store-backed runtime ports, a preallocated attempt,
   atomic GovEngine decision claim, attempt-bound pre-IO runtime permit, stable reason
   codes, trusted-plugin inventory/allowlist and cycle-safe public imports
@@ -151,7 +154,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - Production cron/recurrence scheduler (host-owned worker + systemd/cron pattern only)
 - Web UI or multi-tenant RBAC
 - Unattended apply on critical infrastructure without operator and governance gates
-- `mutation_ready` apply on production targets without explicit stack gate update
+- `mutation_ready` or stable live mutation; `apply` / `recovery` can be exercised only under
+  the explicit `REXECOP_MUTATION_POSTURE=lab_only` development posture
 - An LLM provider adapter or prompt execution pipeline; current proposal handling is
   advisory, local and non-executable
 - Automatic conversion of accepted advisory proposals into operations; operators must

@@ -22,28 +22,33 @@ The script runs:
 4. `python scripts/validate_first_run_smoke.py`
 5. `python scripts/validate_operator_journeys.py`
 6. `python scripts/validate_cross_repo_golden_fixture.py`
-7. Core boundary greps (`tecrax` / domain strings forbidden in core)
-8. `scripts/secret_scan.sh`
-9. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
-10. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
+7. `python scripts/validate_workflow_security.py`
+8. `python scripts/validate_stack_invariants.py`
+9. `python scripts/validate_external_review_gate.py`
+10. `python scripts/validate_m86_security_gate.py`
+11. `python scripts/validate_m9_runtime_gate.py`
+12. `python scripts/validate_m95n_gate.py`
+13. `python scripts/validate_m10_readonly_gate.py` — default/readiness/connector/Tecrax
+    mutation block
+14. `python scripts/validate_g3_runtime_governance_gate.py`
+15. `python scripts/validate_governance_conformance.py`
+16. `python scripts/validate_g6_release_candidate_gate.py`
+17. Core boundary greps (`tecrax` / domain strings forbidden in core) and
+    `scripts/secret_scan.sh`
+18. Ruff and mypy
+19. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
+20. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
-11. Before PyPI upload: `python scripts/validate_release_train_preflight.py --release
-    --previous-evidence <downloaded-json>` (offline stack-line and prior-evidence gate)
-12. Post-publish: `python scripts/validate_public_index_release_smoke.py --write-evidence --verify-post-publish`
+
+The release workflow additionally runs
+`python scripts/validate_release_train_preflight.py --release --previous-evidence
+<downloaded-json>` before upload. Post-publish it runs
+`python scripts/validate_public_index_release_smoke.py --write-evidence --verify-post-publish`
     (wraps `validate_clean_install_smoke.py`, `rexecop version`, `rexecop --json doctor`, creates
-    digest-bound `rexecop.release_evidence.v1`, then verifies it before release-asset upload)
-13. Package supply-chain: `python scripts/validate_supply_chain_gate.py dist` after `python -m build`
-    (`pip-audit` + CycloneDX SBOM; exceptions in `docs/supply-chain-audit-exceptions.json`)
-14. Stack invariants: `python scripts/validate_stack_invariants.py` (`pytest -m invariant`)
-15. External/security review: `python scripts/validate_external_review_gate.py` with record in
-    `docs/release-security-review/<version>.json` (`independent_review` or documented
-    `solo_reviewed_alpha_risk`)
-16. Shared governance corpus: `python scripts/validate_governance_conformance.py`
-    (33 wheel-shipped cases; six execute RExecOp-owned atomic claim semantics)
-17. GovEngine v1 RC behavior:
-    `python scripts/validate_g6_release_candidate_gate.py` (read-only
-    no-network positive/negative, governed HTTP positive/pre-I/O negative,
-    signed decision-to-receipt binding and final SCLite review bundle)
+    digest-bound `rexecop.release_evidence.v1`, then verifies it before release-asset upload).
+Package supply-chain validation is `python scripts/validate_supply_chain_gate.py dist`
+after build (`pip-audit` + CycloneDX SBOM; exceptions in
+`docs/supply-chain-audit-exceptions.json`).
 
 CI on `main` runs the same validators (except the optional build step), **ruff**, **mypy**,
 and the full **pytest** suite on Python **3.11**, **3.12**, and **3.13**, plus the

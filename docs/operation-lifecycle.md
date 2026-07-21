@@ -26,8 +26,8 @@ Invalid transitions raise typed `RExecOpStateError`. Every transition emits evid
 | `dry_run` | Default-safe planning and read-only execution |
 | `observe` | Read-only observation |
 | `emergency_readonly` | Constrained read-only |
-| `apply` | Mutating execution — GovEngine + approval gates |
-| `recovery` | Mutating recovery path — same governance gates |
+| `apply` | Mutating mechanics — blocked by default stable posture; `lab_only` still requires GovEngine + approval gates |
+| `recovery` | Mutating recovery mechanics — same posture and governance gates |
 
 ## CLI orchestration
 
@@ -37,6 +37,11 @@ and `trigger`.
 
 The full grouped CLI reference (including pre-run inspection, triage, profile developer
 surface and reaction commands) lives in [cli-reference.md](cli-reference.md).
+
+`REXECOP_MUTATION_POSTURE` defaults to `stable_read_only`. Planning and approval may
+still produce an `approved` operation for review, but start/advance/resume/retry and
+connector dispatch reject mutating modes with `mutation_not_certified`. The explicit
+`lab_only` value exists for bounded development tests and is not stable certification.
 
 See [runtime-recovery-ops.md](runtime-recovery-ops.md) for triage, recovery and backup
 workflows. See [profile-developer-surface.md](profile-developer-surface.md) and

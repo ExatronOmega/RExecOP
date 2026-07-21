@@ -17,6 +17,7 @@ from rexecop.execution.govengine_governance import enforce_typed_execution_gover
 from rexecop.execution.internal_registry import InternalHandler, load_internal_handlers
 from rexecop.execution.typed_spec import bind_step_execution_spec, compile_step_execution_spec
 from rexecop.profile.loader import load_profile
+from rexecop.runtime.mutation_posture import require_mutation_execution_enabled
 
 EvidenceHandler = Callable[[StepExecutionContext], dict[str, Any]]
 AttemptStartHandler = Callable[[StepExecutionContext, dict[str, Any] | None], dict[str, Any]]
@@ -140,6 +141,7 @@ class StepExecutor:
                     ),
                     None,
                 )
+        require_mutation_execution_enabled(context.mode)
         attempt = (
             self.attempt_start_handler(context, spec)
             if self.attempt_start_handler is not None

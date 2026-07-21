@@ -46,6 +46,12 @@ and fail-closes on schema major-version mismatch or digest drift. Each
 (identity class, egress boundary, secret-ref requirements, live-backend posture).
 These records are runtime projections only — not SCLite truth artifacts.
 
+The independent runtime release gate is evaluated before attempt allocation and again
+at the composite connector boundary. Its default `stable_read_only` value rejects
+`apply` / `recovery` with `mutation_not_certified`, even if GovEngine admission is
+positive. `lab_only` exists to exercise mutation mechanics and makes `doctor` fail
+stable readiness.
+
 ## ExecutionRequest fields
 
 - `request_id`, `operation_id`, `target_ref`, `mode`

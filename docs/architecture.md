@@ -126,6 +126,13 @@ enforces the supported neutral controls.
 Unsupported controls and drift fail closed before backend IO. Connector-level policy
 remains plain-allow-only. GovEngine does **not** execute operations or invoke connectors.
 
+Independently of governance, RExecOp owns the release-readiness boundary:
+`REXECOP_MUTATION_POSTURE` defaults to `stable_read_only`. Mutating modes are rejected
+before operation execution and the same gate is evaluated again at the composite
+connector boundary, so direct built-in or plugin dispatch cannot turn a positive
+GovEngine decision into stable live mutation. `lab_only` enables development mechanics
+but makes `doctor` return a blocker.
+
 Workflow execution additionally records `ExecutionRequest` / `ExecutionReceipt` in operation
 `shared_state` — see [execution-contract.md](execution-contract.md).
 
