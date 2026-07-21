@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from rexecop import __version__
+from rexecop.errors import RExecOpValidationError
+from rexecop.runtime.root_compatibility import require_runtime_root_compatible
 from rexecop.storage.atomic import atomic_write_text, secure_directory
 from rexecop.storage.factory import create_store, resolve_storage_backend
 
@@ -36,6 +38,16 @@ def initialize_runtime_root(
     instance: str | None = None,
     guided: bool = False,
 ) -> dict[str, Any]:
+    manifest_path = root / RUNTIME_MANIFEST
+    if manifest_path.is_file():
+        try:
+            existing_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RExecOpValidationError("runtime_root_manifest_invalid") from exc
+        if not isinstance(existing_manifest, dict):
+            raise RExecOpValidationError("runtime_root_manifest_invalid")
+        require_runtime_root_compatible(existing_manifest, target_version=__version__)
+
     storage_backend = resolve_storage_backend(backend)
     store = create_store(root, backend=storage_backend)
     before = {path for path in _runtime_paths(root) if path.exists()}

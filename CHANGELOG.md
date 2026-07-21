@@ -2,6 +2,15 @@
 
 ## Unreleased — explicit orchestration contract ownership
 
+- Freezes the candidate M10 public surface in `rexecop.public_api.v1`: exact
+  supported Python symbols, 23 `stable_v1` CLI contracts and a complete explicit
+  alpha classification for every other installed CLI leaf. Fresh-subprocess
+  imports and CLI registry drift now fail `validate_m10_public_api_gate.py`.
+- Makes schema compatibility and the runtime-root major-line decision executable.
+  Unknown schema majors fail closed, and a 1.x `init` refuses to overwrite an
+  alpha manifest with `runtime_root_new_root_required`; alpha operational state
+  must start from a new 1.x root.
+
 - Completes the M10 runtime qualification surface. `rexecop doctor` now emits
   `security_blockers` as a bounded subset of runtime-configuration blockers,
   while storage and executor certification remain explicit non-security

@@ -112,6 +112,8 @@ Ravenclaw is legacy and out of scope for RExecOp.
 - CLI contract registry: `contracts cli` emits command schemas, formats, exit-code policy
   and redaction/authority claims for operator-facing surfaces, including
   command groups, `format_matrix` and `exit_code_matrix`
+- Candidate 1.x public API: `rexecop.public_api.v1` lists the exact supported
+  Python imports, stable CLI registry commands and explicit alpha CLI remainder
 - CLI error envelope: registry commands emit `rexecop.cli_error.v0.1` on exit
   code `1` with normalized class, reason code, redacted message and safe next actions
 - Observability: bounded structured logs with correlation IDs and artifact refs;
@@ -255,6 +257,15 @@ The CLI has grown across M1–M5 milestones. **Full command reference:**
 
 Global options: `--root`, `--instance`, `--storage file|sqlite`.
 
+## Public interfaces
+
+The 1.x compatibility promise is deliberately smaller than the installed
+package. `rexecop.public_api.public_api_manifest()` is the machine-readable
+source of truth for supported Python imports and CLI stability. Stable CLI
+surfaces are present in `CLI_CONTRACTS`; every remaining command is explicitly
+classified as alpha. Alpha runtime roots require a new root for 1.0 rather than
+an in-place state migration. See [docs/public-api.md](docs/public-api.md).
+
 ## Development
 
 ```bash
@@ -278,6 +289,7 @@ ruff, mypy, core boundary grep, secret scan, pytest, and a `package-dry-run` job
 
 | Document | Topic |
 | --- | --- |
+| [docs/public-api.md](docs/public-api.md) | Supported Python imports, CLI stability, schema and runtime-root compatibility |
 | [docs/cli-reference.md](docs/cli-reference.md) | Complete CLI command reference |
 | [docs/first-run.md](docs/first-run.md) | No-I/O onboarding: init, doctor, lint, plan |
 | [docs/operation-lifecycle.md](docs/operation-lifecycle.md) | States, lifecycle orchestration, queue/lock |

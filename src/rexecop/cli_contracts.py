@@ -59,19 +59,19 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("status",),
         schema="rexecop.operation_status.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="operation_inspection",
     ),
     CliContract(
         command=("operation", "explain"),
         schema="rexecop.operation_explain.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="operation_inspection",
     ),
     CliContract(
         command=("operation", "review"),
         schema="rexecop.operation_review.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="operation_inspection",
         formats=("json", "table", "markdown"),
         output_policy="format_option",
@@ -79,7 +79,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("operation", "diff"),
         schema="rexecop.operation_plan_diff.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="operation_inspection",
         formats=("json", "table", "markdown"),
         output_policy="format_option",
@@ -91,7 +91,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("receipt", "show"),
         schema="rexecop.receipt_show.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         exit_codes=(
             CliExitCode(0, "present_missing_or_partial"),
@@ -103,21 +103,21 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("evidence", "show"),
         schema="rexecop.evidence_show.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="runtime_evidence_projection",
     ),
     CliContract(
         command=("chain", "summary"),
         schema="rexecop.chain_summary.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="digest_link_projection",
     ),
     CliContract(
         command=("chain", "explain"),
         schema="rexecop.chain_explain.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="digest_link_projection",
         notes=("May include reaction replay status, but does not execute recovery.",),
@@ -125,7 +125,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("reaction", "explain"),
         schema="rexecop.reaction_explain.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="sclite_reaction_chain_projection",
         notes=("Verifies persisted reaction-chain artifacts without starting a child operation.",),
@@ -133,7 +133,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("reaction-proposal-review",),
         schema="rexecop.proposal_review.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="untrusted_proposal_projection",
         notes=("Does not execute, plan, or approve advisory proposal output.",),
@@ -141,7 +141,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("reaction-proposal-submit",),
         schema="rexecop.proposal_submission.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         authority="operator_review_record",
         notes=("Records accept_for_planning or reject without creating an operation.",),
@@ -149,7 +149,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("support", "bundle"),
         schema="rexecop.support_bundle.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="audit_inspection",
         exit_codes=(
             CliExitCode(0, "ready_or_partial"),
@@ -161,14 +161,14 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("runtime", "status"),
         schema="rexecop.runtime_status.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
         output_policy="json_only_flag",
     ),
     CliContract(
         command=("runtime", "reconstruct-status"),
         schema="rexecop.runtime_reconstruction.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
         output_policy="json_only_flag",
         authority="runtime_store_projection",
@@ -177,7 +177,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("ops",),
         schema="rexecop.ops.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
         exit_codes=(
             CliExitCode(0, "no_blockers"),
@@ -187,31 +187,31 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("dead-letter", "list"),
         schema="rexecop.dead_letter_list.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
     ),
     CliContract(
         command=("dead-letter", "show"),
         schema="rexecop.dead_letter_show.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
     ),
     CliContract(
         command=("locks", "list"),
         schema="rexecop.locks_list.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
     ),
     CliContract(
         command=("explain-error",),
         schema="rexecop.explain_error.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="runtime_triage",
     ),
     CliContract(
         command=("governance", "controls"),
         schema="rexecop.governance_controls.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="governance_inspection",
         exit_codes=(
             CliExitCode(0, "passed"),
@@ -225,7 +225,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("profile", "lint"),
         schema="rexecop.profile_conformance.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="profile_developer",
         exit_codes=(
             CliExitCode(0, "passed"),
@@ -236,7 +236,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("observability", "logs", "list"),
         schema="rexecop.structured_log_list.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="observability",
         authority="runtime_observability_projection",
         notes=("Bounded structured logs with correlation and artifact refs.",),
@@ -244,7 +244,7 @@ CLI_CONTRACTS: tuple[CliContract, ...] = (
     CliContract(
         command=("observability", "diagnostics"),
         schema="rexecop.runtime_diagnostics.v0.1",
-        stability="alpha_contract",
+        stability="stable_v1",
         group="observability",
         authority="runtime_observability_projection",
         notes=("Uses the same failure classes as explain-error.",),
@@ -330,6 +330,8 @@ def validate_cli_contract_registry(payload: dict[str, Any] | None = None) -> lis
             errors.append(f"{command}:schema")
         if not str(item.get("group") or ""):
             errors.append(f"{command}:group")
+        if item.get("stability") != "stable_v1":
+            errors.append(f"{command}:stability")
         if item.get("output_policy") not in _OUTPUT_POLICIES:
             errors.append(f"{command}:output_policy")
         formats = item.get("formats")

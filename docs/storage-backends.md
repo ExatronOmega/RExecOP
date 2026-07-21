@@ -59,6 +59,15 @@ Operator backup and post-crash reconciliation are documented in
 [runtime-recovery-ops.md](runtime-recovery-ops.md) (`backup create/restore`,
 `runtime recover`).
 
+## Major-line compatibility
+
+Runtime roots are versioned operational state, not portable truth bundles. The
+1.x policy is `alpha_root_requires_new_v1_root`: `rexecop init` fails with
+`runtime_root_new_root_required` instead of overwriting a `0.x` manifest when
+run by a 1.x binary. Keep the alpha root for audit, initialize a new empty 1.x
+root and re-plan work there. Do not copy queue, lease, attempt or operation
+lifecycle state across the boundary. See [public-api.md](public-api.md).
+
 ## SqliteStore (`sqlite` backend)
 
 | Location | Content |

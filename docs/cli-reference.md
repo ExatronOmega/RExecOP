@@ -1,8 +1,9 @@
 # CLI reference
 
 Complete `rexecop` command reference for the current source candidate (`0.3.0rc3`).
-Commands emit stable JSON unless noted. Secret values, connector endpoints and raw
-backend payloads are never printed.
+Only commands listed by `CLI_CONTRACTS` carry the candidate `stable_v1` JSON
+compatibility promise; all other command surfaces are explicitly alpha. Secret
+values, connector endpoints and raw backend payloads are never printed.
 
 For onboarding without backend IO, start with [first-run.md](first-run.md). For
 lifecycle semantics see [operation-lifecycle.md](operation-lifecycle.md).
@@ -121,7 +122,7 @@ Audit commands are projections only: SCLite remains the authoritative truth laye
 ## CLI Contract Registry
 
 `contracts cli` emits `rexecop.cli_contract_registry.v0.1`. It is a read-only
-registry for operator-facing JSON surfaces and records command argv, stable
+registry for the 23 candidate `stable_v1` operator-facing JSON surfaces and records command argv, stable
 schema id, supported output formats, exit-code meanings, redaction and
 bounded-output claims, and the authority boundary for each output.
 
@@ -134,7 +135,8 @@ The registry also includes:
 - `exit_code_matrix`: exit code meanings and the error schema for each command.
 
 The registry does not execute commands and does not replace command-specific
-tests. It is the M8 anti-drift surface for release-closure checks.
+tests. The complete stable/alpha command classification lives in
+`rexecop.public_api.v1`; see [public-api.md](public-api.md).
 
 ## CLI Error Envelope
 

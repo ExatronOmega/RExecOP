@@ -21,12 +21,15 @@ from rexecop.cli_contracts import CLI_CONTRACT_REGISTRY_SCHEMA, cli_contract_reg
 from rexecop.cli_errors import CLI_ERROR_SCHEMA
 from rexecop.observability.diagnostics import RUNTIME_DIAGNOSTICS_SCHEMA
 from rexecop.observability.structured_log import STRUCTURED_LOG_EVENT_SCHEMA
+from rexecop.public_api import PUBLIC_API_SCHEMA, public_api_manifest
 from rexecop.truth_path import project_truth_path
 
 version = {version!r}
 assert rexecop.__version__ == version
 registry = cli_contract_registry()
+public_api = public_api_manifest()
 assert registry["schema"] == CLI_CONTRACT_REGISTRY_SCHEMA
+assert public_api["schema"] == PUBLIC_API_SCHEMA
 assert registry["contract_count"] >= 17
 assert CLI_ERROR_SCHEMA == "rexecop.cli_error.v0.1"
 assert STRUCTURED_LOG_EVENT_SCHEMA == "rexecop.structured_log_event.v0.1"

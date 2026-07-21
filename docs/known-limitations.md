@@ -19,6 +19,7 @@ This document states what the current published alpha line does **not** provide 
 | --- | --- |
 | Host-owned worker only | `rexecop worker run` polls the file queue; no built-in cron/recurrence DSL |
 | Runtime root is explicit but local | CLI supports global `--root`, `REXECOP_ROOT`, named `--instance` / `REXECOP_INSTANCE`, `init`, `doctor`, `env lint`, `profile lint`, and a fixture first-run path; this is runtime isolation, not multi-tenant RBAC |
+| Alpha roots do not migrate in place to 1.0 | The v1 compatibility policy requires a new runtime root; queue, lease, attempt and lifecycle state are not copied across major lines |
 | One executor per root | Stable runtime certification covers `FileStore` with one active executor; multi-worker/distributed execution is blocked by `doctor` |
 | SQLite alpha-only | `SqliteStore` is selectable via `REXECOP_STORAGE=sqlite`, but is not stable-runtime certified |
 | Doctor security classification is local | `security_blockers` classifies fail-closed runtime configuration checks (mutation, plugins, network, inputs and stack compatibility); it is not a vulnerability scan or substitute for independent release review |
@@ -64,6 +65,7 @@ This document states what the current published alpha line does **not** provide 
 | --- | --- |
 | Public PyPI | `rexecop==0.2.24a0` published for alpha evaluation — not a production-ready claim |
 | Source alpha line | `0.3.0rc3` is the local candidate on `main`; see [CHANGELOG.md](../CHANGELOG.md) for history |
+| Public API is a candidate freeze | `rexecop.public_api.v1` identifies the intended 1.x import/CLI surface, but does not override the unreleased candidate status or other M10 blockers |
 | Coordinated dependencies | Source line requires public `govengine==1.0.0rc1` and public `sclite-core==2.0.0`; the `tecrax` extra requires source candidate `tecrax==0.4.0rc3` |
 
 ## Stack readiness labels

@@ -43,7 +43,7 @@ def test_declared_runtime_modules_import_in_fresh_subprocess() -> None:
         assert result.returncode == 0, result.stderr
 
 
-def test_lazy_package_exports_preserve_public_api() -> None:
+def test_legacy_lazy_package_exports_remain_cycle_safe() -> None:
     from rexecop.operation import Operation, OperationController
     from rexecop.runtime_ops import RunNowQueue, RuntimeCoordinator
     from rexecop.storage import FileStore, create_store

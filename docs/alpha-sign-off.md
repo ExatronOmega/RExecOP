@@ -32,14 +32,16 @@ The script runs:
     mutation block
 14. `python scripts/validate_m10_runtime_gate.py` — M9 dependency, stable storage,
     single executor, mutation posture, plugin inventory and runtime security blockers
-15. `python scripts/validate_g3_runtime_governance_gate.py`
-16. `python scripts/validate_governance_conformance.py`
-17. `python scripts/validate_g6_release_candidate_gate.py`
-18. Core boundary greps (`tecrax` / domain strings forbidden in core) and
+15. `python scripts/validate_m10_public_api_gate.py` — fresh Python imports, full
+    CLI stability classification, schema fail-closed and alpha-to-1.0 new-root policy
+16. `python scripts/validate_g3_runtime_governance_gate.py`
+17. `python scripts/validate_governance_conformance.py`
+18. `python scripts/validate_g6_release_candidate_gate.py`
+19. Core boundary greps (`tecrax` / domain strings forbidden in core) and
     `scripts/secret_scan.sh`
-19. Ruff and mypy
-20. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
-21. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
+20. Ruff and mypy
+21. `pytest -m delivery` — canonical delivery-scope suite from `tests/delivery_scope.py`
+22. Optional `python -m build` + `twine check` + `validate_artifact_install_smoke.py`
    when `REXECOP_SIGNOFF_BUILD=1` and `build` is installed
 
 The release workflow additionally runs
