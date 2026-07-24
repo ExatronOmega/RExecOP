@@ -1,7 +1,7 @@
 {
   "schema": "rexecop.release_security_review.v0.1",
   "version": "1.0.0rc1",
-  "review_mode": "independet_review",
+  "review_mode": "independent_review",
   "reviewed_at": "2026-07-24",
   "reviewer_ref": "reviewer:ExatronOmega",
   "surfaces": [
